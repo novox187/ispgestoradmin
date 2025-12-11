@@ -78,8 +78,7 @@
   }
 </script>
 
-<div class="flex h-screen bg-[#0f0f0f] text-gray-100 overflow-hidden">
-  <Menu bind:isOpen={isSidebarOpen} />
+<div class="flex h-screen w-full bg-[#0f0f0f] text-gray-100 overflow-hidden">
 
   <main class="flex-1 overflow-y-auto">
     <Encabezado {toggleSidebar} {toggleNotifications} notificationCount={3} />
@@ -122,7 +121,4 @@
       </div>
     </div>
   </main>
-
-  <!-- RightSidebar como drawer en móvil, fijo en desktop -->
-  <Menuderecha bind:isOpen={isNotificationsOpen} />
 </div>

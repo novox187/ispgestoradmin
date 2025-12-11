@@ -32,13 +32,13 @@
 {/if}
 
 <aside class="
-  w-64 bg-[#0d0d0d] border-r border-gray-800 flex flex-col p-5
+  w-64 bg-[#0d0d0d] border-r border-neutral-800 flex flex-col p-5
   fixed lg:static inset-y-0 left-0 z-50
   transform transition-transform duration-300 ease-in-out
   {isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
 ">
   <!-- Logo Section -->
-  <div class="p-6 border-b border-gray-800">
+  <div class="p-6 border-b border-neutral-800">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 bg-white rounded flex items-center justify-center">
         <User class="w-6 h-6 text-black" />
@@ -78,7 +78,7 @@
   </nav>
 
   <!-- User Profile -->
-  <div class="p-4 border-t border-gray-800">
+  <div class="p-4 border-t border-neutral-800">
     <div class="flex items-center gap-2 mb-3 px-3">
       <div class="w-2 h-2 bg-blue-500 rounded-sm"></div>
       <span class="text-blue-500 text-xs font-mono font-bold tracking-wide">USER</span>

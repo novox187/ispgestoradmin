@@ -23,14 +23,14 @@
 {/if}
 
 <aside class="
-  w-96 bg-[#0d0d0d] border-l border-gray-800 flex flex-col
+  w-96 bg-[#0d0d0d] border-l border-neutral-800 flex flex-col
   fixed xl:static inset-y-0 right-0 z-50
   transform transition-transform duration-300 ease-in-out
   xl:translate-x-0
   {isOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}
 ">
   <!-- Header con botón de cerrar en móvil -->
-  <div class="xl:hidden flex items-center justify-between p-4 border-b border-gray-800">
+  <div class="xl:hidden flex items-center justify-between p-4 border-b border-neutral-800">
     <div class="flex items-center gap-2">
       <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs">
         3
