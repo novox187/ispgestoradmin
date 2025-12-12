@@ -1,4 +1,7 @@
     <script>
+  /** @typedef {'active' | 'suspended' | 'inactive'} ClientStatus */
+  /** @typedef {{ status: ClientStatus }} Client */
+  /** @type {Client[]} */
         export let clients;
     </script>
 

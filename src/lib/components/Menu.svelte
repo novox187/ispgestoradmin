@@ -1,21 +1,28 @@
 <script>
   // @ts-ignore
   import { LayoutDashboard, FlaskConical, Smartphone, Shield, Mail, Settings, Lock, User, MoreVertical, Users, Wifi, CreditCard, Zap, Bell, UserCog } from '@lucide/svelte';
+  import { page } from '$app/stores';
   
   let { isOpen = $bindable(false) } = $props();
   
   const menuItems = [
-    { label: 'DASHBOARD', icon: LayoutDashboard, active: true },
-    { label: 'CLIENTES', icon: Users, active: false },
-    { label: 'PLANES', icon: Wifi, active: false },
-    { label: 'FACTURACION', icon: CreditCard, active: false },
-    { label: 'AUTOMATIZACION', icon: Zap, active: false },
-    { label: 'MIKROTIK', icon: Settings, active: false, locked: false },
-    { label: 'USUARIOS', icon: UserCog, active: false, locked: false },
+    { label: 'DASHBOARD', icon: LayoutDashboard, path: '/' },
+    { label: 'CLIENTES', icon: Users, path: '/clientes' },
+    { label: 'PLANES', icon: Wifi, path: '/planes' },
+    { label: 'FACTURACION', icon: CreditCard, path: '/facturas' },
+    { label: 'AUTOMATIZACION', icon: Zap, path: '/automatizacion' },
+    { label: 'MIKROTIK', icon: Settings, path: '/mikrotik', locked: false },
+    { label: 'USUARIOS', icon: UserCog, path: '/usuarios', locked: false },
   ];
   
   function closeSidebar() {
     isOpen = false;
+  }
+  
+  /** @param {string} path */
+  function isActive(path) {
+    const current = $page.url.pathname;
+    return path === '/' ? current === '/' : current.startsWith(path);
   }
 </script>
 
@@ -60,17 +67,27 @@
       <ul class="space-y-0.5">
         {#each menuItems as item}
           <li>
-            <button
-              class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-mono transition-colors {item.active ? 'bg-gray-800/50 text-white border-l-2 border-blue-500' : item.locked ? 'text-gray-600' : 'text-gray-300 hover:text-white hover:bg-gray-800/30'}"
-              aria-label="{item.label}"
-              disabled={item.locked}
-            >
-              <item.icon class="w-4 h-4" />
-              <span class="flex-1 text-left font-medium tracking-wide">{item.label}</span>
-              {#if item.locked}
+            {#if item.locked}
+              <button
+                class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-mono transition-colors text-gray-600"
+                aria-label="{item.label}"
+                disabled
+              >
+                <item.icon class="w-4 h-4" />
+                <span class="flex-1 text-left font-medium tracking-wide">{item.label}</span>
                 <Lock class="w-3.5 h-3.5" />
-              {/if}
-            </button>
+              </button>
+            {:else}
+              <a
+                href={item.path}
+                class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-mono transition-colors {isActive(item.path) ? 'bg-gray-800/50 text-white border-l-2 border-blue-500' : 'text-gray-300 hover:text-white hover:bg-gray-800/30'}"
+                aria-label="{item.label}"
+                onclick={() => closeSidebar()}
+              >
+                <item.icon class="w-4 h-4" />
+                <span class="flex-1 text-left font-medium tracking-wide">{item.label}</span>
+              </a>
+            {/if}
           </li>
         {/each}
       </ul>
