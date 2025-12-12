@@ -2,6 +2,17 @@
     import ModalCrearCliente from "$lib/components/clientes/ModalCrearCliente.svelte";
     import TablaClientes from "$lib/components/clientes/TablaClientes.svelte";
     import TarjetasEstadisticas from "$lib/components/clientes/TarjetasEstadisticas.svelte";
+    import {
+        onMount
+    } from 'svelte';
+    import {
+        Pagination
+    } from '@skeletonlabs/skeleton-svelte';
+    import {
+        ArrowLeftIcon,
+        ArrowRightIcon
+    } from '@lucide/svelte';
+    import ModalCliente from "$lib/components/clientes/ModalCliente.svelte";
 
     interface Client {
         id: number;
@@ -26,54 +37,47 @@
         status: 'active'
     });
 
-    let clients = $state < Client[] > ([{
-            id: 1,
-            name: 'Juan García',
-            email: 'juan@example.com',
-            phone: '+34 912 345 678',
-            plan: 'Premium',
-            status: 'active',
-            joinDate: '2024-01-15'
-        },
-        {
-            id: 2,
-            name: 'María López',
-            email: 'maria@example.com',
-            phone: '+34 923 456 789',
-            plan: 'Business',
-            status: 'active',
-            joinDate: '2024-02-20'
-        },
-        {
-            id: 3,
-            name: 'Carlos Rodríguez',
-            email: 'carlos@example.com',
-            phone: '+34 934 567 890',
-            plan: 'Basic',
-            status: 'suspended',
-            joinDate: '2023-11-10'
-        },
-        {
-            id: 4,
-            name: 'Ana Martínez',
-            email: 'ana@example.com',
-            phone: '+34 945 678 901',
-            plan: 'Premium',
-            status: 'active',
-            joinDate: '2024-03-05'
-        },
-        {
-            id: 5,
-            name: 'Pedro Sánchez',
-            email: 'pedro@example.com',
-            phone: '+34 956 789 012',
-            plan: 'Business',
-            status: 'inactive',
-            joinDate: '2023-12-01'
-        },
-    ]);
+    let clients = $state < Client[] > ([]);
 
-    let filteredClients = $state<Client[]>([]);
+    const API_BASE = (typeof window !== 'undefined' && (window as any).__API_BASE__) || 'http://localhost:8000/api';
+
+    let loadingClients = $state(false);
+
+    async function loadClients() {
+        loadingClients = true;
+        try {
+            const res = await fetch(`${API_BASE}/clientes/summary`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const list = Array.isArray(data?.data) ? data.data : data;
+            clients = (list || []).map((c: any) => ({
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                phone: c.phone,
+                plan: c.plan ?? '',
+                status: ((s => {
+                    if (!s) return 'inactive';
+                    const up = String(s).toUpperCase();
+                    if (up === 'ACTIVO' || up === 'ACTIVE') return 'active';
+                    if (up === 'SUSPENDIDO' || up === 'LIMITADO' || up === 'SUSPENDED')
+                        return 'suspended';
+                    return 'inactive';
+                })(c.status)),
+                joinDate: ''
+            }));
+        } catch (e) {
+            console.error('Error cargando clientes:', e);
+        } finally {
+            loadingClients = false;
+        }
+    }
+
+    onMount(() => {
+        loadClients();
+    });
+
+    let filteredClients = $state < Client[] > ([]);
 
     $effect(() => {
         filteredClients = clients.filter(client => {
@@ -82,6 +86,21 @@
             const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
             return matchesSearch && matchesStatus;
         });
+    });
+
+    // Pagination state and derived values
+    let page = $state(1);
+    let pageSize = $state(5);
+    const start = $derived((page - 1) * pageSize);
+    const end = $derived(start + pageSize);
+    const paginatedClients = $derived(filteredClients.slice(start, end));
+
+    // Clamp current page when filters or pageSize change
+    $effect(() => {
+        const total = filteredClients.length;
+        const maxPage = Math.max(1, Math.ceil(total / pageSize));
+        if (page > maxPage) page = maxPage;
+        if (start >= total && total > 0) page = 1;
     });
 
     function handleAddClient() {
@@ -110,9 +129,23 @@
             clients.splice(index, 1);
         }
     }
-	function handleCloseModal() {
-		showAddClient = false;
-	}
+
+    function handleCloseModal() {
+        showAddClient = false;
+    }
+
+    let showViewClient = $state(false);
+    let selectedClientId = $state < number | null > (null);
+
+    function handleViewClient(id: number) {
+        selectedClientId = id;
+        showViewClient = true;
+    }
+
+    function handleCloseView() {
+        showViewClient = false;
+        selectedClientId = null;
+    }
 </script>
 
 <div class="w-full mx-auto p-10">
@@ -132,7 +165,7 @@
     </div>
 
     <!-- Stats Cards -->
-     <TarjetasEstadisticas clients={clients}/>
+    <TarjetasEstadisticas clients={clients} />
 
     <!-- Filters and Search -->
     <div class="bg-card border border-neutral-800 rounded-lg p-6 mb-8">
@@ -157,15 +190,44 @@
     </div>
 
     <!-- Clients Table -->
-     <TablaClientes  filteredClients={filteredClients} handleDeleteClient={handleDeleteClient}/>
+    <TablaClientes filteredClients={paginatedClients} handleDeleteClient={handleDeleteClient}
+        handleViewClient={handleViewClient} loading={loadingClients}/>
+
+    <!-- Pagination Controls -->
+    <div class="flex justify-center items-center gap-4 w-full mt-4">
+        <Pagination count={filteredClients.length} {pageSize} {page} onPageChange={(event)=> (page = event.page)}>
+            <Pagination.PrevTrigger>
+                <ArrowLeftIcon class="size-4" />
+            </Pagination.PrevTrigger>
+            <Pagination.Context>
+                {#snippet children(pagination)}
+                    {#each pagination().pages as page, index (page)}
+                        {#if page.type === 'page'}
+                            <Pagination.Item {...page}>
+                                {page.value}
+                            </Pagination.Item>
+                        {:else}
+                            <Pagination.Ellipsis {index}>&#8230;</Pagination.Ellipsis>
+                        {/if}
+                    {/each}
+                {/snippet}
+            </Pagination.Context>
+            <Pagination.NextTrigger>
+                <ArrowRightIcon class="size-4" />
+            </Pagination.NextTrigger>
+        </Pagination>
+    </div>
 
     <!-- Add Client Modal -->
     {#if showAddClient}
     <ModalCrearCliente
-    	{newClient}
-	    {showAddClient}
-	    {handleAddClient}
-	    on:close={handleCloseModal}
+    {newClient}
+ {showAddClient}
+ {handleAddClient}
+ on:close={handleCloseModal}
     />
+    {/if}
+    {#if showViewClient}
+      <ModalCliente open={showViewClient} clientId={selectedClientId} onClose={handleCloseView} />
     {/if}
   </div>
