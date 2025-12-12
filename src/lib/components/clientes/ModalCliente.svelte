@@ -2,6 +2,7 @@
 	import { XIcon } from '@lucide/svelte';
 	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
 	import { onMount } from 'svelte';
+	import { API_BASE } from '$lib/config';
 
 	// Svelte 5 runes props
 	const props = $props<{ open: boolean; clientId: number | null; onClose: () => void }>();
@@ -10,7 +11,6 @@
 	let errorMsg = $state<string | null>(null);
 	let client: any = $state(null);
 
-	const API_BASE = (typeof window !== 'undefined' && (window as any).__API_BASE__) || 'http://localhost:8000/api';
 
 	function statusLabel(s?: string) {
 		if (!s) return 'Desconocido';
@@ -35,7 +35,7 @@
 		loading = true;
 		errorMsg = null;
 		try {
-			const res = await fetch(`${API_BASE}/clientes/full/${props.clientId}`)
+			const res = await fetch(`${API_BASE}/admin/clientes/full/${props.clientId}`)
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			client = await res.json();
         
@@ -178,23 +178,6 @@
 								{/key}
 							{:else}
 								<p class="text-muted-foreground">Sin plan activo.</p>
-							{/if}
-						</div>
-
-						<!-- Soportes recientes -->
-						<div class="card bg-surface-100-900 border border-neutral-800 rounded-lg p-4">
-							<div class="text-sm font-semibold mb-2">Soportes</div>
-							{#if client.soportes?.length}
-								<ul class="space-y-2 max-h-48 overflow-auto pr-1">
-									{#each client.soportes as t}
-										<li class="flex items-center justify-between gap-3 border border-neutral-800 rounded p-3">
-											<div class="text-sm text-foreground">{t.subject}</div>
-											<span class="text-xs text-muted-foreground">{t.status}</span>
-										</li>
-									{/each}
-								</ul>
-							{:else}
-								<p class="text-muted-foreground">Sin tickets de soporte.</p>
 							{/if}
 						</div>
 					{:else}

@@ -5,6 +5,7 @@
     import {
         onMount
     } from 'svelte';
+    import { API_BASE } from '$lib/config';
     import {
         Pagination
     } from '@skeletonlabs/skeleton-svelte';
@@ -39,14 +40,12 @@
 
     let clients = $state < Client[] > ([]);
 
-    const API_BASE = (typeof window !== 'undefined' && (window as any).__API_BASE__) || 'http://localhost:8000/api';
-
     let loadingClients = $state(false);
 
     async function loadClients() {
         loadingClients = true;
         try {
-            const res = await fetch(`${API_BASE}/clientes/summary`);
+            const res = await fetch(`${API_BASE}/admin/clientes/summary`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const list = Array.isArray(data?.data) ? data.data : data;
