@@ -145,6 +145,11 @@
         showViewClient = false;
         selectedClientId = null;
     }
+
+    function handleCreated() {
+        showAddClient = false;
+        loadClients();
+    }
 </script>
 
 <div class="w-full mx-auto p-10">
@@ -224,6 +229,7 @@
  {showAddClient}
  {handleAddClient}
  on:close={handleCloseModal}
+ on:created={handleCreated}
     />
     {/if}
     {#if showViewClient}
