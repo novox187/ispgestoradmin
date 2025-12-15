@@ -45,7 +45,10 @@
     async function loadClients() {
         loadingClients = true;
         try {
-            const res = await fetch(`${API_BASE}/admin/clientes/summary`);
+            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+            const res = await fetch(`${API_BASE}/admin/clientes/summary`, {
+                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
+            });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const list = Array.isArray(data?.data) ? data.data : data;

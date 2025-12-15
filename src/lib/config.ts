@@ -3,6 +3,5 @@
 import { env as publicEnv } from '$env/dynamic/public';
 
 export const API_BASE: string =
-  publicEnv.PUBLIC_API_BASE ||
-  (typeof window !== 'undefined' && (window as any).__API_BASE__) ||
-  'http://localhost:8000/api';
+  publicEnv.PUBLIC_API_BASE || 'http://localhost:8000/api'||
+  (typeof window !== 'undefined' && (window as any).__API_BASE__);

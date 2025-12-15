@@ -2,6 +2,8 @@
   // @ts-ignore
   import { LayoutDashboard, FlaskConical, Smartphone, Shield, Mail, Settings, Lock, User, MoreVertical, Users, Wifi, CreditCard, Zap, Bell, UserCog } from '@lucide/svelte';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  import { API_BASE } from '$lib/config';
   
   let { isOpen = $bindable(false) } = $props();
   
@@ -23,6 +25,30 @@
   function isActive(path) {
     const current = $page.url.pathname;
     return path === '/' ? current === '/' : current.startsWith(path);
+  }
+
+  let userMenuOpen = $state(false);
+  let loggingOut = $state(false);
+  async function handleLogout() {
+    if (loggingOut) return;
+    loggingOut = true;
+    const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+    try {
+      if (token) {
+        await fetch(`${API_BASE}/employee/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        }).catch(() => {});
+      }
+    } finally {
+      try {
+        localStorage.removeItem('employee_token');
+        localStorage.removeItem('employee_role');
+        localStorage.removeItem('employee_nombre');
+      } catch {}
+      goto('/login', { replaceState: true });
+      loggingOut = false;
+    }
   }
 </script>
 
@@ -100,7 +126,7 @@
       <div class="w-2 h-2 bg-blue-500 rounded-sm"></div>
       <span class="text-blue-500 text-xs font-mono font-bold tracking-wide">USER</span>
     </div>
-    <div class="flex items-center gap-3 px-3 py-2">
+    <div class="relative flex items-center gap-3 px-3 py-2">
       <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
         F
       </div>
@@ -108,9 +134,23 @@
         <div class="text-white font-bold text-sm">FERNANDO</div>
         <div class="text-gray-500 text-xs font-mono truncate">KZENBOUH.JOYCO_STUDIO</div>
       </div>
-      <button class="text-gray-400 hover:text-white flex-shrink-0" aria-label="User menu">
+      <button class="text-gray-400 hover:text-white flex-shrink-0" aria-label="User menu" onclick={() => (userMenuOpen = !userMenuOpen)}>
         <MoreVertical class="w-4 h-4" />
       </button>
+      {#if userMenuOpen}
+        <div class="absolute right-3 bottom-12 w-44 bg-neutral-900 border border-neutral-800 rounded-lg shadow-lg z-10">
+          <button type="button" class="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-200 hover:bg-gray-800" disabled>
+            Perfil
+          </button>
+          <button type="button" class="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-200 hover:bg-gray-800 disabled:opacity-60" onclick={handleLogout} disabled={loggingOut} aria-busy={loggingOut}>
+            {#if loggingOut}
+              Cerrando...
+            {:else}
+              Cerrar sesión
+            {/if}
+          </button>
+        </div>
+      {/if}
     </div>
   </div>
 </aside>
