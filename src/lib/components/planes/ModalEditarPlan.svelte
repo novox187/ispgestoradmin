@@ -57,27 +57,27 @@
         {#if working}
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="text-xs text-muted-foreground">Nombre</label>
+              <label for="plan-name" class="text-xs text-muted-foreground">Nombre</label>
               <input class="w-full px-3 py-2 rounded-lg bg-neutral-900" bind:value={working.name} />
             </div>
             <div>
-              <label class="text-xs text-muted-foreground">Precio</label>
+              <label for="plan-price" class="text-xs text-muted-foreground">Precio</label>
               <input type="number" step="0.01" class="w-full px-3 py-2 rounded-lg bg-neutral-900" bind:value={working.price} />
             </div>
             <div>
-              <label class="text-xs text-muted-foreground">Velocidad descarga</label>
+              <label for="download" class="text-xs text-muted-foreground">Velocidad descarga</label>
               <input type="number" class="w-full px-3 py-2 rounded-lg bg-neutral-900" bind:value={working.download} />
             </div>
             <div>
-              <label class="text-xs text-muted-foreground">Velocidad subida</label>
+              <label for="upload" class="text-xs text-muted-foreground">Velocidad subida</label>
               <input type="number" class="w-full px-3 py-2 rounded-lg bg-neutral-900" bind:value={working.upload} />
             </div>
             <div class="md:col-span-2">
-              <label class="text-xs text-muted-foreground">Descripción</label>
-              <textarea rows="3" class="w-full px-3 py-2 rounded-lg bg-neutral-900" bind:value={working.description} />
+              <label for="plan-description" class="text-xs text-muted-foreground">Descripción</label>
+              <textarea rows="3" class="w-full px-3 py-2 rounded-lg bg-neutral-900" bind:value={working.description}></textarea>
             </div>
             <div class="md:col-span-2">
-              <label class="text-xs text-muted-foreground">Características</label>
+              <label for="features-input" class="text-xs text-muted-foreground">Características</label>
               <div class="flex gap-2">
                 <input class="flex-1 px-3 py-2 rounded-lg bg-neutral-900" placeholder="Agregar característica" bind:value={newFeature} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') addFeature() }} />
                 <button class="px-3 py-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-400" onclick={addFeature}>Agregar</button>
