@@ -14,6 +14,12 @@
         ArrowRightIcon
     } from '@lucide/svelte';
     import ModalCliente from "$lib/components/clientes/ModalCliente.svelte";
+    import Encabezado from "$lib/components/Encabezado.svelte";
+
+      let isSidebarOpen = $state(false);
+  let isNotificationsOpen = $state(false);
+  function toggleSidebar() { isSidebarOpen = !isSidebarOpen }
+  function toggleNotifications() { isNotificationsOpen = !isNotificationsOpen }
 
     interface Client {
         id: number;
@@ -155,8 +161,11 @@
     }
 </script>
 
-<div class="w-full mx-auto p-10">
+<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
+    
     <!-- Header -->
+     <Encabezado {toggleSidebar} {toggleNotifications} />
+     <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
     <div class="flex items-center justify-between mb-8">
         <div>
             <h1 class="text-3xl md:text-4xl font-bold text-foreground mb-2">Gestión de Clientes</h1>
@@ -164,8 +173,7 @@
         </div>
         <div class="flex items-end justify-center">
             <button onclick={()=> (showAddClient = true)}
-                class="w-full px-6 py-2  bg-white text-gray-800 hover:bg-white/90 cursor-pointer rounded-lg transition font-medium"
-                >
+                class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors">
                 + Agregar Cliente
             </button>
         </div>
@@ -238,4 +246,5 @@
     {#if showViewClient}
       <ModalCliente open={showViewClient} clientId={selectedClientId} onClose={handleCloseView} />
     {/if}
-  </div>
+    </div>
+</main>
