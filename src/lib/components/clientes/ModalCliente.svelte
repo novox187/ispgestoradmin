@@ -35,7 +35,13 @@
 		loading = true;
 		errorMsg = null;
 		try {
-			const res = await fetch(`${API_BASE}/admin/clientes/full/${props.clientId}`)
+			const token = localStorage.getItem('employee_token');
+			const res = await fetch(`${API_BASE}/admin/clientes/full/${props.clientId}`, {
+				headers: {
+					'Authorization': `Bearer ${token}`,
+					'Accept': 'application/json'
+				}
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			client = await res.json();
         
