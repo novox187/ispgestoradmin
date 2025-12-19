@@ -16,7 +16,7 @@
   export let handleToggleStatus: (id: number) => void;
   export let loading: boolean = false;
   import { Menu, Portal } from '@skeletonlabs/skeleton-svelte';
-  import { EllipsisVertical } from "@lucide/svelte";
+  import { EllipsisVertical, Users } from "@lucide/svelte";
 </script>
 
 <div class="bg-card border border-neutral-800 rounded-lg overflow-hidden">
@@ -61,7 +61,7 @@
                   {plan.status === 'active' ? 'Activo' : 'Inactivo'}
                 </span>
               </td>
-              <td class="px-6 py-4 text-muted-foreground">{plan.clients}</td>
+              <td class="flex justify-center items-center gap-2 px-6 py-4 text-muted-foreground"><Users  class="size-4" /> {plan.clients}</td>
               <td class="px-6 py-4 text-foreground">${plan.revenue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td class="px-6 py-4">
                 <Menu>
