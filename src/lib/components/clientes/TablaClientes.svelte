@@ -11,6 +11,7 @@
     export let filteredClients: Client[] = [];
     export let handleDeleteClient: (id: number) => void;
     export let handleViewClient: (id: number) => void;
+    export let handleEditClient: (id: number) => void;
     export let handleSuspendClient: (id: number) => void;
     export let handleActivateClient: (id: number) => void;
     import {
@@ -78,6 +79,9 @@
                 <Menu.Content class="border-none focus:outline-none focus:ring-0">
                   <Menu.Item value="view" onclick={() => handleViewClient(client.id)}>
                     <Menu.ItemText>Ver</Menu.ItemText>
+                  </Menu.Item>
+                  <Menu.Item value="edit" onclick={() => handleEditClient(client.id)}>
+                    <Menu.ItemText>Editar</Menu.ItemText>
                   </Menu.Item>
                   {#if client.status === 'suspended'}
                     <Menu.Item value="activate" onclick={() => handleActivateClient(client.id)} class="bg-green-500/10 text-green-500 hover:bg-green-500/20">

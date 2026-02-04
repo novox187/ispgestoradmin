@@ -1,5 +1,6 @@
 <script lang="ts">
     import ModalCrearCliente from "$lib/components/clientes/ModalCrearCliente.svelte";
+    import ModalEditarCliente from "$lib/components/clientes/ModalEditarCliente.svelte";
     import TablaClientes from "$lib/components/clientes/TablaClientes.svelte";
     import TarjetasEstadisticas from "$lib/components/clientes/TarjetasEstadisticas.svelte";
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
@@ -247,6 +248,23 @@
         selectedClientId = null;
     }
 
+    let showEditClient = $state(false);
+
+    function handleEditClient(id: number) {
+        selectedClientId = id;
+        showEditClient = true;
+    }
+
+    function handleCloseEdit() {
+        showEditClient = false;
+        selectedClientId = null;
+    }
+
+    function handleUpdated() {
+        showEditClient = false;
+        loadClients();
+    }
+
     function handleCreated() {
         showAddClient = false;
         loadClients();
@@ -301,6 +319,7 @@
         filteredClients={clients} 
         handleDeleteClient={handleDeleteClient}
         handleViewClient={handleViewClient} 
+        handleEditClient={handleEditClient}
         handleSuspendClient={handleSuspendClient}
         handleActivateClient={handleActivateClient}
         loading={loadingClients}
@@ -366,6 +385,15 @@
 
     {#if showViewClient}
       <ModalCliente open={showViewClient} clientId={selectedClientId} onClose={handleCloseView} />
+    {/if}
+
+    {#if showEditClient}
+      <ModalEditarCliente 
+        open={showEditClient} 
+        clientId={selectedClientId} 
+        onClose={handleCloseEdit} 
+        onUpdated={handleUpdated} 
+      />
     {/if}
     </div>
 </main>
