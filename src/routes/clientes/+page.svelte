@@ -28,7 +28,7 @@
         email: string;
         phone: string;
         plan: string;
-        status: 'active' | 'suspended' | 'inactive';
+        status: 'active' | 'suspended' | 'inactive' | 'cancelled';
         joinDate: string;
     }
 
@@ -87,6 +87,7 @@
                     if (up === 'ACTIVO' || up === 'ACTIVE') return 'active';
                     if (up === 'SUSPENDIDO' || up === 'LIMITADO' || up === 'SUSPENDED')
                         return 'suspended';
+                    if (up === 'CANCELLED' || up === 'CANCELADO') return 'cancelled';
                     return 'inactive';
                 })(c.status)),
                 joinDate: ''
@@ -121,7 +122,7 @@
         confirmText: '',
         cancelText: '',
         type: 'info' as 'danger' | 'success' | 'warning' | 'info',
-        action: '' as 'suspend' | 'activate',
+        action: '' as 'suspend' | 'activate' | 'cancel',
         clientId: 0
     });
 
@@ -213,11 +214,20 @@
     }
 
     function handleDeleteClient(id: number) {
-        console.log('[v0] Deleting client:', id);
-        const index = clients.findIndex(client => client.id === id);
-        if (index !== -1) {
-            clients.splice(index, 1);
-        }
+        const client = clients.find(c => c.id === id);
+        if (!client) return;
+
+        confirmModalData = {
+            title: 'Eliminar Cliente',
+            message: `¿Estás seguro de eliminar el cliente ${client.name}? Esta acción marcará al cliente como cancelado.`,
+            confirmText: 'Sí, Eliminar',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            action: 'cancel',
+            clientId: id
+        };
+        confirmModalError = null;
+        confirmModalOpen = true;
     }
 
     function handleCloseModal() {
@@ -280,7 +290,7 @@
                     <option value="all">Todos</option>
                     <option value="active">Activo</option>
                     <option value="suspended">Suspendido</option>
-                    <option value="inactive">Inactivo</option>
+                    <option value="cancelled">Cancelado</option>
                 </select>
             </div>
         </div>

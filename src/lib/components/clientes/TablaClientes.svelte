@@ -5,7 +5,7 @@
         email: string;
         phone: string;
         plan: string;
-        status: 'active' | 'suspended' | 'inactive';
+        status: 'active' | 'suspended' | 'inactive' | 'cancelled';
     };
 
     export let filteredClients: Client[] = [];
@@ -61,9 +61,11 @@
               ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
               : client.status === 'suspended'
                 ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
-                : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                : client.status === 'cancelled'
+                    ? "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20"
+                    : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
           }`}>
-            {client.status === 'active' ? 'Activo' : client.status === 'suspended' ? 'Suspendido' : 'Inactivo'}
+            {client.status === 'active' ? 'Activo' : client.status === 'suspended' ? 'Suspendido' : client.status === 'cancelled' ? 'Cancelado' : 'Inactivo'}
           </span>
         </td>
         <td class="px-6 py-4">
@@ -86,9 +88,11 @@
                       <Menu.ItemText>Suspender</Menu.ItemText>
                     </Menu.Item>
                   {/if}
+                  {#if client.status === 'suspended'}
                   <Menu.Item value="delete" onclick={() => handleDeleteClient(client.id)} class="bg-red-500/10 text-red-500 hover:bg-red-500/20">
                     <Menu.ItemText>Eliminar</Menu.ItemText>
                   </Menu.Item>
+                  {/if}
                 </Menu.Content>
               </Menu.Positioner>
             </Portal>
