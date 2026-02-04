@@ -336,7 +336,13 @@
     <!-- Add Client Modal -->
     {#if showAddClient}
     <ModalCrearCliente
-    {newClient}
+    newClient={{
+        name: newClient.name,
+        email: newClient.email,
+        phone: newClient.phone,
+        plan: newClient.plan,
+        status: newClient.status === 'cancelled' ? undefined : newClient.status
+    }}
  {showAddClient}
  {handleAddClient}
  on:close={handleCloseModal}
