@@ -45,6 +45,8 @@
     });
 
     let clients = $state < Client[] > ([]);
+    let totalClients = $state(0);
+    let clientStats = $state({ total: 0, active: 0, suspended: 0, inactive: 0 });
 
     let loadingClients = $state(false);
 
@@ -52,12 +54,26 @@
         loadingClients = true;
         try {
             const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-            const res = await fetch(`${API_BASE}/admin/clientes/summary`, {
+            const params = new URLSearchParams({
+                page: page.toString(),
+                per_page: pageSize.toString(),
+                search: searchTerm,
+                status: statusFilter
+            });
+
+            const res = await fetch(`${API_BASE}/admin/clientes/summary?${params.toString()}`, {
                 headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            const list = Array.isArray(data?.data) ? data.data : data;
+            
+            // Handle paginated response
+            const list = data.data || [];
+            totalClients = data.total || 0;
+            if (data.stats) {
+                clientStats = data.stats;
+            }
+
             clients = (list || []).map((c: any) => ({
                 id: c.id,
                 name: c.name,
@@ -85,31 +101,15 @@
         loadClients();
     });
 
-    let filteredClients = $state < Client[] > ([]);
-
-    $effect(() => {
-        filteredClients = clients.filter(client => {
-            const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                client.email.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
-            return matchesSearch && matchesStatus;
-        });
-    });
-
-    // Pagination state and derived values
+    // Pagination state
     let page = $state(1);
     let pageSize = $state(5);
-    const start = $derived((page - 1) * pageSize);
-    const end = $derived(start + pageSize);
-    const paginatedClients = $derived(filteredClients.slice(start, end));
 
-    // Clamp current page when filters or pageSize change
-    $effect(() => {
-        const total = filteredClients.length;
-        const maxPage = Math.max(1, Math.ceil(total / pageSize));
-        if (page > maxPage) page = maxPage;
-        if (start >= total && total > 0) page = 1;
-    });
+    function handleSearch() {
+        page = 1;
+        loadClients();
+    }
+
 
     function handleAddClient() {
         console.log('[v0] Adding client:', newClient);
@@ -180,7 +180,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <TarjetasEstadisticas clients={clients} />
+    <TarjetasEstadisticas stats={clientStats} />
 
     <!-- Filters and Search -->
     <div class="bg-card border border-neutral-800 rounded-lg p-6 mb-8">
@@ -188,12 +188,12 @@
             <div>
                 <label class="block text-sm font-medium text-foreground mb-2" for="searchTerm">Buscar
                     Cliente</label>
-                <input id="searchTerm" type="text" placeholder="Nombre o email..." bind:value={searchTerm}
+                <input id="searchTerm" type="text" placeholder="Nombre o email..." bind:value={searchTerm} oninput={handleSearch}
                     class="w-full px-4 py-2 border border-neutral-800 rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0" />
             </div>
             <div>
                 <label class="block text-sm font-medium text-foreground mb-2" for="statusFilter">Estado</label>
-                <select id="statusFilter" bind:value={statusFilter}
+                <select id="statusFilter" bind:value={statusFilter} onchange={handleSearch}
                     class="w-full px-5 py-2 border border-neutral-800 rounded-lg focus:outline-none focus:ring-0 bg-neutral-900">
                     <option value="all">Todos</option>
                     <option value="active">Activo</option>
@@ -205,12 +205,13 @@
     </div>
 
     <!-- Clients Table -->
-    <TablaClientes filteredClients={paginatedClients} handleDeleteClient={handleDeleteClient}
+    <TablaClientes filteredClients={clients} handleDeleteClient={handleDeleteClient}
         handleViewClient={handleViewClient} loading={loadingClients}/>
 
     <!-- Pagination Controls -->
+    {#if totalClients > 0}
     <div class="flex justify-center items-center gap-4 w-full mt-4">
-        <Pagination count={filteredClients.length} {pageSize} {page} onPageChange={(event)=> (page = event.page)}>
+        <Pagination count={totalClients} {pageSize} {page} onPageChange={(event)=> { page = event.page; loadClients(); }}>
             <Pagination.PrevTrigger>
                 <ArrowLeftIcon class="size-4" />
             </Pagination.PrevTrigger>
@@ -232,6 +233,7 @@
             </Pagination.NextTrigger>
         </Pagination>
     </div>
+    {/if}
 
     <!-- Add Client Modal -->
     {#if showAddClient}
