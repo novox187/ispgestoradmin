@@ -11,6 +11,8 @@
     export let filteredClients: Client[] = [];
     export let handleDeleteClient: (id: number) => void;
     export let handleViewClient: (id: number) => void;
+    export let handleSuspendClient: (id: number) => void;
+    export let handleActivateClient: (id: number) => void;
     import {
         Menu,
         Portal
@@ -75,6 +77,15 @@
                   <Menu.Item value="view" onclick={() => handleViewClient(client.id)}>
                     <Menu.ItemText>Ver</Menu.ItemText>
                   </Menu.Item>
+                  {#if client.status === 'suspended'}
+                    <Menu.Item value="activate" onclick={() => handleActivateClient(client.id)} class="bg-green-500/10 text-green-500 hover:bg-green-500/20">
+                      <Menu.ItemText>Activar</Menu.ItemText>
+                    </Menu.Item>
+                  {:else if client.status === 'active'}
+                    <Menu.Item value="suspend" onclick={() => handleSuspendClient(client.id)} class="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
+                      <Menu.ItemText>Suspender</Menu.ItemText>
+                    </Menu.Item>
+                  {/if}
                   <Menu.Item value="delete" onclick={() => handleDeleteClient(client.id)} class="bg-red-500/10 text-red-500 hover:bg-red-500/20">
                     <Menu.ItemText>Eliminar</Menu.ItemText>
                   </Menu.Item>

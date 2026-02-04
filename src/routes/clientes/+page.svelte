@@ -2,6 +2,7 @@
     import ModalCrearCliente from "$lib/components/clientes/ModalCrearCliente.svelte";
     import TablaClientes from "$lib/components/clientes/TablaClientes.svelte";
     import TarjetasEstadisticas from "$lib/components/clientes/TarjetasEstadisticas.svelte";
+    import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
     import {
         onMount
     } from 'svelte';
@@ -110,6 +111,19 @@
         loadClients();
     }
 
+    // Modal de Confirmación
+    let confirmModalOpen = $state(false);
+    let confirmModalLoading = $state(false);
+    let confirmModalError = $state<string | null>(null);
+    let confirmModalData = $state({
+        title: '',
+        message: '',
+        confirmText: '',
+        cancelText: '',
+        type: 'info' as 'danger' | 'success' | 'warning' | 'info',
+        action: '' as 'suspend' | 'activate',
+        clientId: 0
+    });
 
     function handleAddClient() {
         console.log('[v0] Adding client:', newClient);
@@ -128,6 +142,74 @@
             status: 'active'
         };
         showAddClient = false;
+    }
+
+    function handleSuspendClient(id: number) {
+        const client = clients.find(c => c.id === id);
+        if (!client) return;
+
+        confirmModalData = {
+            title: 'Desactivar Servicios',
+            message: `¿Estás seguro de querer desactivar los servicios del usuario ${client.name} con el id ${client.id}??`,
+            confirmText: 'Sí, Desactivar',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            action: 'suspend',
+            clientId: id
+        };
+        confirmModalError = null;
+        confirmModalOpen = true;
+    }
+
+    function handleActivateClient(id: number) {
+        const client = clients.find(c => c.id === id);
+        if (!client) return;
+
+        confirmModalData = {
+            title: 'Activar Servicios',
+            message: `¿Estás seguro de querer activar los servicios del usuario ${client.name} con el id ${client.id}??`,
+            confirmText: 'Sí, Activar',
+            cancelText: 'Cancelar',
+            type: 'success',
+            action: 'activate',
+            clientId: id
+        };
+        confirmModalError = null;
+        confirmModalOpen = true;
+    }
+
+    async function handleConfirmAction() {
+        confirmModalLoading = true;
+        confirmModalError = null;
+        const id = confirmModalData.clientId;
+        const action = confirmModalData.action;
+
+        try {
+            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+            const url = `${API_BASE}/admin/clientes/${id}/${action}`;
+            
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                confirmModalError = data.message || `Error al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
+                return;
+            }
+            
+            // Éxito
+            confirmModalOpen = false;
+            loadClients();
+            
+        } catch (e) {
+            console.error(e);
+            confirmModalError = `Error de conexión al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
+        } finally {
+            confirmModalLoading = false;
+        }
     }
 
     function handleDeleteClient(id: number) {
@@ -205,8 +287,14 @@
     </div>
 
     <!-- Clients Table -->
-    <TablaClientes filteredClients={clients} handleDeleteClient={handleDeleteClient}
-        handleViewClient={handleViewClient} loading={loadingClients}/>
+    <TablaClientes 
+        filteredClients={clients} 
+        handleDeleteClient={handleDeleteClient}
+        handleViewClient={handleViewClient} 
+        handleSuspendClient={handleSuspendClient}
+        handleActivateClient={handleActivateClient}
+        loading={loadingClients}
+    />
 
     <!-- Pagination Controls -->
     {#if totalClients > 0}
@@ -245,6 +333,21 @@
  on:created={handleCreated}
     />
     {/if}
+
+    <!-- Confirmation Modal -->
+    <ModalConfirmacion
+        bind:open={confirmModalOpen}
+        title={confirmModalData.title}
+        message={confirmModalData.message}
+        confirmText={confirmModalData.confirmText}
+        cancelText={confirmModalData.cancelText}
+        type={confirmModalData.type}
+        loading={confirmModalLoading}
+        error={confirmModalError}
+        on:confirm={handleConfirmAction}
+        on:cancel={() => confirmModalOpen = false}
+    />
+
     {#if showViewClient}
       <ModalCliente open={showViewClient} clientId={selectedClientId} onClose={handleCloseView} />
     {/if}
