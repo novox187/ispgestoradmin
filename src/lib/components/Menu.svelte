@@ -12,7 +12,6 @@
     { label: 'CLIENTES', icon: Users, path: '/clientes' },
     { label: 'PLANES', icon: Wifi, path: '/planes' },
     { label: 'FACTURACION', icon: CreditCard, path: '/facturas' },
-    { label: 'AUTOMATIZACION', icon: Zap, path: '/automatizacion' },
     { label: 'MIKROTIK', icon: Settings, path: '/mikrotik', locked: false },
     { label: 'USUARIOS', icon: UserCog, path: '/usuarios', locked: false },
   ];
