@@ -53,25 +53,42 @@
     if (loading) return;
     actionError = null;
     loading = true;
-    try {
-      const result = await props.onAction(useAsync);
-      if (result.ok) {
-        open = false;
-        props.onNotify?.({ type: 'success', message: result.message });
-      } else {
-        actionError = result.message || 'No se pudo completar la acción.';
-        props.onNotify?.({ type: 'error', message: actionError });
+
+    if (useAsync) {
+      open = false; // Cierra el modal inmediatamente
+      props.onNotify?.({ type: 'info', message: 'La tarea se está ejecutando en segundo plano.' });
+      props.onAction(true).then((result: ActionResult) => {
+        if (result.ok) {
+          props.onNotify?.({ type: 'success', message: result.message });
+        } else {
+          props.onNotify?.({ type: 'error', message: result.message || 'No se pudo completar la acción.' });
+        }
+      }).catch((e: unknown) => {
+        const message = e instanceof Error ? e.message : 'Error inesperado';
+        props.onNotify?.({ type: 'error', message });
+      }).finally(() => {
+        loading = false;
+      });
+    } else {
+      try {
+        const result = await props.onAction(false);
+        if (result.ok) {
+          open = false;
+          props.onNotify?.({ type: 'success', message: result.message });
+        } else {
+          actionError = result.message || 'No se pudo completar la acción.';
+        }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Error inesperado';
+        actionError = message;
+      } finally {
+        loading = false;
       }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Error inesperado';
-      actionError = message;
-      props.onNotify?.({ type: 'error', message });
-    } finally {
-      loading = false;
     }
   }
 </script>
 
+<!-- svelte-ignore slot_element_deprecated -->
 <div class="card bg-surface-100-900 border border-neutral-800 rounded-xl p-5 space-y-4">
   <div class="space-y-1">
     <h3 class="text-lg font-semibold text-foreground">{props.title}</h3>

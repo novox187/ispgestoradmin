@@ -78,12 +78,6 @@
         onAction={syncQueues}
         onNotify={handleNotify}
       >
-        <div class="flex items-center justify-end">
-          <label class="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" bind:checked={useAsync} />
-            Ejecutar en segundo plano
-          </label>
-        </div>
       </MikroTikActionCard>
     </div>
   </div>
