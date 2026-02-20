@@ -12,6 +12,9 @@
   export let type: 'danger' | 'success' | 'warning' | 'info' = 'info';
   export let loading: boolean = false;
   export let error: string | null = null;
+  export let detailsTitle: string = '';
+  export let detailsItems: string[] = [];
+  export let secondaryMessage: string = '';
 
   const dispatch = createEventDispatcher();
 
@@ -23,11 +26,10 @@
   function handleCancel() {
     if (loading) return;
     dispatch('cancel');
-    open = false;
   }
 </script>
 
-<Dialog bind:open>
+<Dialog open={open} onOpenChange={(v) => open = v.open}>
   <Dialog.Backdrop 
     transition={fade} 
     transitionParams={{ duration: 200 }}
@@ -68,9 +70,29 @@
           <p class="text-muted-foreground text-sm leading-relaxed">
             {message}
           </p>
+          {#if secondaryMessage}
+            <p class="text-muted-foreground text-xs leading-relaxed">
+              {secondaryMessage}
+            </p>
+          {/if}
+
+          {#if detailsTitle || (detailsItems && detailsItems.length)}
+            <div class="w-full text-left bg-neutral-900/60 border border-neutral-800 rounded-lg p-4 space-y-2">
+              {#if detailsTitle}
+                <p class="text-xs font-semibold text-foreground">{detailsTitle}</p>
+              {/if}
+              {#if detailsItems && detailsItems.length}
+                <ul class="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  {#each detailsItems as item}
+                    <li>{item}</li>
+                  {/each}
+                </ul>
+              {/if}
+            </div>
+          {/if}
 
           {#if error}
-            <div class="w-full p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+            <div class="w-full p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm" role="alert" aria-live="assertive">
               {error}
             </div>
           {/if}
@@ -92,7 +114,11 @@
             class={`flex-1 px-4 py-2 text-sm font-medium rounded-lg text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${
               type === 'danger' 
                 ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-900/20' 
-                : 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-900/20'
+                : type === 'success'
+                ? 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-900/20'
+                : type === 'warning'
+                ? 'bg-yellow-500 hover:bg-yellow-600 shadow-lg shadow-yellow-900/20'
+                : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/20'
             }`}
             onclick={handleConfirm}
             disabled={loading}

@@ -4,6 +4,7 @@
     import TablaClientes from "$lib/components/clientes/TablaClientes.svelte";
     import TarjetasEstadisticas from "$lib/components/clientes/TarjetasEstadisticas.svelte";
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
+    import { toast } from 'svelte-sonner';
     import {
         onMount
     } from 'svelte';
@@ -198,17 +199,22 @@
             const data = await res.json();
             
             if (!res.ok) {
-                confirmModalError = data.message || `Error al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
+                const errorMsg = data.message || `Error al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
+                confirmModalError = errorMsg;
+                toast.error(errorMsg);
                 return;
             }
             
             // Éxito
+            toast.success(`Cliente ${action === 'suspend' ? 'suspendido' : (action === 'activate' ? 'activado' : 'cancelado')} con éxito`);
             confirmModalOpen = false;
             loadClients();
             
         } catch (e) {
             console.error(e);
-            confirmModalError = `Error de conexión al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
+            const errorMsg = `Error de conexión al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
+            confirmModalError = errorMsg;
+            toast.error(errorMsg);
         } finally {
             confirmModalLoading = false;
         }

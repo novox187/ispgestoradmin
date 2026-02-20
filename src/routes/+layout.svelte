@@ -3,6 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
     import Menu from '$lib/components/Menu.svelte';
     import Menuderecha from '$lib/components/Menuderecha.svelte';
+    import { Toaster } from 'svelte-sonner';
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
@@ -51,4 +52,5 @@
   {#if !isLogin}
     <Menuderecha bind:isOpen={isNotificationsOpen} />
   {/if}
+  <Toaster theme="dark" position="bottom-right" />
 </div>
