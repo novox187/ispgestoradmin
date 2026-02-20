@@ -10,11 +10,12 @@
     import { Pagination } from '@skeletonlabs/skeleton-svelte';
     import { ArrowLeftIcon, ArrowRightIcon } from '@lucide/svelte';
     import Encabezado from "$lib/components/Encabezado.svelte";
+    import { appState } from '$lib/stores/app.svelte';
 
     let isSidebarOpen = $state(false);
     let isNotificationsOpen = $state(false);
-    function toggleSidebar() { isSidebarOpen = !isSidebarOpen }
-    function toggleNotifications() { isNotificationsOpen = !isNotificationsOpen }
+    function toggleSidebar() { appState.toggleSidebar() }
+    function toggleNotifications() { appState.toggleNotifications() }
 
     interface Employee {
         id: number;

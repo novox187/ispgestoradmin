@@ -3,11 +3,12 @@
   import MikroTikActionCard from "$lib/components/mikrotik/MikroTikActionCard.svelte";
   import { API_BASE } from "$lib/config";
   import { toast } from 'svelte-sonner';
+  import { appState } from '$lib/stores/app.svelte';
 
   let isSidebarOpen = $state(false);
   let isNotificationsOpen = $state(false);
-  function toggleSidebar() { isSidebarOpen = !isSidebarOpen }
-  function toggleNotifications() { isNotificationsOpen = !isNotificationsOpen }
+  function toggleSidebar() { appState.toggleSidebar() }
+  function toggleNotifications() { appState.toggleNotifications() }
 
   let useAsync = $state(false);
 

@@ -7,11 +7,12 @@
     import TablaFacturas from "$lib/components/facturas/TablaFacturas.svelte";
     import ModalCrearFactura from "$lib/components/facturas/ModalCrearFactura.svelte";
     import ModalVerFactura from "$lib/components/facturas/ModalVerFactura.svelte";
+    import { appState } from '$lib/stores/app.svelte';
 
     let isSidebarOpen = $state(false);
     let isNotificationsOpen = $state(false);
-    function toggleSidebar() { isSidebarOpen = !isSidebarOpen }
-    function toggleNotifications() { isNotificationsOpen = !isNotificationsOpen }
+    function toggleSidebar() { appState.toggleSidebar() }
+    function toggleNotifications() { appState.toggleNotifications() }
 
     interface Invoice {
         id: number;

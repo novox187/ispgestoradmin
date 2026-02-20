@@ -7,11 +7,10 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
+    import { appState } from '$lib/stores/app.svelte';
 	
 	let { children } = $props();
 
-	let isSidebarOpen = $state(false);
-    let isNotificationsOpen = $state(false);
     const isLogin = $derived($page.url.pathname === '/login');
 
     function guard() {
@@ -33,7 +32,8 @@
     });
 
     $effect(() => {
-        void $page.url.pathname;
+        // Run guard on navigation
+        const p = $page.url.pathname;
         guard();
     });
 </script>
@@ -44,13 +44,13 @@
 
 <div class="flex h-screen min-w-dvw bg-[#0f0f0f] text-gray-100 ">
   {#if !isLogin}
-    <Menu bind:isOpen={isSidebarOpen} />
+    <Menu bind:isOpen={appState.isSidebarOpen} />
   {/if}
 
 {@render children?.()}
   <!-- RightSidebar como drawer en móvil, fijo en desktop -->
   {#if !isLogin}
-    <Menuderecha bind:isOpen={isNotificationsOpen} />
+    <Menuderecha bind:isOpen={appState.isNotificationsOpen} />
   {/if}
   <Toaster theme="dark" position="bottom-right" />
 </div>

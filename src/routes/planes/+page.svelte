@@ -8,10 +8,12 @@
   import { ArrowLeftIcon, ArrowRightIcon } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { API_BASE } from "$lib/config";
+  import { appState } from '$lib/stores/app.svelte';
+
   let isSidebarOpen = $state(false);
   let isNotificationsOpen = $state(false);
-  function toggleSidebar() { isSidebarOpen = !isSidebarOpen }
-  function toggleNotifications() { isNotificationsOpen = !isNotificationsOpen }
+  function toggleSidebar() { appState.toggleSidebar() }
+  function toggleNotifications() { appState.toggleNotifications() }
 
   type PlanStatus = 'active' | 'inactive';
   interface Plan {

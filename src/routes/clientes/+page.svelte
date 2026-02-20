@@ -18,11 +18,12 @@
     } from '@lucide/svelte';
     import ModalCliente from "$lib/components/clientes/ModalCliente.svelte";
     import Encabezado from "$lib/components/Encabezado.svelte";
+    import { appState } from '$lib/stores/app.svelte';
 
-      let isSidebarOpen = $state(false);
-  let isNotificationsOpen = $state(false);
-  function toggleSidebar() { isSidebarOpen = !isSidebarOpen }
-  function toggleNotifications() { isNotificationsOpen = !isNotificationsOpen }
+    let isSidebarOpen = $state(false);
+    let isNotificationsOpen = $state(false);
+    function toggleSidebar() { appState.toggleSidebar() }
+    function toggleNotifications() { appState.toggleNotifications() }
 
     interface Client {
         id: number;

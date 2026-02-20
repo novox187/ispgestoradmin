@@ -1,13 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Menu from "$lib/components/Menu.svelte";
   import Encabezado from "$lib/components/Encabezado.svelte";
   import MetricasCarta from "$lib/components/MetricasCarta.svelte";
   import Chart from "$lib/components/Chart.svelte";
   import TopUsuarios from "$lib/components/TopUsuarios.svelte";
   import EstadoRouter from "$lib/components/EstadoRouter.svelte";
-  import Menuderecha from "$lib/components/Menuderecha.svelte";
   import { Users } from "@lucide/svelte";
+  import { appState } from '$lib/stores/app.svelte';
 
   // Tipos e interfaces
   type Period = "WEEK" | "MONTH" | "YEAR";
@@ -32,11 +31,11 @@
   let isNotificationsOpen = $state(false);
 
   function toggleSidebar() {
-    isSidebarOpen = !isSidebarOpen;
+    appState.toggleSidebar();
   }
   
   function toggleNotifications() {
-    isNotificationsOpen = !isNotificationsOpen;
+    appState.toggleNotifications();
   }
 
   // Datos del gráfico
