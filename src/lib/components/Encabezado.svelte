@@ -1,6 +1,10 @@
-<script>
+<script lang="ts">
   // Tu código Svelte existente
-  let { toggleSidebar } = $props();
+  const props = $props<{
+    toggleSidebar: () => void;
+    toggleNotifications?: () => void;
+    notificationCount?: number;
+  }>();
 
   // Obtener la ruta actual (pathname)
   // Asume que este componente se renderiza en un entorno de navegador.
@@ -12,7 +16,7 @@
   /**
    * @param {string} path
    */
-  function getHeaderTitle(path) {
+  function getHeaderTitle(path: string) {
     // Eliminar barras iniciales o finales para aislar el nombre de la ruta
     let routeName = path.replace(/^\/+|\/+$/g, "");
 
@@ -39,7 +43,7 @@
     <div class="flex items-center gap-3">
       <button
         class="lg:hidden p-2 hover:bg-gray-800 rounded-lg transition-colors"
-        onclick={toggleSidebar}
+        onclick={props.toggleSidebar}
         aria-label="Toggle menu"
       >
         <svg

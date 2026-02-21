@@ -7,6 +7,7 @@
   import EstadoRouter from "$lib/components/EstadoRouter.svelte";
   import { Users } from "@lucide/svelte";
   import { appState } from '$lib/stores/app.svelte';
+  import { API_BASE } from '$lib/config';
 
   // Tipos e interfaces
   type Period = "WEEK" | "MONTH" | "YEAR";
@@ -29,6 +30,11 @@
   let selectedPeriod: Period = $state("WEEK");
   let isSidebarOpen = $state(false);
   let isNotificationsOpen = $state(false);
+  let stats = $state({
+    active_users: 0,
+    users_with_debt: 0,
+    inactive_users: 0
+  });
 
   function toggleSidebar() {
     appState.toggleSidebar();
@@ -37,6 +43,25 @@
   function toggleNotifications() {
     appState.toggleNotifications();
   }
+
+  async function loadStats() {
+    try {
+        const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+        const res = await fetch(`${API_BASE}/admin/dashboard/stats`, {
+            headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            stats = data;
+        }
+    } catch (e) {
+        console.error('Error loading stats:', e);
+    }
+  }
+
+  onMount(() => {
+    loadStats();
+  });
 
   // Datos del gráfico
   const chartData: ChartData = {
@@ -90,19 +115,19 @@
       >
         <MetricasCarta
           title="USUARIOS ACTIVOS"
-          value="150"
+          value={stats.active_users}
           icon={Users}
           tipo="activo"
         />
         <MetricasCarta 
           title="USUARIOS CON DEUDA"
-          value="5"
+          value={stats.users_with_debt}
           icon={Users}
           tipo="deuda"
         />
         <MetricasCarta
           title="USUARIOS INACTIVOS"
-          value="15"
+          value={stats.inactive_users}
           icon={Users}
           tipo="inactivo"
         />
