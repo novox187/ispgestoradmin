@@ -1,6 +1,6 @@
 <script>
   // Tu código Svelte existente
-  let { toggleSidebar, toggleNotifications, notificationCount = 2 } = $props();
+  let { toggleSidebar } = $props();
 
   // Obtener la ruta actual (pathname)
   // Asume que este componente se renderiza en un entorno de navegador.
@@ -76,24 +76,6 @@
                 ultima actualizacion  12:05
             </div>
  -->
-      <button
-        class="xl:hidden relative p-2 hover:bg-gray-800 rounded-lg transition-colors"
-        onclick={toggleNotifications}
-        aria-label="Toggle notifications"
-      >
-        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"
-          />
-        </svg>
-        {#if notificationCount > 0}
-          <span
-            class="absolute top-1 right-1 w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center"
-          >
-            {notificationCount}
-          </span>
-        {/if}
-      </button>
     </div>
   </div>
 </header>
