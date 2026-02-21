@@ -1,112 +1,142 @@
-<script>
-  const rebels = [
-    { 
-      id: 1, 
-      name: 'KRIMSON', 
-      handle: '@KRIMSON', 
-      points: 148, 
-      streak: '2 WEEKS STREAK 🔥',
-      featured: true,
-      color: 'from-purple-500 to-pink-500'
-    },
-    { 
-      id: 2, 
-      name: 'MATI', 
-      handle: '@MATI', 
-      points: 129, 
-      featured: false,
-      color: 'from-orange-500 to-red-500' 
-    },
-    { 
-      id: 3, 
-      name: 'PEM', 
-      handle: '@MATT', 
-      points: 108, 
-      featured: false,
-      color: 'from-green-500 to-emerald-500' 
-    },
-    { 
-      id: 4, 
-      name: 'JOYBOY', 
-      handle: '@JOYBOY', 
-      points: 64, 
-      featured: false,
-      color: 'from-blue-500 to-cyan-500' 
+<script lang="ts">
+  import { onMount } from "svelte";
+  import { API_BASE } from '$lib/config';
+  import { fade } from 'svelte/transition';
+  import ModalCliente from '$lib/components/clientes/ModalCliente.svelte';
+
+  interface Debtor {
+    id: number;
+    full_name: string;
+    email: string;
+    total_debt: number;
+    pending_invoices_count: number;
+  }
+
+  let debtors: Debtor[] = [];
+  let loading = true;
+  let showClientModal = false;
+  let selectedClientId: number | null = null;
+
+  async function loadDebtors() {
+    try {
+      const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+      const res = await fetch(`${API_BASE}/admin/dashboard/top-debtors`, {
+          headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
+      });
+      if (res.ok) {
+        debtors = await res.json();
+      }
+    } catch (e) {
+      console.error('Error loading top debtors:', e);
+    } finally {
+      loading = false;
     }
-  ];
+  }
+
+  function openModal(id: number) {
+    selectedClientId = id;
+    showClientModal = true;
+  }
+
+  function closeModal() {
+    showClientModal = false;
+    selectedClientId = null;
+  }
+
+  onMount(() => {
+    loadDebtors();
+  });
+
+  function formatCurrency(amount: number) {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount);
+  }
 </script>
 
-<div class="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 md:p-6">
+<div class="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 md:p-6 h-full flex flex-col">
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-2 text-xs font-mono text-gray-300">
-      <div class="w-2 h-2 bg-blue-500 rounded-sm"></div>
-      <span class="font-bold tracking-wide">REBELS RANKING</span>
+      <div class="w-2 h-2 bg-red-500 rounded-sm"></div>
+      <span class="font-bold tracking-wide">TOP DEUDORES</span>
     </div>
-    <div class="bg-yellow-700/20 border border-yellow-700 text-yellow-600 px-3 py-1 rounded-md text-xs font-bold">
-      2 NEW
+    <div class="bg-red-900/20 border border-red-900/50 text-red-500 px-3 py-1 rounded-md text-xs font-bold">
+      CRÍTICO
     </div>
   </div>
 
-  <div class="space-y-4">
-    {#each rebels as rebel}
-      <div class="flex items-center justify-between w-full">
-        <div class="flex items-center gap-1 md:gap-2 w-full">
-          <!-- Ranking Number -->
-          <div class="{
-            rebel.featured 
-              ? 'h-10 bg-blue-600 text-white' 
-              : 'h-8 bg-gray-800 text-gray-300'
-            } flex items-center justify-center rounded text-sm font-bold px-1.5 mr-1 md:mr-2 flex-shrink-0">
-            {rebel.id}
-          </div>
-          
-          <!-- Avatar -->
-          <div class="{
-            rebel.featured 
-              ? 'w-14 h-14 md:w-16 md:h-16' 
-              : 'w-10 h-10 md:w-12 md:h-12'
-            } rounded-lg overflow-hidden bg-gradient-to-br {rebel.color} flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-lg">
-            {rebel.name.charAt(0)}
-          </div>
-          
-          <!-- Content Container -->
-          <div class="{
-            rebel.featured ? 'bg-gray-800/50' : ''
-            } flex flex-1 h-full items-center justify-between py-2 px-2.5 rounded">
-            <div class="flex flex-col flex-1 min-w-0">
-              <div class="flex items-center justify-between gap-2">
-                <div class="flex items-baseline gap-2 flex-1 min-w-0">
-                  <span class="{
-                    rebel.featured 
-                      ? 'text-xl md:text-2xl' 
-                      : 'text-lg md:text-xl'
-                    } font-bold text-white tracking-wide truncate">
-                    {rebel.name}
-                  </span>
-                  <span class="text-gray-400 text-xs md:text-sm whitespace-nowrap">
-                    {rebel.handle}
-                  </span>
-                </div>
-                
-                <!-- Points Badge -->
-                <div class="{
-                  rebel.featured 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-800 text-gray-300'
-                  } px-3 md:px-4 py-1.5 md:py-2 rounded-md font-bold text-xs md:text-sm whitespace-nowrap flex-shrink-0">
-                  {rebel.points} POINTS
-                </div>
+  <div class="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+    {#if loading}
+      {#each Array(3) as _}
+        <div class="animate-pulse flex items-center justify-between w-full py-2">
+           <div class="flex items-center gap-3 w-full">
+              <div class="w-10 h-10 rounded-lg bg-gray-800"></div>
+              <div class="flex-1 space-y-2">
+                 <div class="h-4 bg-gray-800 rounded w-3/4"></div>
+                 <div class="h-3 bg-gray-800 rounded w-1/2"></div>
+              </div>
+           </div>
+        </div>
+      {/each}
+    {:else if debtors.length === 0}
+      <div class="text-gray-500 text-sm text-center py-4">No hay clientes con deuda pendiente.</div>
+    {:else}
+      {#each debtors as debtor, i}
+        <div class="flex items-center justify-between w-full group" transition:fade>
+          <div class="flex items-center gap-3 w-full">
+            <!-- Ranking Number -->
+            <div class="h-8 w-8 {i === 0 ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'} flex items-center justify-center rounded text-sm font-bold flex-shrink-0">
+              {i + 1}
+            </div>
+            
+            <!-- Avatar/Initial -->
+            <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center text-gray-300 font-bold text-lg flex-shrink-0 border border-gray-700">
+              {debtor.full_name.charAt(0).toUpperCase()}
+            </div>
+            
+            <!-- Content -->
+            <div class="flex flex-1 items-center justify-between bg-gray-800/30 hover:bg-gray-800/50 transition-colors p-2 rounded border border-transparent hover:border-gray-700">
+              <div class="flex flex-col min-w-0 mr-2">
+                <span class="text-sm font-bold text-gray-200 truncate" title={debtor.full_name}>
+                  {debtor.full_name}
+                </span>
+                <span class="text-xs text-gray-500 truncate">
+                  {debtor.pending_invoices_count} facturas pendientes
+                </span>
               </div>
               
-              {#if rebel.streak}
-                <span class="text-sm text-orange-400 italic mt-0.5">
-                  {rebel.streak}
-                </span>
-              {/if}
+              <div class="flex flex-col items-end">
+                 <span class="text-sm font-bold text-red-400 whitespace-nowrap">
+                   {formatCurrency(Number(debtor.total_debt))}
+                 </span>
+                 <button 
+                    onclick={() => openModal(debtor.id)}
+                    class="text-[10px] text-blue-400 hover:text-blue-300 hover:underline cursor-pointer bg-transparent border-none p-0"
+                 >
+                    Ver cliente
+                 </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    {/each}
+      {/each}
+    {/if}
   </div>
 </div>
+
+<ModalCliente 
+  open={showClientModal} 
+  clientId={selectedClientId} 
+  onClose={closeModal} 
+/>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #374151;
+    border-radius: 20px;
+  }
+</style>

@@ -66,14 +66,14 @@
 	<Portal>
 		<Dialog.Backdrop class="fixed inset-0 z-50 bg-surface-50-950/50" />
 		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center p-4">
-			<Dialog.Content class="card bg-surface-100-900 w-full max-w-2xl p-4 space-y-4 shadow-xl rounded-xl {animation}">
-				<header class="flex justify-between items-center">
+			<Dialog.Content class="card bg-surface-100-900 w-full max-w-2xl p-4 space-y-4 shadow-xl rounded-xl max-h-[90vh] flex flex-col {animation}">
+				<header class="flex justify-between items-center flex-shrink-0">
 					<Dialog.Title class="text-lg font-bold">Detalle del Cliente</Dialog.Title>
 					<Dialog.CloseTrigger class="btn-icon hover:preset-tonal">
 						<XIcon class="size-4" />
 					</Dialog.CloseTrigger>
 				</header>
-				<div class="space-y-6">
+				<div class="space-y-6 overflow-y-auto pr-2 custom-scrollbar flex-1">
 					{#if loading}
 						<!-- Skeleton de carga -->
 						<div class="space-y-6 animate-pulse">
@@ -186,6 +186,27 @@
 								<p class="text-muted-foreground">Sin plan activo.</p>
 							{/if}
 						</div>
+						<!-- Facturas pendientes -->
+						{#if client.invoices?.some((inv: { status: string; }) => ['pending', 'failed'].includes(inv.status))}
+							<div class="card bg-red-900/10 border border-red-800/30 rounded-lg p-4 space-y-3">
+								<div class="flex items-center justify-between">
+									<div class="text-sm font-semibold text-red-400">Facturas Pendientes</div>
+								</div>
+								<div class="space-y-2">
+									{#each client.invoices.filter((inv: { status: string; }) => ['pending', 'failed'].includes(inv.status)) as invoice}
+										<div class="flex items-center justify-between bg-red-950/20 p-2 rounded border border-red-900/30">
+											<div class="flex flex-col">
+												<span class="text-xs font-mono text-red-300">{invoice.invoice_number}</span>
+												<span class="text-[10px] text-red-400/70">Vence: {invoice.due_date}</span>
+											</div>
+											<div class="text-sm font-bold text-red-400">
+												${invoice.total_amount}
+											</div>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					{:else}
 						<p class="text-muted-foreground">Selecciona un cliente.</p>
 					{/if}
@@ -194,3 +215,19 @@
 		</Dialog.Positioner>
 	</Portal>
 </Dialog>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(64, 64, 64, 0.5);
+    border-radius: 20px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(64, 64, 64, 0.8);
+  }
+</style>
