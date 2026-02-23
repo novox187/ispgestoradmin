@@ -13,24 +13,21 @@
   </div>
 
   <div class="space-y-1">
-  
-      <div class="text-3xl font-bold text-white">{value}</div>
-
- 
+      <div class="text-3xl font-bold text-white">{value ?? 0}</div>
   </div>
 
   {#if tipo}
     <div class="absolute right-4 bottom-4">
       {#if tipo === 'activo'}
-        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/50 text-emerald-500">
+        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-500">
          <IconComponent class="w-6 h-6" />
         </div>
       {:else if tipo === 'deuda'}
-        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500/50 text-orange-500">
+        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500/20 text-orange-500">
          <IconComponent class="w-6 h-6" />
         </div>
       {:else if tipo === 'inactivo'}
-        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-500/50 text-red-500">
+        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-500/20 text-red-500">
          <IconComponent class="w-6 h-6" />
         </div>
       {/if}

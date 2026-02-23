@@ -36,6 +36,14 @@
     inactive_users: 0
   });
 
+  let mikrotikStats = $state({
+    online: false,
+    activeClients: 0,
+    totalClients: 0, // Este valor podría venir de la DB o ser fijo por ahora
+    cpuLoad: "0%",
+    uptime: "Offline"
+  });
+
   function toggleSidebar() {
     appState.toggleSidebar();
   }
@@ -44,23 +52,46 @@
     appState.toggleNotifications();
   }
 
-  async function loadStats() {
+  async function loadDashboardData() {
     try {
         const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-        const res = await fetch(`${API_BASE}/admin/dashboard/stats`, {
-            headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
-        });
+        const headers: Record<string, string> = { Accept: 'application/json' };
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+        
+        const res = await fetch(`${API_BASE}/admin/dashboard/full-stats`, { headers });
         if (res.ok) {
             const data = await res.json();
-            stats = data;
+            
+            // Actualizar estadísticas de usuarios
+            stats.active_users = data.active_users;
+            stats.users_with_debt = data.users_with_debt;
+            stats.inactive_users = data.inactive_users;
+
+            // Actualizar estadísticas de MikroTik
+            if (data.mikrotik) {
+                mikrotikStats.online = data.mikrotik.online;
+                mikrotikStats.cpuLoad = data.mikrotik.cpu_load;
+                mikrotikStats.uptime = data.mikrotik.uptime;
+                mikrotikStats.activeClients = data.mikrotik.active_clients;
+                mikrotikStats.totalClients = data.mikrotik.total_clients;
+            }
+        } else {
+             console.error('Error fetching dashboard stats:', res.status, res.statusText);
         }
     } catch (e) {
-        console.error('Error loading stats:', e);
+        console.error('Error loading dashboard data:', e);
+        mikrotikStats.online = false;
     }
   }
 
   onMount(() => {
-    loadStats();
+    loadDashboardData();
+    
+    // Actualizar cada 30 segundos
+    const interval = setInterval(loadDashboardData, 30000);
+    return () => clearInterval(interval);
   });
 
   // Datos del gráfico
@@ -141,7 +172,13 @@
       <!-- Bottom Section -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <TopUsuarios />
-        <EstadoRouter />
+        <EstadoRouter 
+            online={mikrotikStats.online}
+            activeClients={mikrotikStats.activeClients}
+            totalClients={mikrotikStats.totalClients}
+            cpuLoad={mikrotikStats.cpuLoad}
+            uptime={mikrotikStats.uptime}
+        />
       </div>
     </div>
   </main>
