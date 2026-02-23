@@ -230,7 +230,7 @@
             </div>
         </div>
 
-        <div class="relative w-full overflow-hidden">
+        <div class="relative w-full">
             {#if loading}
                 <div class="flex items-center justify-center h-[320px] text-gray-400">
                     Cargando datos...
@@ -247,7 +247,7 @@
                 >
                     <svg
                         viewBox={`0 0 ${width} ${height}`}
-                        class="w-full h-full"
+                        class="w-full h-full overflow-visible"
                         role="img"
                         onmousemove={handleMouseMove}
                         onmouseleave={handleMouseLeave}
@@ -317,11 +317,14 @@
                 </div>
 
                 {#if hoveredPoint}
+                    {@const xRatio = hoveredPoint.x / width}
+                    {@const isLeftEdge = xRatio < 0.25}
+                    {@const isRightEdge = xRatio > 0.75}
                     <div
-                        class="absolute bg-gray-700 text-gray-100 p-4 shadow-lg rounded-lg border border-gray-600 pointer-events-none z-10 min-w-[200px]"
-                        style:transform="translate3d(calc({hoveredPoint.x / width * 100}% - 50%), 0, 0)"
-                        style:top={`20px`}
-                        style:left="0"
+                        class="absolute bg-gray-700/95 backdrop-blur-sm text-gray-100 p-4 shadow-xl rounded-lg border border-gray-600 pointer-events-none z-50 min-w-[200px]"
+                        style:left="{xRatio * 100}%"
+                        style:top="10px"
+                        style:transform={isLeftEdge ? 'translate(10px, 0)' : isRightEdge ? 'translate(calc(-100% - 10px), 0)' : 'translate(-50%, 0)'}
                     >
                         <div class="font-bold text-center mb-2 border-b border-gray-600 pb-2">
                             {hoveredPoint.data.date}
