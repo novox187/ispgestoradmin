@@ -22,13 +22,21 @@
       }
       const data = await res.json();
       const token = data?.token;
+      // Intenta obtener el rol desde diferentes estructuras posibles
       const role = data?.role || data?.user?.role || data?.usuario?.rol || "employee";
-      const nombre = data?.user?.name || data?.usuario?.nombre || data?.admin?.nombre || "";
+      // Intenta obtener el nombre desde diferentes estructuras posibles, incluyendo data.employee
+      const nombre = data?.employee?.nombre || data?.user?.name || data?.usuario?.nombre || data?.admin?.nombre || "";
+      // Intenta obtener el ID del empleado
+      const employeeId = data?.employee?.id || data?.user?.id || data?.usuario?.id || "";
+
       if (!token) throw new Error("No se recibió el token de autenticación");
       if (String(role).toLowerCase() !== "employee") throw new Error("No autorizado");
+      
       localStorage.setItem("employee_token", token);
       localStorage.setItem("employee_role", "employee");
       if (nombre) localStorage.setItem("employee_nombre", nombre);
+      if (employeeId) localStorage.setItem("employee_id", String(employeeId));
+      
       goto("/", { replaceState: true });
     } catch (err) {
       errorMsg = err instanceof Error && err.message === "No autorizado" ? "Acceso restringido al área administrativa" : "El correo electrónico o la contraseña son incorrectos";

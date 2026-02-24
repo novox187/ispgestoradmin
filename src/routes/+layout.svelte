@@ -19,11 +19,15 @@
         const userId = localStorage.getItem('employee_id');
 
         const path = $page.url.pathname;
-        if ((!token || role !== 'employee') && path !== '/login') {
+        // Permitimos cualquier rol que no esté vacío, ya que el backend maneja los permisos reales
+        // El frontend solo debe validar que exista una sesión activa
+        if (!token && path !== '/login') {
             goto('/login', { replaceState: true });
             return;
         }
-        if (token && role === 'employee' && path === '/login') {
+        
+        // Si hay token y estamos en login, redirigir al home
+        if (token && path === '/login') {
             goto('/', { replaceState: true });
         }
     }
