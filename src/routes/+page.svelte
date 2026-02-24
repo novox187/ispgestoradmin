@@ -129,7 +129,6 @@
   function handlePeriodChange(period: Period): void {
     selectedPeriod = period;
     // Aquí podrías agregar lógica para actualizar los datos según el período
-    console.log("Período seleccionado:", period);
   }
 </script>
 

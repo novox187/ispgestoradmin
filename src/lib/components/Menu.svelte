@@ -153,10 +153,10 @@
           class="absolute bottom-full left-0 w-full mb-2 bg-neutral-900/95 backdrop-blur-xl border border-neutral-800 rounded-xl shadow-2xl overflow-hidden z-20"
         >
           <div class="p-1 space-y-0.5">
-             <button class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors group/item">
+             <a href="/perfil" onclick={() => userMenuOpen = false} class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors group/item">
                 <User class="w-4 h-4 text-gray-500 group-hover/item:text-blue-400 transition-colors" />
                 <span class="font-medium">Mi Perfil</span>
-             </button>
+             </a>
              <div class="h-px bg-neutral-800/50 my-1 mx-2"></div>
              <button 
                 class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors group/item"

@@ -227,7 +227,6 @@
       try {
         debugBody = await res.clone().text();
       } catch {}
-      console.log('[CrearCliente] URL:', url, 'Status:', res.status, 'OK:', res.ok, 'Body:', debugBody);
 
       if (res.ok) {
         const client = await res.json();

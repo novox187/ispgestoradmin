@@ -130,7 +130,6 @@
     });
 
     function handleAddClient() {
-        console.log('[v0] Adding client:', newClient);
         const newId = Math.max(...clients.map(c => c.id), 0) + 1;
         const newJoinDate = new Date().toISOString().split('T')[0];
         clients.push({

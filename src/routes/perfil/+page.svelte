@@ -107,7 +107,6 @@
       }
 
       const data = await res.json();
-         console.log(data);
       // Ajustar según la respuesta de la API (puede venir directo o en data.employee)
       const rawEmployee = data.employee || data.user || data;
       

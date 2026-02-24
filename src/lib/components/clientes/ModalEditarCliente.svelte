@@ -72,7 +72,6 @@
         download: Number(p.download_speed),
         upload: Number(p.upload_speed)
       }));
-      console.log('Planes cargados:', plans);
     } catch (e) {
       console.error('Error cargando planes:', e);
       plansError = 'No se pudieron cargar los planes.';
