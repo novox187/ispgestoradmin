@@ -29,6 +29,16 @@
 
   let userMenuOpen = $state(false);
   let loggingOut = $state(false);
+  let userName = $state('Usuario');
+  let userRole = $state('Sin Rol');
+
+  $effect(() => {
+      const storedName = localStorage.getItem('employee_nombre');
+      const storedRole = localStorage.getItem('employee_role');
+      if (storedName) userName = storedName;
+      if (storedRole) userRole = storedRole.toUpperCase();
+  });
+
   async function handleLogout() {
     if (loggingOut) return;
     loggingOut = true;
@@ -132,14 +142,14 @@
         <div class="relative">
           <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full opacity-75 blur group-hover:opacity-100 transition duration-500"></div>
           <div class="relative w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-white font-bold text-lg border border-neutral-800">
-            F
+            {userName.charAt(0).toUpperCase()}
           </div>
           <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-neutral-900 rounded-full"></div>
         </div>
         
         <div class="flex-1 min-w-0 text-left">
-          <div class="text-white font-bold text-sm truncate group-hover:text-blue-400 transition-colors">FERNANDO</div>
-          <div class="text-gray-500 text-[10px] font-mono truncate tracking-tight">KZENBOUH.JOYCO_STUDIO</div>
+          <div class="text-white font-bold text-sm truncate group-hover:text-blue-400 transition-colors">{userName}</div>
+          <div class="text-gray-500 text-[10px] font-mono truncate tracking-tight">{userRole}</div>
         </div>
 
         <div class="text-gray-500 group-hover:text-white transition-transform duration-300 {userMenuOpen ? 'rotate-180' : ''}">

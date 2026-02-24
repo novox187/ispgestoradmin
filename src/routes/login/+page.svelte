@@ -33,7 +33,11 @@
       if (String(role).toLowerCase() !== "employee") throw new Error("No autorizado");
       
       localStorage.setItem("employee_token", token);
-      localStorage.setItem("employee_role", "employee");
+      
+      // Guardar el nombre real del rol si está disponible en los datos del empleado
+      const realRole = data?.employee?.role || data?.employee?.rol || role;
+      localStorage.setItem("employee_role", String(realRole));
+      
       if (nombre) localStorage.setItem("employee_nombre", nombre);
       if (employeeId) localStorage.setItem("employee_id", String(employeeId));
       
