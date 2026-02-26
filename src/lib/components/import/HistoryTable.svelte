@@ -1,15 +1,25 @@
-<script>
+<script lang="ts">
   import { createEventDispatcher } from 'svelte';
   
-  export let history = [];
+  interface HistoryItem {
+    id: number | string;
+    created_at: string;
+    employee?: { nombre: string } | null;
+    table_name: string;
+    file_name: string;
+    status: string;
+    summary?: { success: number; failed: number } | null;
+  }
+
+  export let history: HistoryItem[] = [];
   
   const dispatch = createEventDispatcher();
 
-  function formatDate(dateString) {
+  function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString('es-ES');
   }
 
-  function getStatusColor(status) {
+  function getStatusColor(status: string) {
     switch (status) {
       case 'success': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
@@ -18,7 +28,7 @@
     }
   }
 
-  function getStatusLabel(status) {
+  function getStatusLabel(status: string) {
     switch (status) {
       case 'success': return 'Exitoso';
       case 'failed': return 'Fallido';

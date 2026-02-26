@@ -1,19 +1,18 @@
-<script>
+<script lang="ts">
   import { createEventDispatcher } from 'svelte';
   
   const dispatch = createEventDispatcher();
   let dragging = false;
 
-  function handleDrop(e) {
+  function handleDrop(e: DragEvent) {
     e.preventDefault();
     dragging = false;
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      dispatch('fileSelected', files[0]);
+    if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+      dispatch('fileSelected', e.dataTransfer.files[0]);
     }
   }
 
-  function handleDragOver(e) {
+  function handleDragOver(e: DragEvent) {
     e.preventDefault();
     dragging = true;
   }
@@ -22,10 +21,10 @@
     dragging = false;
   }
 
-  function handleFileSelect(e) {
-    const files = e.target.files;
-    if (files.length > 0) {
-      dispatch('fileSelected', files[0]);
+  function handleFileSelect(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+      dispatch('fileSelected', target.files[0]);
     }
   }
 </script>
@@ -35,10 +34,18 @@
   {dragging 
     ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
     : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500'}"
+  role="button"
+  tabindex="0"
+  on:keydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      document.getElementById('fileInput')?.click();
+    }
+  }}
   on:drop={handleDrop}
   on:dragover={handleDragOver}
   on:dragleave={handleDragLeave}
-  on:click={() => document.getElementById('fileInput').click()}
+  on:click={() => document.getElementById('fileInput')?.click()}
 >
   <input
     type="file"

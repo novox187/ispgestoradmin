@@ -1,11 +1,33 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { API_BASE } from '$lib/config';
   
-  export let plans = [];
+  interface Plan {
+    id: number | string;
+    name: string;
+    price: number;
+  }
+
+  interface Client {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    plan: string | null;
+    document_id: string;
+  }
+
+  interface Pagination {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  }
+
+  export let plans: Plan[] = [];
   
-  let clients = [];
-  let pagination = {
+  let clients: Client[] = [];
+  let pagination: Pagination = {
     current_page: 1,
     last_page: 1,
     total: 0,
@@ -19,7 +41,7 @@
   // Filtros
   let searchTerm = '';
   let showOnlyWithoutPlan = true;
-  let searchTimeout;
+  let searchTimeout: ReturnType<typeof setTimeout>;
 
   async function loadClients(page = 1) {
     loading = true;
@@ -69,7 +91,7 @@
     loadClients(1);
   }
 
-  function changePage(newPage) {
+  function changePage(newPage: number) {
     if (newPage >= 1 && newPage <= pagination.last_page) {
         loadClients(newPage);
     }
@@ -79,7 +101,7 @@
     loadClients();
   });
 
-  async function assignPlan(client, planId) {
+  async function assignPlan(client: Client, planId: string) {
     if (!planId) return;
     
     assigning = true;
@@ -133,12 +155,14 @@
         const updatedClient = await res.json();
         const plan = plans.find(p => p.id == planId);
         
-        clients = clients.map(c => 
-            c.id === client.id 
-            ? { ...c, plan: plan.name } 
-            : c
-        );
-        message = `Plan asignado correctamente a ${client.name}`;
+        if (plan) {
+            clients = clients.map(c => 
+                c.id === client.id 
+                ? { ...c, plan: plan.name } 
+                : c
+            );
+            message = `Plan asignado correctamente a ${client.name}`;
+        }
         
         // Auto-limpiar mensaje
         setTimeout(() => message = '', 3000);
@@ -237,7 +261,7 @@
                             <td class="px-6 py-4 whitespace-nowrap bg-blue-50/30 dark:bg-blue-900/5">
                                 <select 
                                     class="block w-full pl-3 pr-10 py-1 text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md shadow-sm"
-                                    on:change={(e) => assignPlan(client, e.target.value)}
+                                    on:change={(e) => assignPlan(client, e.currentTarget.value)}
                                     disabled={assigning}
                                     value="" 
                                 >

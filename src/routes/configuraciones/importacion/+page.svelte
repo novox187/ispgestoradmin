@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { API_BASE } from '$lib/config';
   import ImportZone from '$lib/components/import/ImportZone.svelte';
@@ -6,8 +6,43 @@
   import HistoryTable from '$lib/components/import/HistoryTable.svelte';
   import AssignPlanStep from '$lib/components/import/steps/AssignPlanStep.svelte';
   
+  interface Step {
+    id: number;
+    table: string;
+    title: string;
+    description: string;
+    skippable: boolean;
+    customView?: boolean;
+  }
+
+  interface HistoryItem {
+    id: number | string;
+    created_at: string;
+    employee?: { nombre: string } | null;
+    table_name: string;
+    file_name: string;
+    status: string;
+    summary?: { success: number; failed: number } | null;
+  }
+
+  interface Plan {
+    id: number | string;
+    name: string;
+    price: number;
+    download_speed: number;
+    upload_speed: number;
+  }
+
+  interface ValidationResult {
+    valid: boolean;
+    total_rows: number;
+    error_count: number;
+    errors: Array<{ row: number; errors: string[] }>;
+    preview: Array<Record<string, any>>;
+  }
+
   // Definición de pasos para el Wizard
-  const steps = [
+  const steps: Step[] = [
     {
       id: 1,
       table: 'plans',
@@ -44,12 +79,12 @@
   $: currentStep = steps[currentStepIndex];
   $: selectedTable = currentStep.table;
 
-  let history = [];
-  let validationResult = null;
+  let history: HistoryItem[] = [];
+  let validationResult: ValidationResult | null = null;
   let isUploading = false;
   let isProcessing = false;
   let isDownloading = false;
-  let uploadFile = null;
+  let uploadFile: File | null = null;
   let errorMessage = '';
   let successMessage = '';
 
@@ -70,7 +105,7 @@
     }
   }
 
-  let availablePlans = [];
+  let availablePlans: Plan[] = [];
   
   async function loadPlans() {
     try {
@@ -95,9 +130,9 @@
   });
 
   // Mapa para guardar las asignaciones de planes (rowIndex -> planId)
-  let planAssignments = {};
+  let planAssignments: Record<number, string> = {};
 
-  function handlePlanAssignment(event) {
+  function handlePlanAssignment(event: CustomEvent<{ rowIndex: number; planId: string }>) {
     const { rowIndex, planId } = event.detail;
     planAssignments[rowIndex] = planId;
     // También podemos actualizar el objeto validationResult.preview para que refleje el cambio visualmente si quisiéramos
@@ -117,7 +152,7 @@
     }
   }
 
-  function goToStep(index) {
+  function goToStep(index: number) {
     currentStepIndex = index;
     resetState();
   }
@@ -162,7 +197,7 @@
     }
   }
 
-  async function handleFileSelected(event) {
+  async function handleFileSelected(event: CustomEvent<File>) {
     const file = event.detail;
     uploadFile = file;
     errorMessage = '';
@@ -249,7 +284,7 @@
     }
   }
 
-  async function handleRollback(event) {
+  async function handleRollback(event: CustomEvent<number>) {
     if (!confirm('¿Estás seguro de que quieres revertir esta importación? Esta acción eliminará los registros creados.')) return;
     
     const id = event.detail;

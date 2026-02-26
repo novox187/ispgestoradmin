@@ -1,12 +1,29 @@
-<script>
-  export let validationResult = null;
-  export let plans = [];
+<script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+
+  interface Plan {
+    id: number | string;
+    name: string;
+    price: number;
+    download_speed: number;
+    upload_speed: number;
+  }
+
+  interface ValidationResult {
+    valid: boolean;
+    total_rows: number;
+    error_count: number;
+    errors: Array<{ row: number; errors: string[] }>;
+    preview: Array<Record<string, any>>;
+  }
+
+  export let validationResult: ValidationResult | null = null;
+  export let plans: Plan[] = [];
   export let showPlanSelector = false;
   
-  import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
 
-  function handlePlanChange(rowIndex, planId) {
+  function handlePlanChange(rowIndex: number, planId: string) {
     dispatch('planChange', { rowIndex, planId });
   }
 </script>
@@ -99,7 +116,7 @@
                         <div class="relative">
                             <select 
                                 class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-md shadow-sm transition-shadow duration-200 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600"
-                                on:change={(e) => handlePlanChange(i, e.target.value)}
+                                on:change={(e) => handlePlanChange(i, e.currentTarget.value)}
                             >
                                 <option value="" class="text-gray-500">Seleccionar Plan...</option>
                                 {#each plans as plan}
