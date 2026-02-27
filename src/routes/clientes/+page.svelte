@@ -1,30 +1,29 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
+    import { API_BASE } from '$lib/config';
+    import { appState } from '$lib/stores/app.svelte';
+    
+    // Components
+    import Encabezado from "$lib/components/Encabezado.svelte";
+    import ClientListSidebar from "$lib/components/clientes/telegram/ClientListSidebar.svelte";
+    import ClientChatArea from "$lib/components/clientes/telegram/ClientChatArea.svelte";
+    
+    // Modals (Keep them for functionality)
     import ModalCrearCliente from "$lib/components/clientes/ModalCrearCliente.svelte";
     import ModalEditarCliente from "$lib/components/clientes/ModalEditarCliente.svelte";
-    import TablaClientes from "$lib/components/clientes/TablaClientes.svelte";
-    import TarjetasEstadisticas from "$lib/components/clientes/TarjetasEstadisticas.svelte";
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
-    import { toast } from 'svelte-sonner';
-    import {
-        onMount
-    } from 'svelte';
-    import { API_BASE } from '$lib/config';
-    import {
-        Pagination
-    } from '@skeletonlabs/skeleton-svelte';
-    import {
-        ArrowLeftIcon,
-        ArrowRightIcon
-    } from '@lucide/svelte';
-    import ModalCliente from "$lib/components/clientes/ModalCliente.svelte";
-    import Encabezado from "$lib/components/Encabezado.svelte";
-    import { appState } from '$lib/stores/app.svelte';
 
+    // Icons
+    import { Plus, Pencil, Trash2 } from '@lucide/svelte';
+
+    // State
     let isSidebarOpen = $state(false);
     let isNotificationsOpen = $state(false);
     function toggleSidebar() { appState.toggleSidebar() }
     function toggleNotifications() { appState.toggleNotifications() }
 
+    // Client Data Types
     interface Client {
         id: number;
         name: string;
@@ -33,14 +32,45 @@
         plan: string;
         status: 'active' | 'suspended' | 'inactive' | 'cancelled';
         joinDate: string;
+        unreadCount?: number; // Mocked for now
     }
 
-    type NewClient = Omit < Client, 'id' | 'joinDate' > ;
-
+    // List State
+    let clients = $state<Client[]>([]);
+    let loadingClients = $state(false);
     let searchTerm = $state('');
     let statusFilter = $state('all');
+    let page = $state(1);
+    let pageSize = $state(50); // Increased for list view
+    let totalClients = $state(0);
+
+    // Selected Client State
+    let selectedClientId = $state<number | null>(null);
+    let selectedClient = $state<any>(null); // Full client data
+    let selectedClientMessages = $state<any[]>([]);
+    let loadingMessages = $state(false);
+    let isDetailOpen = $state(false);
+
+    // Derived state for mobile view
+    let showChatOnMobile = $derived(selectedClientId !== null);
+
+    // Modal States
     let showAddClient = $state(false);
-    let newClient = $state < NewClient > ({
+    let showEditClient = $state(false);
+    let confirmModalOpen = $state(false);
+    let confirmModalLoading = $state(false);
+    let confirmModalError = $state<string | null>(null);
+    let confirmModalData = $state({
+        title: '',
+        message: '',
+        confirmText: '',
+        cancelText: '',
+        type: 'info' as 'danger' | 'success' | 'warning' | 'info',
+        action: '' as 'suspend' | 'activate' | 'cancel',
+        clientId: 0
+    });
+
+    let newClient = $state({
         name: '',
         email: '',
         phone: '',
@@ -48,11 +78,7 @@
         status: 'active'
     });
 
-    let clients = $state < Client[] > ([]);
-    let totalClients = $state(0);
-    let clientStats = $state({ total: 0, active: 0, suspended: 0, inactive: 0 });
-
-    let loadingClients = $state(false);
+    // --- Data Fetching ---
 
     async function loadClients() {
         loadingClients = true;
@@ -71,12 +97,8 @@
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             
-            // Handle paginated response
             const list = data.data || [];
             totalClients = data.total || 0;
-            if (data.stats) {
-                clientStats = data.stats;
-            }
 
             clients = (list || []).map((c: any) => ({
                 id: c.id,
@@ -84,322 +106,201 @@
                 email: c.email,
                 phone: c.phone,
                 plan: c.plan ?? '',
-                status: ((s => {
-                    if (!s) return 'inactive';
-                    const up = String(s).toUpperCase();
-                    if (up === 'ACTIVO' || up === 'ACTIVE') return 'active';
-                    if (up === 'SUSPENDIDO' || up === 'LIMITADO' || up === 'SUSPENDED')
-                        return 'suspended';
-                    if (up === 'CANCELLED' || up === 'CANCELADO') return 'cancelled';
-                    return 'inactive';
-                })(c.status)),
-                joinDate: ''
+                status: normalizeStatus(c.status),
+                joinDate: '',
+                unreadCount: 0 // Placeholder
             }));
         } catch (e) {
             console.error('Error cargando clientes:', e);
+            toast.error('Error cargando la lista de clientes');
         } finally {
             loadingClients = false;
         }
     }
 
-    onMount(() => {
-        loadClients();
-    });
+    function normalizeStatus(s: string) {
+        if (!s) return 'inactive';
+        const up = String(s).toUpperCase();
+        if (up === 'ACTIVO' || up === 'ACTIVE') return 'active';
+        if (up === 'SUSPENDIDO' || up === 'LIMITADO' || up === 'SUSPENDED') return 'suspended';
+        if (up === 'CANCELLED' || up === 'CANCELADO') return 'cancelled';
+        return 'inactive';
+    }
 
-    // Pagination state
-    let page = $state(1);
-    let pageSize = $state(5);
+    async function handleSelectClient(event: CustomEvent<number>) {
+        const id = event.detail;
+        selectedClientId = id;
+        loadingMessages = true;
+        isDetailOpen = false; // Close detail on new selection
+        selectedClientMessages = [];
 
-    function handleSearch() {
+        try {
+            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+            const res = await fetch(`${API_BASE}/admin/clientes/full/${id}`, {
+                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
+            });
+
+            if (!res.ok) throw new Error('Error cargando detalles del cliente');
+            
+            const data = await res.json();
+            
+            // Transform data for the view
+            // The API returns the client object directly
+            selectedClient = {
+                ...data,
+                status: normalizeStatus(data.status || data.estado)
+            };
+
+            // Process tickets/messages
+            // The API includes 'soportes' relation
+            const tickets = data.soportes || data.tickets || [];
+            
+            // Flatten messages from tickets
+            let allMessages: any[] = [];
+            tickets.forEach((ticket: any) => {
+                if (ticket.messages && Array.isArray(ticket.messages)) {
+                    const ticketMsgs = ticket.messages.map((m: any) => ({
+                        id: m.id,
+                        text: m.message,
+                        sender: m.user_id ? 'me' : 'them', // Logic depends on backend structure. Assuming user_id means employee? Or check against client_id?
+                        // Usually: if message.user_id matches client.user_id, it's 'them'. If it matches current admin, it's 'me'.
+                        // For simplicity: if m.sender_type === 'App\Models\User' (Admin) -> 'me', 'App\Models\Client' -> 'them'
+                        time: new Date(m.created_at).toLocaleString(),
+                        attachments: m.attachments || []
+                    }));
+                    allMessages = [...allMessages, ...ticketMsgs];
+                }
+            });
+
+            // Sort by date
+            selectedClientMessages = allMessages.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+        } catch (e) {
+            console.error(e);
+            toast.error('No se pudieron cargar los mensajes');
+        } finally {
+            loadingMessages = false;
+        }
+    }
+
+    // --- Event Handlers ---
+
+    function handleSearch(event: CustomEvent<string>) {
+        searchTerm = event.detail;
         page = 1;
         loadClients();
     }
 
-    // Modal de Confirmación
-    let confirmModalOpen = $state(false);
-    let confirmModalLoading = $state(false);
-    let confirmModalError = $state<string | null>(null);
-    let confirmModalData = $state({
-        title: '',
-        message: '',
-        confirmText: '',
-        cancelText: '',
-        type: 'info' as 'danger' | 'success' | 'warning' | 'info',
-        action: '' as 'suspend' | 'activate' | 'cancel',
-        clientId: 0
-    });
-
-    function handleAddClient() {
-        const newId = Math.max(...clients.map(c => c.id), 0) + 1;
-        const newJoinDate = new Date().toISOString().split('T')[0];
-        clients.push({
-            ...newClient,
-            id: newId,
-            joinDate: newJoinDate
-        });
-        newClient = {
-            name: '',
-            email: '',
-            phone: '',
-            plan: '',
-            status: 'active'
-        };
-        showAddClient = false;
-    }
-
-    function handleSuspendClient(id: number) {
-        const client = clients.find(c => c.id === id);
-        if (!client) return;
-
-        confirmModalData = {
-            title: 'Desactivar Servicios',
-            message: `¿Estás seguro de querer desactivar los servicios del usuario ${client.name} con el id ${client.id}??`,
-            confirmText: 'Sí, Desactivar',
-            cancelText: 'Cancelar',
-            type: 'danger',
-            action: 'suspend',
-            clientId: id
-        };
-        confirmModalError = null;
-        confirmModalOpen = true;
-    }
-
-    function handleActivateClient(id: number) {
-        const client = clients.find(c => c.id === id);
-        if (!client) return;
-
-        confirmModalData = {
-            title: 'Activar Servicios',
-            message: `¿Estás seguro de querer activar los servicios del usuario ${client.name} con el id ${client.id}??`,
-            confirmText: 'Sí, Activar',
-            cancelText: 'Cancelar',
-            type: 'success',
-            action: 'activate',
-            clientId: id
-        };
-        confirmModalError = null;
-        confirmModalOpen = true;
-    }
-
-    async function handleConfirmAction() {
-        confirmModalLoading = true;
-        confirmModalError = null;
-        const id = confirmModalData.clientId;
-        const action = confirmModalData.action;
-
-        try {
-            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-            const url = `${API_BASE}/admin/clientes/${id}/${action}`;
-            
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
-            });
-            
-            const data = await res.json();
-            
-            if (!res.ok) {
-                const errorMsg = data.message || `Error al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
-                confirmModalError = errorMsg;
-                toast.error(errorMsg);
-                return;
-            }
-            
-            // Éxito
-            toast.success(`Cliente ${action === 'suspend' ? 'suspendido' : (action === 'activate' ? 'activado' : 'cancelado')} con éxito`);
-            confirmModalOpen = false;
-            loadClients();
-            
-        } catch (e) {
-            console.error(e);
-            const errorMsg = `Error de conexión al ${action === 'suspend' ? 'suspender' : 'activar'} cliente`;
-            confirmModalError = errorMsg;
-            toast.error(errorMsg);
-        } finally {
-            confirmModalLoading = false;
-        }
-    }
-
-    function handleDeleteClient(id: number) {
-        const client = clients.find(c => c.id === id);
-        if (!client) return;
-
-        confirmModalData = {
-            title: 'Eliminar Cliente',
-            message: `¿Estás seguro de eliminar el cliente ${client.name}? Esta acción marcará al cliente como cancelado.`,
-            confirmText: 'Sí, Eliminar',
-            cancelText: 'Cancelar',
-            type: 'danger',
-            action: 'cancel',
-            clientId: id
-        };
-        confirmModalError = null;
-        confirmModalOpen = true;
-    }
-
-    function handleCloseModal() {
-        showAddClient = false;
-    }
-
-    let showViewClient = $state(false);
-    let selectedClientId = $state < number | null > (null);
-
-    function handleViewClient(id: number) {
-        selectedClientId = id;
-        showViewClient = true;
-    }
-
-    function handleCloseView() {
-        showViewClient = false;
-        selectedClientId = null;
-    }
-
-    let showEditClient = $state(false);
-
-    function handleEditClient(id: number) {
-        selectedClientId = id;
-        showEditClient = true;
-    }
-
-    function handleCloseEdit() {
-        showEditClient = false;
-        selectedClientId = null;
-    }
-
-    function handleUpdated() {
-        showEditClient = false;
+    function handleFilter(event: CustomEvent<string>) {
+        statusFilter = event.detail;
+        page = 1;
         loadClients();
+    }
+
+    function handleSendMessage(event: CustomEvent<string>) {
+        // Mock sending for now
+        const text = event.detail;
+        selectedClientMessages = [...selectedClientMessages, {
+            id: Date.now(),
+            text,
+            sender: 'me',
+            time: new Date().toLocaleTimeString(),
+            attachments: []
+        }];
+        toast.success('Mensaje enviado (Simulado)');
+    }
+
+    function handleToggleDetail() {
+        isDetailOpen = !isDetailOpen;
+    }
+
+    function handleClientUpdated(event: CustomEvent<any>) {
+        loadClients();
+        const updatedData = event.detail.client || event.detail;
+        if (selectedClient && selectedClient.id === updatedData.id) {
+             selectedClient = {
+                ...selectedClient,
+                ...updatedData,
+                status: normalizeStatus(updatedData.status || updatedData.service_status)
+            };
+        }
     }
 
     function handleCreated() {
         showAddClient = false;
         loadClients();
     }
+
+    function handleCloseModal() {
+        showAddClient = false;
+    }
+
+    onMount(() => {
+        loadClients();
+    });
+
 </script>
 
-<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
+<div class="flex flex-col h-screen bg-[#0f0f0f] overflow-hidden w-full">
+    <!-- Global Header -->
+    <Encabezado {toggleSidebar} {toggleNotifications} />
     
-    <!-- Header -->
-     <Encabezado {toggleSidebar} {toggleNotifications} />
-     <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
-    <div class="flex items-center justify-between mb-8">
-        <div>
-            <h1 class="text-3xl md:text-4xl font-bold text-foreground mb-2">Gestión de Clientes</h1>
-            <p class="text-muted-foreground">Administra todos tus clientes de internet</p>
+    <!-- Main Content Area (Split View) -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Sidebar -->
+        <div class="{showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-auto h-full">
+            <ClientListSidebar 
+                {clients} 
+                {selectedClientId} 
+                {searchTerm} 
+                {statusFilter}
+                loading={loadingClients}
+                on:select={handleSelectClient}
+                on:search={handleSearch}
+                on:filter={handleFilter}
+            />
         </div>
-        <div class="flex items-end justify-center">
-            <button onclick={()=> (showAddClient = true)}
-                class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors">
-                + Agregar Cliente
-            </button>
+
+        <!-- Chat Area -->
+        <div class="{!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 h-full min-w-0">
+            <ClientChatArea 
+                client={selectedClient}
+                messages={selectedClientMessages}
+                loading={loadingMessages}
+                {isDetailOpen}
+                on:sendMessage={handleSendMessage}
+                on:toggleDetail={handleToggleDetail}
+                on:back={() => selectedClientId = null}
+                on:updated={handleClientUpdated}
+            />
         </div>
+        
     </div>
 
-    <!-- Stats Cards -->
-    <TarjetasEstadisticas stats={clientStats} />
-
-    <!-- Filters and Search -->
-    <div class="bg-card border border-neutral-800 rounded-lg p-6 mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-foreground mb-2" for="searchTerm">Buscar
-                    Cliente</label>
-                <input id="searchTerm" type="text" placeholder="Nombre o email..." bind:value={searchTerm} oninput={handleSearch}
-                    class="w-full px-4 py-2 border border-neutral-800 rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-foreground mb-2" for="statusFilter">Estado</label>
-                <select id="statusFilter" bind:value={statusFilter} onchange={handleSearch}
-                    class="w-full px-5 py-2 border border-neutral-800 rounded-lg focus:outline-none focus:ring-0 bg-neutral-900">
-                    <option value="all">Todos</option>
-                    <option value="active">Activo</option>
-                    <option value="suspended">Suspendido</option>
-                    <option value="cancelled">Cancelado</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <!-- Clients Table -->
-    <TablaClientes 
-        filteredClients={clients} 
-        handleDeleteClient={handleDeleteClient}
-        handleViewClient={handleViewClient} 
-        handleEditClient={handleEditClient}
-        handleSuspendClient={handleSuspendClient}
-        handleActivateClient={handleActivateClient}
-        loading={loadingClients}
-    />
-
-    <!-- Pagination Controls -->
-    {#if totalClients > 0}
-    <div class="flex justify-center items-center gap-4 w-full mt-4">
-        <Pagination count={totalClients} {pageSize} {page} onPageChange={(event)=> { page = event.page; loadClients(); }}>
-            <Pagination.PrevTrigger>
-                <ArrowLeftIcon class="size-4" />
-            </Pagination.PrevTrigger>
-            <Pagination.Context>
-                {#snippet children(pagination)}
-                    {#each pagination().pages as page, index (page)}
-                        {#if page.type === 'page'}
-                            <Pagination.Item {...page}>
-                                {page.value}
-                            </Pagination.Item>
-                        {:else}
-                            <Pagination.Ellipsis {index}>&#8230;</Pagination.Ellipsis>
-                        {/if}
-                    {/each}
-                {/snippet}
-            </Pagination.Context>
-            <Pagination.NextTrigger>
-                <ArrowRightIcon class="size-4" />
-            </Pagination.NextTrigger>
-        </Pagination>
-    </div>
-    {/if}
-
-    <!-- Add Client Modal -->
+    <!-- Modals -->
     {#if showAddClient}
-    <ModalCrearCliente
-    newClient={{
-        name: newClient.name,
-        email: newClient.email,
-        phone: newClient.phone,
-        plan: newClient.plan,
-        status: newClient.status === 'cancelled' ? undefined : newClient.status
-    }}
- {showAddClient}
- {handleAddClient}
- on:close={handleCloseModal}
- on:created={handleCreated}
-    />
+        <ModalCrearCliente
+            newClient={{
+                name: newClient.name,
+                email: newClient.email,
+                phone: newClient.phone,
+                plan: newClient.plan,
+status: newClient.status === 'cancelled' ? undefined : newClient.status as 'active' | 'suspended' | 'inactive' | undefined
+            }}
+            {showAddClient}
+            handleAddClient={() => {}} 
+            on:close={handleCloseModal}
+            on:created={handleCreated}
+        />
     {/if}
 
-    <!-- Confirmation Modal -->
-    <ModalConfirmacion
-        bind:open={confirmModalOpen}
-        title={confirmModalData.title}
-        message={confirmModalData.message}
-        confirmText={confirmModalData.confirmText}
-        cancelText={confirmModalData.cancelText}
-        type={confirmModalData.type}
-        loading={confirmModalLoading}
-        error={confirmModalError}
-        on:confirm={handleConfirmAction}
-        on:cancel={() => confirmModalOpen = false}
-    />
-
-    {#if showViewClient}
-      <ModalCliente open={showViewClient} clientId={selectedClientId} onClose={handleCloseView} />
-    {/if}
-
-    {#if showEditClient}
-      <ModalEditarCliente 
-        open={showEditClient} 
-        clientId={selectedClientId} 
-        onClose={handleCloseEdit} 
-        onUpdated={handleUpdated} 
-      />
-    {/if}
-    </div>
-</main>
+    <!-- Add Client Button (Floating or integrated) -->
+    <button 
+        onclick={() => showAddClient = true}
+        class="absolute bottom-6 left-6 md:left-72 z-50 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
+        title="Nuevo Cliente"
+    >
+        <Plus class="size-6" />
+    </button>
+</div>
