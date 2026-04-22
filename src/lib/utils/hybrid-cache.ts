@@ -49,9 +49,10 @@ export function writeCookie(
 	if (typeof document === 'undefined') return;
 	const path = options.path ?? '/';
 	const sameSite = options.sameSite ?? 'Lax';
-	const maxAge = typeof options.maxAgeSeconds === 'number' ? `; Max-Age=${Math.max(0, Math.floor(options.maxAgeSeconds))}` : '';
-	const secure = typeof location !== 'undefined' && location.protocol === 'https:' ? '; Secure' : '';
-	document.cookie = `${name}=${safeEncode(value)}; Path=${path}; SameSite=${sameSite}${maxAge}${secure}`;
+	const maxAge = typeof options.maxAgeSeconds === 'number' ? `; max-age=${Math.max(0, Math.floor(options.maxAgeSeconds))}` : '';
+	const secure = typeof location !== 'undefined' && location.protocol === 'https:' ? '; secure' : '';
+	const encodedValue = safeEncode(value);
+	document.cookie = `${name}=${encodedValue}; path=${path}; samesite=${sameSite}${maxAge}${secure}`;
 }
 
 export function readCookieCache<T>(name: string): CookieCacheEnvelope<T> | null {
@@ -72,6 +73,30 @@ export function writeCookieCache<T>(name: string, data: T, options: { maxAgeSeco
 	try {
 		writeCookie(name, JSON.stringify(envelope), { maxAgeSeconds });
 	} catch {
+	}
+	return envelope;
+}
+
+export function readStorageCache<T>(name: string): CookieCacheEnvelope<T> | null {
+	if (typeof localStorage === 'undefined') return null;
+	const raw = localStorage.getItem(name);
+	if (!raw) return null;
+	try {
+		const parsed = JSON.parse(raw) as CookieCacheEnvelope<T>;
+		if (!parsed || parsed.v !== 1 || typeof parsed.storedAt !== 'number') return null;
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+
+export function writeStorageCache<T>(name: string, data: T) {
+	if (typeof localStorage === 'undefined') return null;
+	const envelope: CookieCacheEnvelope<T> = { v: 1, storedAt: Date.now(), data };
+	try {
+		localStorage.setItem(name, JSON.stringify(envelope));
+	} catch (e) {
+		console.warn('Could not write to localStorage', e);
 	}
 	return envelope;
 }
