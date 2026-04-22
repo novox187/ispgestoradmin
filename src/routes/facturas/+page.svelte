@@ -204,6 +204,55 @@
     let showCreateModal = $state(false);
     let showViewModal = $state(false);
     let selectedInvoice = $state<Invoice | null>(null);
+    
+    // Estado de carga específico para el proceso de facturación automática
+    let generatingAuto = $state(false);
+
+    /**
+     * Invoca la función de generación de facturas automáticas en la API.
+     * Muestra indicadores de carga, maneja errores y recarga la lista de facturas
+     * en caso de éxito, usando el sistema de hybrid-cache (loadBus) para la UI global.
+     * Mantenimiento: Si la ruta de la API cambia o se requieren nuevos encabezados, actualizar endpoint y headers.
+     */
+    async function handleGenerateAuto() {
+        // Validar que no se estén procesando facturas simultáneamente
+        if (generatingAuto) return;
+        
+        generatingAuto = true;
+        try {
+            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+            const endpoint = `${API_BASE}/admin/invoices/generate-auto`;
+            const headers: Record<string, string> = { Accept: 'application/json' };
+            if (token) headers.Authorization = `Bearer ${token}`;
+
+            loadBus.start('generate-auto', endpoint);
+
+            // Llamada HTTP POST al endpoint de generación automática
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers
+            });
+
+            const data = await res.json().catch(() => ({ message: 'Respuesta inválida del servidor' }));
+
+            if (!res.ok) throw new Error(data.error || data.message || 'Error generando facturas');
+
+            // Confirmación exitosa en el UI y recarga de la tabla
+            loadBus.success('generate-auto');
+            loadInvoices();
+            
+            alert(`✅ ${data.message || 'Facturas generadas'}. Se generaron ${data.count || 0} facturas nuevas.`);
+
+        } catch (e: any) {
+            // Manejo de errores con feedback apropiado
+            console.error('Error generando facturas automáticas:', e);
+            const message = e.message || 'Error desconocido';
+            loadBus.error('generate-auto', { endpoint: `${API_BASE}/admin/invoices/generate-auto`, message });
+            alert(`❌ Error: ${message}`);
+        } finally {
+            generatingAuto = false;
+        }
+    }
 
     function handleCreate() {
         showCreateModal = true;
@@ -234,9 +283,21 @@
                 <h1 class="text-3xl md:text-4xl font-bold text-foreground mb-2">Gestión de Facturas</h1>
                 <p class="text-muted-foreground">Administra las facturas de tus clientes</p>
             </div>
-            <div class="flex items-end justify-center">
+            <div class="flex items-center gap-3">
+                <button onclick={handleGenerateAuto} disabled={generatingAuto || loading}
+                    class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-lg transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={generatingAuto ? 'Procesando facturación...' : (loading ? 'Esperando datos del sistema...' : 'Generar facturas mensuales para planes activos')}
+                >
+                    {#if generatingAuto}
+                        <Loader2 class="w-4 h-4 animate-spin" />
+                        Generando...
+                    {:else}
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Generar Automáticas
+                    {/if}
+                </button>
                 <button onclick={handleCreate}
-                    class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors">
+                    class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors hover:bg-gray-300">
                     + Nueva Factura
                 </button>
             </div>
