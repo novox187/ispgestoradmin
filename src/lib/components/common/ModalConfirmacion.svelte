@@ -2,7 +2,6 @@
   import { Dialog } from '@skeletonlabs/skeleton-svelte';
   import { Loader2, AlertTriangle, CheckCircle } from '@lucide/svelte';
   import { createEventDispatcher } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
 
   export let open: boolean = false;
   export let title: string = 'Confirmación';
@@ -31,14 +30,10 @@
 
 <Dialog open={open} onOpenChange={(v) => open = v.open}>
   <Dialog.Backdrop 
-    transition={fade} 
-    transitionParams={{ duration: 200 }}
     class="fixed inset-0 bg-black/60 z-[999] backdrop-blur-sm" 
   />
   <Dialog.Positioner class="fixed inset-0 z-[999] flex items-center justify-center p-4">
     <Dialog.Content 
-      transition={fly}
-      transitionParams={{ y: 20, duration: 200 }}
       class="w-full max-w-md bg-[#0f0f0f] border border-neutral-800 rounded-xl shadow-2xl overflow-hidden relative"
     >
       <!-- Loading Overlay -->

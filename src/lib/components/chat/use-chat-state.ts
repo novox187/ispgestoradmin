@@ -107,25 +107,25 @@ const chatStore = create<ChatStore>((set, get) => ({
 
 // Hook with computed values using selectors
 export const useChatState = () => {
-  const chatState = chatStore((state) => state.chatState);
-  const conversations = chatStore((state) => state.conversations);
-  const newMessage = chatStore((state) => state.newMessage);
-  const setChatState = chatStore((state) => state.setChatState);
-  const setConversations = chatStore((state) => state.setConversations);
-  const setNewMessage = chatStore((state) => state.setNewMessage);
-  const handleSendMessage = chatStore((state) => state.handleSendMessage);
-  const openConversation = chatStore((state) => state.openConversation);
-  const goBack = chatStore((state) => state.goBack);
-  const toggleExpanded = chatStore((state) => state.toggleExpanded);
+  const chatState = chatStore((state: ChatStore) => state.chatState);
+  const conversations = chatStore((state: ChatStore) => state.conversations);
+  const newMessage = chatStore((state: ChatStore) => state.newMessage);
+  const setChatState = chatStore((state: ChatStore) => state.setChatState);
+  const setConversations = chatStore((state: ChatStore) => state.setConversations);
+  const setNewMessage = chatStore((state: ChatStore) => state.setNewMessage);
+  const handleSendMessage = chatStore((state: ChatStore) => state.handleSendMessage);
+  const openConversation = chatStore((state: ChatStore) => state.openConversation);
+  const goBack = chatStore((state: ChatStore) => state.goBack);
+  const toggleExpanded = chatStore((state: ChatStore) => state.toggleExpanded);
 
   // Computed values
   const totalUnreadCount = conversations.reduce(
-    (total, conv) => total + conv.unreadCount,
+    (total: number, conv: ChatConversation) => total + conv.unreadCount,
     0
   );
 
   const activeConversation = conversations.find(
-    (conv) => conv.id === chatState.activeConversation
+    (conv: ChatConversation) => conv.id === chatState.activeConversation
   );
 
   return {

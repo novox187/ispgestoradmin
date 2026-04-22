@@ -1,6 +1,15 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { getContext, onMount } from 'svelte';
+    import { fade } from 'svelte/transition';
     import { API_BASE } from '$lib/config';
+    import {
+        DASHBOARD_LOAD_CONTEXT,
+        fetchJsonWithRetry,
+        readCookieCache,
+        writeCookieCache,
+        type DashboardLoadBus,
+        type FetchErrorDetails,
+    } from '$lib/utils/hybrid-cache';
 
     //======================================================================
     // 1. TIPOS Y DATOS (Finanzas)
@@ -25,6 +34,9 @@
     let chartData: ChartDataItem[] = [];
     let loading = $state(true);
     let error = $state<string | null>(null);
+
+    const CHART_COOKIE = 'ispga_dash_chart_v1';
+    const loadBus = getContext<DashboardLoadBus | undefined>(DASHBOARD_LOAD_CONTEXT);
 
     // Configuración de métricas
     const config: ChartConfig = {
@@ -55,6 +67,8 @@
     let activeTab = $state<TimePeriod>('year');
     let chartContainer = $state<HTMLDivElement | null>(null);
     let hoveredPoint = $state<{ x: number, data: ChartDataItem } | null>(null);
+    let abortController: AbortController | null = null;
+    let inFlight = false;
     
     // Datos y dimensiones derivados
     const data = $derived<ChartDataItem[]>(chartData);
@@ -75,17 +89,25 @@
     const xStep = $derived(data.length > 1 ? chartWidth / (data.length - 1) : chartWidth);
 
     async function loadChartData() {
-        loading = true;
+        if (inFlight) return;
+        inFlight = true;
         error = null;
+        if (chartData.length === 0) loading = true;
         try {
             const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-            const res = await fetch(`${API_BASE}/admin/dashboard/chart`, {
-                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
-            });
-            
-            if (!res.ok) throw new Error('Error cargando datos del gráfico');
-            
-            const payload = await res.json();
+            const endpoint = `${API_BASE}/admin/dashboard/chart`;
+            const headers: Record<string, string> = { Accept: 'application/json' };
+            if (token) headers.Authorization = `Bearer ${token}`;
+            loadBus?.start('chart', endpoint);
+
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
+            const payload = await fetchJsonWithRetry<any>(
+                endpoint,
+                { headers, signal: abortController.signal },
+                { attempts: 3, baseDelayMs: 700 }
+            );
             
             // Transformar respuesta del backend al formato ChartDataItem
             if (payload.labels && payload.datasets) {
@@ -100,17 +122,34 @@
                     collected: Number(collectedData[i] || 0),
                     pending: Number(pendingData[i] || 0)
                 }));
+                writeCookieCache(CHART_COOKIE, chartData, { maxAgeSeconds: 60 * 60 * 24 });
             }
+            loadBus?.success('chart');
         } catch (e: any) {
-            console.error('Error chart:', e);
-            error = e.message;
+            if (e?.name === 'AbortError') return;
+            const err = e as FetchErrorDetails;
+            const msg = typeof err?.message === 'string' && err.message ? err.message : 'Error cargando datos del gráfico';
+            loadBus?.error('chart', { endpoint: `${API_BASE}/admin/dashboard/chart`, status: err?.status, message: msg });
+            error = msg;
         } finally {
             loading = false;
+            inFlight = false;
         }
     }
 
     onMount(() => {
+        const cached = readCookieCache<ChartDataItem[]>(CHART_COOKIE);
+        if (cached?.data && Array.isArray(cached.data) && cached.data.length > 0) {
+            chartData = cached.data;
+            loading = false;
+        }
         loadChartData();
+        const interval = setInterval(loadChartData, 30000);
+
+        return () => {
+            clearInterval(interval);
+            if (abortController) abortController.abort();
+        };
     });
 
     //======================================================================
@@ -232,26 +271,26 @@
 
         <div class="relative w-full">
             {#if loading}
-                <div class="flex items-center justify-center h-[320px] text-gray-400">
-                    Cargando datos...
-                </div>
-            {:else if error}
-                <div class="flex items-center justify-center h-[320px] text-red-400">
-                    {error}
-                </div>
-            {:else}
-                <div 
-                    class="md:aspect-[3/1] w-full" 
-                    style:height="{height}px"
-                    bind:this={chartContainer}
-                >
-                    <svg
-                        viewBox={`0 0 ${width} ${height}`}
-                        class="w-full h-full overflow-visible"
-                        role="img"
-                        onmousemove={handleMouseMove}
-                        onmouseleave={handleMouseLeave}
+                    <div class="flex items-center justify-center h-[320px] text-gray-400">
+                        Cargando datos...
+                    </div>
+                {:else if error}
+                    <div class="flex items-center justify-center h-[320px] text-red-400">
+                        {error}
+                    </div>
+                {:else}
+                    <div 
+                        class="md:aspect-[3/1] w-full" 
+                        style:height="{height}px"
+                        bind:this={chartContainer}
                     >
+                        <svg
+                            viewBox={`0 0 ${width} ${height}`}
+                            class="w-full h-full overflow-visible"
+                            role="img"
+                            onmousemove={handleMouseMove}
+                            onmouseleave={handleMouseLeave}
+                        >
                         <defs>
                             <linearGradient id="fillInvoiced" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stop-color={config.invoiced.color} stop-opacity={0.3} />
@@ -313,38 +352,38 @@
                             <circle cx={hoveredPoint.x} cy={getY(hoveredPoint.data.collected)} r="4" fill={config.collected.color} stroke="#333" stroke-width="2" />
                             <circle cx={hoveredPoint.x} cy={getY(hoveredPoint.data.pending)} r="4" fill={config.pending.color} stroke="#333" stroke-width="2" />
                         {/if}
-                    </svg>
-                </div>
-
-                {#if hoveredPoint}
-                    {@const xRatio = hoveredPoint.x / width}
-                    {@const isLeftEdge = xRatio < 0.25}
-                    {@const isRightEdge = xRatio > 0.75}
-                    <div
-                        class="absolute bg-gray-700/95 backdrop-blur-sm text-gray-100 p-4 shadow-xl rounded-lg border border-gray-600 pointer-events-none z-50 min-w-[200px]"
-                        style:left="{xRatio * 100}%"
-                        style:top="10px"
-                        style:transform={isLeftEdge ? 'translate(10px, 0)' : isRightEdge ? 'translate(calc(-100% - 10px), 0)' : 'translate(-50%, 0)'}
-                    >
-                        <div class="font-bold text-center mb-2 border-b border-gray-600 pb-2">
-                            {hoveredPoint.data.date}
-                        </div>
-                        
-                        <div class="space-y-2">
-                            {#each Object.entries(config) as [key, { label, color }]}
-                                {@const value = hoveredPoint.data[key] as number}
-                                
-                                <div class="flex items-center justify-between text-sm">
-                                    <div class="flex items-center">
-                                        <span class="w-2 h-2 rounded-full mr-2" style:background-color={color}></span>
-                                        <span>{label}:</span>
-                                    </div>
-                                    <span class="ml-auto font-medium">{formatTooltipValue(key as keyof ChartDataItem, value)}</span>
-                                </div>
-                            {/each}
-                        </div>
+                        </svg>
                     </div>
-                {/if}
+
+                    {#if hoveredPoint}
+                        {@const xRatio = hoveredPoint.x / width}
+                        {@const isLeftEdge = xRatio < 0.25}
+                        {@const isRightEdge = xRatio > 0.75}
+                        <div
+                            class="absolute bg-gray-700/95 backdrop-blur-sm text-gray-100 p-4 shadow-xl rounded-lg border border-gray-600 pointer-events-none z-50 min-w-[200px]"
+                            style:left="{xRatio * 100}%"
+                            style:top="10px"
+                            style:transform={isLeftEdge ? 'translate(10px, 0)' : isRightEdge ? 'translate(calc(-100% - 10px), 0)' : 'translate(-50%, 0)'}
+                        >
+                            <div class="font-bold text-center mb-2 border-b border-gray-600 pb-2">
+                                {hoveredPoint.data.date}
+                            </div>
+                            
+                            <div class="space-y-2">
+                                {#each Object.entries(config) as [key, { label, color }]}
+                                    {@const value = hoveredPoint.data[key] as number}
+                                    
+                                    <div class="flex items-center justify-between text-sm">
+                                        <div class="flex items-center">
+                                            <span class="w-2 h-2 rounded-full mr-2" style:background-color={color}></span>
+                                            <span>{label}:</span>
+                                        </div>
+                                        <span class="ml-auto font-medium">{formatTooltipValue(key as keyof ChartDataItem, value)}</span>
+                                    </div>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
             {/if}
         </div>
     </div>
