@@ -1,13 +1,23 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, setContext } from 'svelte';
+    import { fade, scale } from 'svelte/transition';
     import { API_BASE } from '$lib/config';
     import { Pagination } from '@skeletonlabs/skeleton-svelte';
-    import { ArrowLeftIcon, ArrowRightIcon } from '@lucide/svelte';
+    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon } from '@lucide/svelte';
     import Encabezado from "$lib/components/Encabezado.svelte";
     import TablaFacturas from "$lib/components/facturas/TablaFacturas.svelte";
     import ModalCrearFactura from "$lib/components/facturas/ModalCrearFactura.svelte";
     import ModalVerFactura from "$lib/components/facturas/ModalVerFactura.svelte";
     import { appState } from '$lib/stores/app.svelte';
+    import {
+        DASHBOARD_LOAD_CONTEXT,
+        fetchJsonWithRetry,
+        readStorageCache,
+        writeStorageCache,
+        type DashboardLoadBus,
+        type DashboardLoadStatus,
+        type FetchErrorDetails
+    } from '$lib/utils/hybrid-cache';
 
     let isSidebarOpen = $state(false);
     let isNotificationsOpen = $state(false);
@@ -43,8 +53,84 @@
     let pageSize = $state(5);
     let totalInvoices = $state(0);
 
+    const INVOICES_CACHE_STORAGE = 'ispga_invoices_v1';
+    let inFlight = false;
+    let abortController: AbortController | null = null;
+
+    let requestStates = $state<Record<string, { status: DashboardLoadStatus; endpoint: string; message?: string; updatedAt: number }>>({});
+    let indicatorVisible = $state(false);
+    let indicatorHideTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const overallStatus = $derived.by((): DashboardLoadStatus => {
+        const items = Object.values(requestStates);
+        if (items.some(i => i.status === 'loading')) return 'loading';
+        if (items.some(i => i.status === 'error')) return 'error';
+        if (items.some(i => i.status === 'success')) return 'success';
+        return 'idle';
+    });
+
+    const overallMessage = $derived.by((): string => {
+        const errors = Object.entries(requestStates)
+            .filter(([, v]) => v.status === 'error')
+            .sort((a, b) => (b[1].updatedAt ?? 0) - (a[1].updatedAt ?? 0));
+        const first = errors[0]?.[1];
+        if (!first) return '';
+        return first.message || 'Error de actualización';
+    });
+
+    function setRequestState(key: string, next: { status: DashboardLoadStatus; endpoint: string; message?: string }) {
+        requestStates[key] = { ...next, updatedAt: Date.now() };
+        requestStates = { ...requestStates };
+    }
+
+    const loadBus: DashboardLoadBus = {
+        start: (key, endpoint) => setRequestState(key, { status: 'loading', endpoint }),
+        success: (key) => {
+            const prev = requestStates[key];
+            setRequestState(key, { status: 'success', endpoint: prev?.endpoint || '' });
+        },
+        error: (key, details) => setRequestState(key, { status: 'error', endpoint: details.endpoint, message: details.message })
+    };
+
+    setContext(DASHBOARD_LOAD_CONTEXT, loadBus);
+
+    $effect(() => {
+        if (indicatorHideTimer) {
+            clearTimeout(indicatorHideTimer);
+            indicatorHideTimer = null;
+        }
+
+        if (overallStatus === 'idle') {
+            indicatorVisible = false;
+            return;
+        }
+
+        indicatorVisible = true;
+
+        if (overallStatus === 'success') {
+            indicatorHideTimer = setTimeout(() => {
+                if (overallStatus === 'success') indicatorVisible = false;
+            }, 2500);
+        }
+
+        if (overallStatus === 'error') {
+            indicatorHideTimer = setTimeout(() => {
+                if (overallStatus === 'error') indicatorVisible = false;
+            }, 9000);
+        }
+
+        return () => {
+            if (indicatorHideTimer) {
+                clearTimeout(indicatorHideTimer);
+                indicatorHideTimer = null;
+            }
+        };
+    });
+
     async function loadInvoices() {
-        loading = true;
+        if (inFlight) return;
+        inFlight = true;
+        if (invoices.length === 0) loading = true;
         try {
             const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
             
@@ -54,23 +140,55 @@
             if (dateFrom) query += `&date_from=${dateFrom}`;
             if (dateTo) query += `&date_to=${dateTo}`;
 
-            const res = await fetch(`${API_BASE}/admin/invoices${query}`, {
-                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
-            });
+            const endpoint = `${API_BASE}/admin/invoices${query}`;
+            const headers: Record<string, string> = { Accept: 'application/json' };
+            if (token) headers.Authorization = `Bearer ${token}`;
 
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
+            loadBus.start('invoices-list', endpoint);
+
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
+            const data = await fetchJsonWithRetry<any>(
+                endpoint,
+                { headers, signal: abortController.signal },
+                { attempts: 3, baseDelayMs: 700 }
+            );
+
             invoices = data.data;
             totalInvoices = data.total;
-        } catch (e) {
+
+            if (!searchTerm && statusFilter === 'all' && !dateFrom && !dateTo && page === 1) {
+                writeStorageCache(INVOICES_CACHE_STORAGE, { invoices, totalInvoices });
+            }
+            loadBus.success('invoices-list');
+        } catch (e: any) {
+            if (e?.name === 'AbortError') return;
             console.error('Error cargando facturas:', e);
+            const err = e as FetchErrorDetails;
+            const message = typeof err?.message === 'string' && err.message ? err.message : 'Error cargando la lista de facturas';
+            loadBus.error('invoices-list', { endpoint: `${API_BASE}/admin/invoices`, status: err?.status, message });
         } finally {
             loading = false;
+            inFlight = false;
         }
     }
 
     onMount(() => {
+        const cached = readStorageCache<{invoices: Invoice[], totalInvoices: number}>(INVOICES_CACHE_STORAGE);
+        if (cached?.data?.invoices && Array.isArray(cached.data.invoices) && cached.data.invoices.length > 0) {
+            invoices = cached.data.invoices;
+            totalInvoices = cached.data.totalInvoices || cached.data.invoices.length;
+            loading = false;
+        }
+
         loadInvoices();
+        const interval = setInterval(loadInvoices, 60000); // 60s
+        
+        return () => {
+            clearInterval(interval);
+            if (abortController) abortController.abort();
+        };
     });
 
     $effect(() => {
@@ -194,6 +312,25 @@
 
     {#if showViewModal}
         <ModalVerFactura open={showViewModal} invoice={selectedInvoice} onClose={handleCloseView} />
+    {/if}
+
+    <!-- Indicador de carga -->
+    {#if indicatorVisible}
+        <div class="fixed bottom-4 right-4 z-[60]" in:scale={{ duration: 140, start: 0.9 }} out:fade={{ duration: 140 }}>
+            <button
+                class="flex items-center gap-2 bg-[#141414] border border-gray-800 text-gray-200 px-3 py-2 rounded-lg shadow-lg max-w-[320px]"
+                onclick={() => overallStatus === 'error' && loadInvoices()}
+            >
+                {#if overallStatus === 'loading'}
+                    <Loader2 class="w-4 h-4 animate-spin text-blue-400 flex-shrink-0" />
+                {:else if overallStatus === 'success'}
+                    <CheckCircleIcon class="w-4 h-4 text-green-500 flex-shrink-0" />
+                {:else if overallStatus === 'error'}
+                    <XCircleIcon class="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <span class="text-xs truncate">{overallMessage}</span>
+                {/if}
+            </button>
+        </div>
     {/if}
 
 </main>
