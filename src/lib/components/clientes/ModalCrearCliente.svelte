@@ -170,7 +170,7 @@
     try {
       const headers: Record<string, string> = { Accept: 'application/json' };
       const token =
-        (typeof localStorage !== 'undefined' && (localStorage.getItem('admin_token') || localStorage.getItem('client_token'))) || '';
+        (typeof localStorage !== 'undefined' && localStorage.getItem('employee_token')) || '';
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const url = `${API_BASE}/mikrotik/ip/check?ip=${encodeURIComponent(ip)}`;
       const res = await fetch(url, { method: 'GET', headers });
@@ -196,7 +196,7 @@
     loading = true;
     try {
       const token =
-        (typeof localStorage !== 'undefined' && (localStorage.getItem('admin_token') || localStorage.getItem('client_token'))) || '';
+        (typeof localStorage !== 'undefined' && localStorage.getItem('employee_token')) || '';
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json'

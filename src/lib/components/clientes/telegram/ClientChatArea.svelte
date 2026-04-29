@@ -6,6 +6,9 @@
     } from '@lucide/svelte';
     import { fade, fly } from 'svelte/transition';
     import ClientDetailSidebar from './ClientDetailSidebar.svelte';
+    import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
+    import { API_BASE } from '$lib/config';
+    import { toast } from 'svelte-sonner';
 
     interface Attachment {
         name: string;
@@ -23,7 +26,8 @@
     interface Client {
         id: number;
         name: string;
-        status: string;
+        status?: string;
+        service_status?: string;
         [key: string]: any;
     }
 
@@ -43,6 +47,81 @@
 
     let newMessage = $state('');
     let chatContainer: HTMLDivElement;
+
+    let showDropdown = $state(false);
+    let showConfirmModal = $state(false);
+    let actionType = $state<'suspend' | 'activate' | null>(null);
+    let actionLoading = $state(false);
+
+    function toggleDropdown() {
+        showDropdown = !showDropdown;
+    }
+
+    function handleActionClick(action: 'suspend' | 'activate') {
+        showDropdown = false;
+        actionType = action;
+        showConfirmModal = true;
+    }
+
+    function closeConfirmModal() {
+        showConfirmModal = false;
+        actionType = null;
+    }
+
+    async function executeAction() {
+        if (!client || !client.id) {
+            toast.error("ID de cliente inválido.");
+            return;
+        }
+        
+        actionLoading = true;
+        try {
+            const token = localStorage.getItem('employee_token');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            
+            const endpoint = actionType === 'suspend' 
+                ? `${API_BASE}/admin/clientes/${client.id}/suspend`
+                : `${API_BASE}/admin/clientes/${client.id}/activate`;
+                
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                toast.success(`Cliente ${actionType === 'suspend' ? 'suspendido' : 'activado'} correctamente.`);
+                // actualizamos el estado local
+                if (client) {
+                    const newStatus = actionType === 'suspend' ? 'SUSPENDED' : 'ACTIVE';
+                    if ('status' in client) client.status = newStatus;
+                    if ('service_status' in client) client.service_status = newStatus;
+                }
+                dispatch('updated', data);
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.message || `Error al ${actionType === 'suspend' ? 'suspender' : 'activar'} el cliente.`);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Error de red al procesar la solicitud.");
+        } finally {
+            actionLoading = false;
+            showConfirmModal = false;
+            actionType = null;
+        }
+    }
+
+    function handleWindowClick(e: MouseEvent) {
+        const target = e.target as HTMLElement;
+        if (showDropdown && !target.closest('.dropdown-container')) {
+            showDropdown = false;
+        }
+    }
 
     function handleSendMessage() {
         if (!newMessage.trim()) return;
@@ -77,6 +156,8 @@
     }
 </script>
 
+<svelte:window onclick={handleWindowClick} />
+
 <div class="flex flex-1 h-full bg-[#0f0f0f] relative overflow-hidden">
     {#if !client}
         <!-- Empty State -->
@@ -110,17 +191,38 @@
                                 {client.name}
                             </h2>
                             <span class="text-xs flex items-center gap-1.5">
-                                <span class="size-2 rounded-full {client.status === 'active' ? 'bg-green-500' : 'bg-red-500'}"></span>
-                                <span class="text-neutral-400">{client.status === 'active' ? 'En línea' : 'Desconectado'}</span>
+                                <span class="size-2 rounded-full {(client.status?.toUpperCase() === 'ACTIVE' || client.service_status?.toUpperCase() === 'ACTIVE') ? 'bg-green-500' : 'bg-red-500'}"></span>
+                                <span class="text-neutral-400">{(client.status?.toUpperCase() === 'ACTIVE' || client.service_status?.toUpperCase() === 'ACTIVE') ? 'En línea' : 'Desconectado'}</span>
                             </span>
                         </div>
                     </button>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <button onclick={toggleDetail} class="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-colors" title="Info del cliente">
-                        <MoreVertical class="size-5" />
+                <div class="flex items-center gap-2 relative dropdown-container">
+                    <button onclick={toggleDropdown} disabled={actionLoading} class="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-colors disabled:opacity-50" title="Opciones del cliente">
+                        {#if actionLoading}
+                            <div class="size-5 border-2 border-neutral-400 border-t-white rounded-full animate-spin"></div>
+                        {:else}
+                            <MoreVertical class="size-5" />
+                        {/if}
                     </button>
+                    
+                    {#if showDropdown}
+                        <div class="absolute top-full right-0 mt-2 w-48 bg-[#1c1c1e] rounded-xl border border-neutral-800 shadow-xl overflow-hidden z-50">
+                            <button onclick={() => { showDropdown = false; toggleDetail(); }} class="w-full text-left px-4 py-2 text-sm text-neutral-300 hover:bg-white/5 transition-colors">
+                                Ver Detalles
+                            </button>
+                            {#if (client?.status?.toUpperCase() === 'ACTIVE') || (client?.service_status?.toUpperCase() === 'ACTIVE')}
+                                <button onclick={() => handleActionClick('suspend')} class="w-full text-left px-4 py-2 text-sm text-yellow-400 hover:bg-yellow-500/10 transition-colors border-t border-neutral-800">
+                                    Suspender
+                                </button>
+                            {:else}
+                                <button onclick={() => handleActionClick('activate')} class="w-full text-left px-4 py-2 text-sm text-green-400 hover:bg-green-500/10 transition-colors border-t border-neutral-800">
+                                    Activar
+                                </button>
+                            {/if}
+                        </div>
+                    {/if}
                 </div>
             </header>
 
@@ -216,6 +318,17 @@
         {/if}
     {/if}
 </div>
+
+<ModalConfirmacion
+    open={showConfirmModal}
+    title={actionType === 'suspend' ? 'Suspender Cliente' : 'Activar Cliente'}
+    message={`¿Está seguro que desea ${actionType === 'suspend' ? 'suspender' : 'activar'} a ${client?.name || 'este cliente'} (ID: ${client?.id})?`}
+    type={actionType === 'suspend' ? 'warning' : 'success'}
+    confirmText={actionType === 'suspend' ? 'Sí, suspender' : 'Sí, activar'}
+    loading={actionLoading}
+    on:confirm={executeAction}
+    on:cancel={closeConfirmModal}
+/>
 
 <style>
     .custom-scrollbar::-webkit-scrollbar {
