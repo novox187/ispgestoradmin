@@ -4,7 +4,6 @@
         Send, Paperclip, MoreVertical, Phone, Mail, 
         MapPin, CreditCard, User, X, ArrowLeft
     } from '@lucide/svelte';
-    import { fade, fly } from 'svelte/transition';
     import ClientDetailSidebar from './ClientDetailSidebar.svelte';
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
     import ModalAddFunds from "./ModalAddFunds.svelte";
@@ -56,10 +55,39 @@
     
     let showAddFundsModal = $state(false);
     let isAdmin = $state(false);
+    let detailMounted = $state(false);
+    let detailVisible = $state(false);
+    let detailUnmountTimer: ReturnType<typeof setTimeout> | null = null;
 
     $effect(() => {
         const role = (localStorage.getItem('employee_role') || '').toLowerCase().trim();
         isAdmin = role === 'admin' || role === 'administrador' || role === 'super_admin' || role === 'super admin';
+    });
+
+    $effect(() => {
+        if (detailUnmountTimer) {
+            clearTimeout(detailUnmountTimer);
+            detailUnmountTimer = null;
+        }
+
+        if (isDetailOpen) {
+            detailMounted = true;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    detailVisible = true;
+                });
+            });
+            return;
+        }
+
+        detailVisible = false;
+
+        if (detailMounted) {
+            detailUnmountTimer = setTimeout(() => {
+                detailMounted = false;
+                detailUnmountTimer = null;
+            }, 620);
+        }
     });
 
     function toggleDropdown() {
@@ -179,7 +207,7 @@
         </div>
     {:else}
         <!-- Main Chat Area -->
-        <div class="flex-1 flex flex-col min-w-0 transition-all duration-300" class:mr-80={isDetailOpen}>
+        <div class="flex-1 flex flex-col min-w-0 chat-layer" class:chat-hidden={detailVisible} aria-hidden={detailVisible}>
             
             <!-- Header -->
             <header class="h-16 border-b border-neutral-800 flex items-center justify-between px-4 bg-[#1c1c1e]/50 backdrop-blur-md sticky top-0 z-10">
@@ -318,16 +346,13 @@
         </div>
 
         <!-- Detail Panel (Overlay/Sidebar) -->
-        {#if isDetailOpen}
-            <div 
-                transition:fly={{ x: 300, duration: 300 }}
-                class="absolute top-0 right-0 w-80 h-full bg-[#1c1c1e] border-l border-neutral-800 z-20 shadow-2xl"
+        {#if detailMounted}
+            <div
+                class="detail-layer bg-[#0f0f0f] flex flex-col"
+                class:detail-open={detailVisible}
+                aria-hidden={!detailVisible}
             >
-                <ClientDetailSidebar 
-                    {client} 
-                    onClose={toggleDetail}
-                    on:updated
-                />
+                <ClientDetailSidebar {client} onClose={toggleDetail} on:updated />
             </div>
         {/if}
     {/if}
@@ -351,6 +376,51 @@
 />
 
 <style>
+    :global(:root) {
+        --detail-transition-ms: 600ms;
+        --detail-ease: cubic-bezier(0.2, 0.9, 0.2, 1);
+    }
+
+    .chat-layer {
+        position: relative;
+        z-index: 10;
+        opacity: 1;
+        visibility: visible;
+        transform-origin: left center;
+        transform: translate3d(0, 0, 0) scaleX(1);
+        will-change: transform, opacity;
+        transition:
+            opacity var(--detail-transition-ms) var(--detail-ease),
+            transform var(--detail-transition-ms) var(--detail-ease),
+            visibility 0ms linear 0ms;
+    }
+
+    .chat-layer.chat-hidden {
+        opacity: 0;
+        transform: translate3d(-18px, 0, 0) scaleX(0.02);
+        pointer-events: none;
+        visibility: hidden;
+        transition:
+            opacity var(--detail-transition-ms) var(--detail-ease),
+            transform var(--detail-transition-ms) var(--detail-ease),
+            visibility 0ms linear var(--detail-transition-ms);
+    }
+
+    .detail-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        transform: translate3d(100%, 0, 0);
+        will-change: transform;
+        transition: transform var(--detail-transition-ms) var(--detail-ease);
+        pointer-events: none;
+    }
+
+    .detail-layer.detail-open {
+        transform: translate3d(0, 0, 0);
+        pointer-events: auto;
+    }
+
     .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
     }
