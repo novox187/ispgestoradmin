@@ -7,6 +7,7 @@
     import { fade, fly } from 'svelte/transition';
     import ClientDetailSidebar from './ClientDetailSidebar.svelte';
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
+    import ModalAddFunds from "./ModalAddFunds.svelte";
     import { API_BASE } from '$lib/config';
     import { toast } from 'svelte-sonner';
 
@@ -52,6 +53,14 @@
     let showConfirmModal = $state(false);
     let actionType = $state<'suspend' | 'activate' | null>(null);
     let actionLoading = $state(false);
+    
+    let showAddFundsModal = $state(false);
+    let isAdmin = $state(false);
+
+    $effect(() => {
+        const role = (localStorage.getItem('employee_role') || '').toLowerCase().trim();
+        isAdmin = role === 'admin' || role === 'administrador' || role === 'super_admin' || role === 'super admin';
+    });
 
     function toggleDropdown() {
         showDropdown = !showDropdown;
@@ -221,6 +230,11 @@
                                     Activar
                                 </button>
                             {/if}
+                            {#if isAdmin}
+                                <button onclick={() => { showDropdown = false; showAddFundsModal = true; }} class="w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-blue-500/10 transition-colors border-t border-neutral-800 flex items-center gap-2">
+                                    <CreditCard class="size-4" /> Agregar Fondos
+                                </button>
+                            {/if}
                         </div>
                     {/if}
                 </div>
@@ -328,6 +342,12 @@
     loading={actionLoading}
     on:confirm={executeAction}
     on:cancel={closeConfirmModal}
+/>
+
+<ModalAddFunds 
+    bind:open={showAddFundsModal} 
+    {client}
+    on:success={(e) => dispatch('updated', e.detail)}
 />
 
 <style>
