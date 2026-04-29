@@ -1,7 +1,7 @@
 <script lang="ts">
   import { 
     X, Loader2, Crosshair, Search, CheckCircle, XCircle, AlertTriangle, 
-    Save, Phone, Mail, MapPin, CreditCard, Edit3, User, Settings, FileText 
+    Save, Phone, Mail, MapPin, CreditCard, Edit3, User, Settings, FileText, Wallet
   } from '@lucide/svelte';
   import { createEventDispatcher, onMount, untrack } from 'svelte';
   import { API_BASE } from '$lib/config';
@@ -29,6 +29,9 @@
         observations?: string;
         current_plan_id?: number;
         client_plans?: { plan_id: number }[];
+        wallet_balance?: number | string;
+        balance?: number | string;
+        wallet?: { balance?: number | string };
         [key: string]: any;
     }
 
@@ -77,8 +80,13 @@
     reason: ''
   });
 
-  let originalPlanId: number | undefined = undefined;
+  let originalPlanId = $state<number | undefined>(undefined);
   let selectedPlan = $derived(plans.find(p => p.id === form.plan_id));
+  let walletBalance = $derived.by(() => {
+    const raw = client?.wallet_balance ?? client?.balance ?? client?.wallet?.balance;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  });
 
   let currentClientId = $state<number | null>(null);
 
@@ -277,6 +285,15 @@
   function getInitials(name: string) {
         return name ? name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : '';
   }
+
+  function formatCurrency(amount: number) {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(amount);
+  }
 </script>
 
 <div class="h-full flex flex-col bg-[#0f0f0f] text-gray-100">
@@ -394,6 +411,20 @@
                     </div>
                     
                     <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-neutral-400 mb-1.5" for="wallet_balance">Balance de Billetera</label>
+                            <div class="relative">
+                                <Wallet class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-500" />
+                                <input
+                                    id="wallet_balance"
+                                    type="text"
+                                    value={formatCurrency(walletBalance)}
+                                    readonly
+                                    class="w-full pl-9 pr-3 py-2 bg-[#0f0f0f] border border-neutral-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label class="block text-xs font-medium text-neutral-400 mb-1.5" for="ip">Dirección IP</label>
                             <div class="relative">
