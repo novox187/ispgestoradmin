@@ -218,7 +218,7 @@
                     
                     <button 
                         onclick={toggleDetail}
-                        class="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg transition-colors group text-left"
+                        class="flex items-center gap-3  p-2 rounded-lg transition-colors group text-left"
                     >
                         <div class="size-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
                             {getInitials(client.name)}
