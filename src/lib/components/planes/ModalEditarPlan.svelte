@@ -158,7 +158,7 @@
               <label for="features-input" class="text-xs text-muted-foreground">Características</label>
               <div class="flex gap-2">
                 <input id="features-input" class="flex-1 px-3 py-2 rounded-lg bg-neutral-900" placeholder="Agregar característica" bind:value={newFeature} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') addFeature() }} />
-                <button class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors" onclick={addFeature}>Agregar</button>
+                <button class="sm:px-4 sm:py-2 rounded-xl sm:hover:bg-gray-200  sm:hover:text-gray-900 text-xs sm:text-sm font-semibold  transition transform duration-300" onclick={addFeature}>Agregar</button>
               </div>
               {#if featuresList.length}
                 <ul class="mt-2 space-y-2">

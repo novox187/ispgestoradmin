@@ -5,7 +5,7 @@
   import ModalEditarPlan from "$lib/components/planes/ModalEditarPlan.svelte";
   import ModalCrearPlan from "$lib/components/planes/ModalCrearPlan.svelte";
   import { Pagination } from "@skeletonlabs/skeleton-svelte";
-  import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon } from "@lucide/svelte";
+  import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon, PlusIcon } from "@lucide/svelte";
   import { onMount, setContext } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { API_BASE } from "$lib/config";
@@ -431,11 +431,11 @@
   <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-3xl md:text-4xl font-bold tracking-tight">Gestión de Planes</h2>
-        <p class="text-sm text-gray-400 leading-relaxed">Administra los planes de internet disponibles</p>
+        <h2 class="text-xl md:text-4xl font-bold tracking-tight">Gestión de Planes</h2>
+        <p class="sm:text-sm text-xs text-gray-400 leading-relaxed">Administra los planes de internet disponibles</p>
       </div>
-      <button class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors" onclick={openCreate}>
-        + Nuevo Plan
+      <button class=" flex gap-1 items-center px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-xs sm:text-sm font-semibold shadow-lg transition-colors" onclick={openCreate}>
+        <PlusIcon class="size-4" /> Nuevo 
       </button>
     </div>
 
@@ -443,7 +443,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <label class="block text-sm font-medium text-foreground mb-2" for="searchTerm">Buscar Plan</label>
-          <input id="searchTerm" type="text" placeholder="Nombre..." bind:value={searchTerm}
+          <input id="searchTerm" type="text" placeholder="Nombre" bind:value={searchTerm}
             class="w-full px-4 py-2 border border-neutral-800 rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0" />
         </div>
         <div>

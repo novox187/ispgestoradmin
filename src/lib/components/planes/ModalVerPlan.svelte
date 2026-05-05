@@ -21,7 +21,7 @@
   <Portal>
     <Dialog.Backdrop class="fixed inset-0 z-50 bg-surface-50-950/50" />
     <Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center p-4">
-      <Dialog.Content class={"card bg-surface-100-900 w-[520px] max-w-[95vw] p-4 shadow-xl rounded-2xl " + animation}>
+      <Dialog.Content class={"card bg-surface-100-900 w-[520px] max-w-[95vw] p-4 shadow-xl rounded-2xl overflow-auto  max-h-[80vh] " + animation}>
         <header class="flex justify-between items-center mb-2">
           <Dialog.Title class="text-lg font-bold">Detalle del Plan</Dialog.Title>
           <Dialog.CloseTrigger class="btn-icon hover:preset-tonal">
