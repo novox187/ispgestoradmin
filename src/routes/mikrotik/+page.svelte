@@ -62,7 +62,7 @@
       <MikroTikActionCard
         title="Sincronizar MikroTik con planes y clientes"
         description="Actualiza colas padre e hijas en MikroTik usando los planes activos y clientes con IP válida."
-        actionLabel="Sincronizar ahora"
+        actionLabel="Sincronizar"
         modalTitle="Confirmar sincronización con limpieza"
         modalMessage="Se crearán o actualizarán colas de planes y clientes, y se eliminarán colas huérfanas."
         modalSecondaryMessage="Esta acción afecta la configuración de /queue/simple en el Router."

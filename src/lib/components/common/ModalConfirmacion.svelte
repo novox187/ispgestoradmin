@@ -24,11 +24,17 @@
 
   function handleCancel() {
     if (loading) return;
+    open = false;
     dispatch('cancel');
+  }
+
+  function handleOpenChange(v: { open: boolean }) {
+    if (!v.open && open && !loading) dispatch('cancel');
+    open = v.open;
   }
 </script>
 
-<Dialog open={open} onOpenChange={(v) => open = v.open}>
+<Dialog open={open} onOpenChange={handleOpenChange}>
   <Dialog.Backdrop 
     class="fixed inset-0 bg-black/60 z-[999] backdrop-blur-sm" 
   />
@@ -98,7 +104,7 @@
           <button
             type="button"
             class="flex-1 px-4 py-2 text-sm font-medium rounded-lg border border-neutral-800 hover:bg-neutral-800/50 transition-colors disabled:opacity-50"
-            onclick={handleCancel}
+            on:click={handleCancel}
             disabled={loading}
           >
             {cancelText}
@@ -115,7 +121,7 @@
                 ? 'bg-yellow-500 hover:bg-yellow-600 shadow-lg shadow-yellow-900/20'
                 : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/20'
             }`}
-            onclick={handleConfirm}
+            on:click={handleConfirm}
             disabled={loading}
           >
             {#if loading}

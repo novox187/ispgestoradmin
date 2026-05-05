@@ -91,8 +91,8 @@
 <!-- svelte-ignore slot_element_deprecated -->
 <div class="card bg-surface-100-900 border border-neutral-800 rounded-xl p-5 space-y-4">
   <div class="space-y-1">
-    <h3 class="text-lg font-semibold text-foreground">{props.title}</h3>
-    <p class="text-sm text-muted-foreground leading-relaxed">{props.description}</p>
+    <h3 class="sm:text-lg font-semibold text-foreground">{props.title}</h3>
+    <p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">{props.description}</p>
   </div>
 
   {#if props.acknowledgeLabel}
@@ -114,7 +114,7 @@
     <div class="flex items-center gap-4">
       <button
         type="button"
-        class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-60 flex items-center gap-2"
+        class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium transition-colors disabled:opacity-60 flex items-center"
         onclick={validateBeforeOpen}
         disabled={loading || props.actionDisabled}
         aria-busy={loading}
@@ -124,13 +124,13 @@
         {/if}
         {props.actionLabel}
       </button>
-      <label class="flex items-center gap-2 text-xs text-muted-foreground">
+      <label class="flex items-center gap-2 text-[10px] sm:text-sm text-muted-foreground">
         <input type="checkbox" bind:checked={useAsync} />
         Ejecutar en segundo plano
       </label>
     </div>
-    <span class="text-xs text-muted-foreground">Recomendado fuera de horas pico.</span>
   </div>
+  <span class="text-[10px] sm:text-sm text-muted-foreground text-amber-200">Recomendado fuera de horas pico.</span>
 </div>
 
 <ModalConfirmacion
