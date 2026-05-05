@@ -118,7 +118,7 @@
   <Portal>
     <Dialog.Backdrop class="fixed inset-0 z-50 bg-surface-50-950/50" />
     <Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center p-4">
-      <Dialog.Content class={"card bg-surface-100-900 w-full max-w-2xl p-6 shadow-xl rounded-2xl " + animation}>
+      <Dialog.Content class={"card bg-surface-100-900 w-full max-w-2xl p-6 shadow-xl rounded-2xl max-h-[80vh] overflow-auto " + animation}>
         <header class="flex justify-between items-center mb-6">
           <Dialog.Title class="text-xl font-bold text-white">Nueva Factura</Dialog.Title>
           <Dialog.CloseTrigger class="btn-icon hover:preset-tonal" onclick={() => onClose?.()}>

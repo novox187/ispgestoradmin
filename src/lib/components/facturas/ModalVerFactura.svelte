@@ -98,11 +98,11 @@
   <Portal>
     <Dialog.Backdrop class="fixed inset-0 z-50 bg-surface-50-950/50 " />
     <Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center p-4 ">
-      <Dialog.Content class={"card bg-surface-100-900 max-w-3xl p-6 shadow-xl rounded-2xl max-h-[90vh] overflow-y-auto " + animation}>
+      <Dialog.Content class={"card bg-surface-100-900 max-w-3xl p-6 shadow-xl rounded-2xl max-h-[80vh] overflow-y-auto " + animation}>
         {#if invoice}
         <header class="flex justify-between items-center mb-6 border-b border-neutral-800 pb-4">
           <div>
-            <Dialog.Title class="text-2xl font-bold text-white">Factura {invoice.invoice_number}</Dialog.Title>
+            <Dialog.Title class="sm:text-2xl font-bold text-white">Factura {invoice.invoice_number}</Dialog.Title>
             <div class="mt-1">
                 {@html getStatusBadge(invoice.status)}
             </div>

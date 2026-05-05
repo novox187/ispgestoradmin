@@ -3,7 +3,7 @@
     import { fade, scale } from 'svelte/transition';
     import { API_BASE } from '$lib/config';
     import { Pagination } from '@skeletonlabs/skeleton-svelte';
-    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon } from '@lucide/svelte';
+    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon, SparkleIcon, PlusIcon } from '@lucide/svelte';
     import Encabezado from "$lib/components/Encabezado.svelte";
     import TablaFacturas from "$lib/components/facturas/TablaFacturas.svelte";
     import ModalCrearFactura from "$lib/components/facturas/ModalCrearFactura.svelte";
@@ -278,27 +278,29 @@
 <main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
     <Encabezado {toggleSidebar} {toggleNotifications} />
     <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
-        <div class="flex items-center justify-between mb-8">
+        <div class="flex flex-col sm:flex-row gap-3 sm:justify-between mb-8">
             <div>
-                <h1 class="text-3xl md:text-4xl font-bold text-foreground mb-2">Gestión de Facturas</h1>
-                <p class="text-muted-foreground">Administra las facturas de tus clientes</p>
+                <h1 class="text-xl md:text-4xl font-bold text-foreground mb-2">Gestión de Facturas</h1>
+                <p class="sm:text-sm text-xs text-gray-400 leading-relaxed">Administra las facturas de tus clientes</p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 ">
                 <button onclick={handleGenerateAuto} disabled={generatingAuto || loading}
-                    class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-lg transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-lg transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     title={generatingAuto ? 'Procesando facturación...' : (loading ? 'Esperando datos del sistema...' : 'Generar facturas mensuales para planes activos')}
                 >
                     {#if generatingAuto}
                         <Loader2 class="w-4 h-4 animate-spin" />
                         Generando...
                     {:else}
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        Generar Automáticas
+                        <SparkleIcon class="w-4 h-4" fill="currentColor" />
+                        Generar
                     {/if}
                 </button>
                 <button onclick={handleCreate}
-                    class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors hover:bg-gray-300">
-                    + Nueva Factura
+                    class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl bg-gray-200 text-gray-900 text-xs sm:text-sm font-semibold shadow-lg transition-colors hover:bg-gray-300">
+                    <PlusIcon size={20} strokeWidth={3} fill="currentColor" />
+                   
+                    Nueva
                 </button>
             </div>
         </div>
