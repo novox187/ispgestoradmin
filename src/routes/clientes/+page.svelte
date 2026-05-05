@@ -394,6 +394,15 @@
                 on:updated={handleClientUpdated}
             />
         </div>
+
+        <button
+            type="button"
+            onclick={() => showAddClient = true}
+            class="{showChatOnMobile ? 'hidden md:inline-flex' : 'inline-flex'} absolute bottom-4 left-4 z-20 items-center justify-center p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
+            title="Nuevo Cliente"
+        >
+            <Plus class="size-6" />
+        </button>
         
     </div>
 
@@ -413,15 +422,6 @@ status: newClient.status === 'cancelled' ? undefined : newClient.status as 'acti
             on:created={handleCreated}
         />
     {/if}
-
-    <!-- Add Client Button (Floating or integrated) -->
-    <button 
-        onclick={() => showAddClient = true}
-        class="absolute bottom-6 left-6 md:left-72 z-50 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
-        title="Nuevo Cliente"
-    >
-        <Plus class="size-6" />
-    </button>
 
     <!-- Indicador de carga -->
     {#if indicatorVisible}

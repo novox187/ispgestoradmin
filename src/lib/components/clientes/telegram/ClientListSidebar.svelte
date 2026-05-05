@@ -94,7 +94,7 @@
     </div>
 
     <!-- Client List -->
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-y-auto pb-24">
         {#if loading && clients.length === 0}
             <div class="p-4 space-y-3">
                 {#each Array(5) as _}
