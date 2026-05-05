@@ -298,14 +298,14 @@
 
 <div class="h-full flex flex-col bg-[#0f0f0f] text-gray-100">
     <!-- Header -->
-    <div class="px-8 py-6 border-b border-neutral-800 flex justify-between items-center bg-[#1c1c1e] shrink-0">
+    <div class="sm:px-8 sm:py-6 p-4 border-b border-neutral-800 flex justify-between items-center bg-[#1c1c1e] shrink-0">
         <div class="flex items-center gap-5">
-            <div class="size-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-xl">
+            <div class="size-12 sm:size-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white sm:text-xl font-bold shadow-xl">
                 {getInitials(form.full_name)}
             </div>
             <div class="flex flex-col justify-center">
                 <div class="flex items-center gap-3">
-                    <h2 class="text-xl font-bold text-white">{form.full_name}</h2>
+                    <h2 class=" sm:text-xl font-bold text-white">{form.full_name}</h2>
                     <button 
                         onclick={() => isEditing = !isEditing} 
                         class="p-1.5 rounded-md transition-colors {isEditing ? 'bg-blue-500/20 text-blue-400' : 'text-neutral-400 hover:text-white hover:bg-white/10'}"
@@ -540,16 +540,16 @@
 
     <!-- Footer Actions -->
     {#if isEditing}
-        <div class="px-8 py-4 border-t border-neutral-800 bg-[#1c1c1e] flex justify-end gap-4 shrink-0 animate-in fade-in slide-in-from-bottom-2">
-            <button onclick={() => isEditing = false} class="px-6 py-2.5 rounded-lg border border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white text-sm font-medium transition-colors">
-                Cancelar Edición
+        <div class=" px-8 py-4 border-t border-neutral-800 bg-[#1c1c1e] flex justify-center sm:justify-end gap-4 shrink-0 animate-in fade-in slide-in-from-bottom-2">
+            <button onclick={() => isEditing = false} class="px-6 py-2.5 rounded-lg border border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white text-sm sm:text-md font-medium transition-colors">
+                Cancelar
             </button>
             <button onclick={submit} disabled={loading || !hasChanges} 
-                class="px-8 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
+                class="px-8 py-2.5 text-sm sm:text-md rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
                 {#if loading}
                     <Loader2 class="size-4 animate-spin" /> Guardando...
                 {:else}
-                    <Save class="size-4" /> Guardar Cambios
+                    <Save class="size-3 sm:size-4" /> Guardar
                 {/if}
             </button>
         </div>
