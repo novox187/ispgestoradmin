@@ -116,7 +116,7 @@
 								<h3 class="text-xl font-semibold text-foreground">{client.full_name}</h3>
 								<p class="text-sm text-muted-foreground">Doc: {client.document_id}</p>
 							</div>
-							<span class={`px-3 py-1 rounded-full text-xs font-medium ${statusClass(client.service_status)}`}>
+							<span class={`px-3 py-1 rounded-full text-xs font-medium w-25 text-center ${statusClass(client.service_status)}`}>
 								{statusLabel(client.service_status)}
 							</span>
 						</div>

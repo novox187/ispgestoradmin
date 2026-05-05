@@ -134,27 +134,27 @@
       {:else}
         {#each debtors as debtor, i}
           <div class="flex items-center justify-between w-full group" transition:fade>
-            <div class="flex items-center gap-3 w-full">
+            <div class="flex items-center sm:gap-3 gap-1 w-full">
               <div class="h-8 w-8 {i === 0 ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'} flex items-center justify-center rounded text-sm font-bold flex-shrink-0">
                 {i + 1}
               </div>
               
-              <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center text-gray-300 font-bold text-lg flex-shrink-0 border border-gray-700">
+              <div class="size-10 sm:size-12 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center text-gray-300 font-bold text-lg flex-shrink-0 border border-gray-700">
                 {debtor.full_name.charAt(0).toUpperCase()}
               </div>
               
               <div class="flex flex-1 items-center justify-between bg-gray-800/30 hover:bg-gray-800/50 transition-colors p-2 rounded border border-transparent hover:border-gray-700">
                 <div class="flex flex-col min-w-0 mr-2">
-                  <span class="text-sm font-bold text-gray-200 truncate" title={debtor.full_name}>
+                  <span class="sm:text-sm text-xs font-bold text-gray-200 truncate" title={debtor.full_name}>
                     {debtor.full_name}
                   </span>
-                  <span class="text-xs text-gray-500 truncate">
+                  <span class="sm:text-xs text-[11px]  text-gray-500 truncate">
                     {debtor.pending_invoices_count} facturas pendientes
                   </span>
                 </div>
                 
                 <div class="flex flex-col items-end">
-                   <span class="text-sm font-bold text-red-400 whitespace-nowrap">
+                   <span class="sm:text-sm text-xs font-bold text-red-400 whitespace-nowrap">
                      {formatCurrency(Number(debtor.total_debt))}
                    </span>
                    <button 
