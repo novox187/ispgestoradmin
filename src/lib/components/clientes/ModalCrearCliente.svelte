@@ -298,7 +298,7 @@
   <Portal>
     <Dialog.Backdrop class="fixed inset-0 z-40 bg-surface-50-950/50" />
     <Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center p-4">
-      <Dialog.Content class="card bg-surface-100-900 w-full max-w-2xl p-6 space-y-4 shadow-xl rounded-xl {animation}">
+      <Dialog.Content class="card bg-surface-100-900 w-full max-w-2xl p-6 space-y-4 shadow-xl rounded-xl max-h-[80vh] overflow-auto  {animation}">
         <header class="flex justify-between items-center">
           <Dialog.Title class="text-lg font-bold">Agregar Nuevo Cliente</Dialog.Title>
           <Dialog.CloseTrigger class="btn-icon hover:preset-tonal">
@@ -453,8 +453,8 @@
         </div>
 
         <footer class="flex justify-end gap-2">
-          <Dialog.CloseTrigger class="btn preset-tonal">Cancelar</Dialog.CloseTrigger>
-          <button type="button" class="btn preset-filled inline-flex items-center gap-2" onclick={submit} disabled={loading}>
+          <Dialog.CloseTrigger class="px-6 py-2.5 rounded-lg border border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white text-sm sm:text-md font-medium transition-colors btn preset-tonal">Cancelar</Dialog.CloseTrigger>
+          <button type="button" class="px-8 py-2.5 text-sm sm:text-md rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20" onclick={submit} disabled={loading}>
             {#if loading}
               <Loader2 class="size-4 animate-spin" /> Guardando...
             {:else}
