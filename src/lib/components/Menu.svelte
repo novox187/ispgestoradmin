@@ -12,6 +12,7 @@
     { label: 'DASHBOARD', icon: LayoutDashboard, path: '/' },
     { label: 'CLIENTES', icon: Users, path: '/clientes' },
     { label: 'PLANES', icon: Wifi, path: '/planes' },
+    { label: 'PROVEEDORES', icon: Zap, path: '/proveedores' },
     { label: 'FACTURACION', icon: CreditCard, path: '/facturas' },
     { label: 'MIKROTIK', icon: Settings, path: '/mikrotik', locked: false },
     { label: 'USUARIOS', icon: UserCog, path: '/usuarios', locked: false },
