@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+	color-scheme: dark;
+}
+
 @import '@skeletonlabs/skeleton'; 
 @import '@skeletonlabs/skeleton-svelte'; 
 @import '@skeletonlabs/skeleton/themes/cerberus';
