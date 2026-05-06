@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { API_BASE } from '$lib/config';
+  import Encabezado from '$lib/components/Encabezado.svelte';
+  import { appState } from '$lib/stores/app.svelte';
   import ImportZone from '$lib/components/import/ImportZone.svelte';
   import PreviewTable from '$lib/components/import/PreviewTable.svelte';
   import HistoryTable from '$lib/components/import/HistoryTable.svelte';
@@ -308,7 +310,14 @@
       errorMessage = 'Error de conexión';
     }
   }
+
+  function toggleSidebar() {
+    appState.toggleSidebar();
+  }
 </script>
+
+<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
+  <Encabezado {toggleSidebar} />
 
 <div class="container mx-auto px-4 py-8">
   <div class="mb-8">
@@ -475,3 +484,4 @@
     <HistoryTable {history} on:rollback={handleRollback} />
   </div>
 </div>
+</main>

@@ -3,6 +3,8 @@
   import { fade, slide } from 'svelte/transition';
   import { User, Mail, Phone, Shield, Save, X, Edit2, CheckCircle, AlertCircle, Loader2 } from '@lucide/svelte';
   import { API_BASE } from '$lib/config';
+  import Encabezado from '$lib/components/Encabezado.svelte';
+  import { appState } from '$lib/stores/app.svelte';
 
   // Tipos
     interface Employee {
@@ -207,9 +209,16 @@
       saving = false;
     }
   }
+
+  function toggleSidebar() {
+    appState.toggleSidebar();
+  }
 </script>
 
-<div class="p-6 max-w-7xl mx-auto space-y-6">
+<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
+  <Encabezado {toggleSidebar} />
+
+<div class="p-4 md:p-6 max-w-7xl mx-auto space-y-6 w-full">
   <!-- Header -->
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
     <div>
@@ -439,3 +448,4 @@
     </div>
   {/if}
 </div>
+</main>

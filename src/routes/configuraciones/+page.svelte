@@ -1,6 +1,15 @@
-<script>
+<script lang="ts">
   import { Settings, Database, Shield, Bell } from '@lucide/svelte';
+  import Encabezado from '$lib/components/Encabezado.svelte';
+  import { appState } from '$lib/stores/app.svelte';
+
+  function toggleSidebar() {
+    appState.toggleSidebar();
+  }
 </script>
+
+<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
+  <Encabezado {toggleSidebar} />
 
 <div class="container mx-auto px-4 py-8">
   <div class="mb-8">
@@ -54,3 +63,4 @@
     </div>
   </div>
 </div>
+</main>
