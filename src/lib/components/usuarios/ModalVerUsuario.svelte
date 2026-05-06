@@ -30,7 +30,7 @@
     
     try {
         const token = localStorage.getItem('employee_token');
-        const res = await fetch(`${API_BASE}/admin/employees/${props.userId}`, {
+        const res = await fetch(`${API_BASE}/admin/employees/show/${props.userId}`, {
             headers: { 
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -63,17 +63,17 @@
   <Portal>
     <Dialog.Backdrop class="fixed inset-0 z-40 bg-black/50" />
     <Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center p-4">
-      <Dialog.Content class="card bg-neutral-900 w-full max-w-2xl p-0 shadow-xl rounded-xl border border-neutral-800 text-gray-100 overflow-hidden {animation}">
+      <Dialog.Content class="card bg-neutral-900 w-full max-w-2xl max-h-[80vh] sm:max-h-none overflow-hidden p-0 shadow-xl rounded-xl border border-neutral-800 text-gray-100 {animation}">
         
         <!-- Header -->
-        <header class="flex justify-between items-center p-6 border-b border-neutral-800 bg-neutral-800/50">
+        <header class="flex justify-between items-center sm:p-6 p-3 border-b border-neutral-800 bg-neutral-800/50">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-blue-500/20 rounded-lg">
                 <User class="size-6 text-blue-400" />
             </div>
             <div>
-                <Dialog.Title class="text-xl font-bold">Detalles del Usuario</Dialog.Title>
-                <p class="text-sm text-neutral-400">Información completa y permisos</p>
+                <Dialog.Title class="sm:text-xl font-bold">Detalles del Usuario</Dialog.Title>
+                <p class="text-xs sm:text-sm text-neutral-400">Información completa y permisos</p>
             </div>
           </div>
           <Dialog.CloseTrigger class="btn-icon hover:bg-white/10 text-white transition-colors" onclick={() => dispatch('close')}>
@@ -206,12 +206,6 @@
             </div>
           {/if}
         </div>
-
-        <footer class="p-4 border-t border-neutral-800 bg-neutral-800/30 flex justify-end">
-          <button class="px-5 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition-colors font-medium" onclick={() => dispatch('close')}>
-            Cerrar
-          </button>
-        </footer>
 
       </Dialog.Content>
     </Dialog.Positioner>

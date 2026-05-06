@@ -57,7 +57,7 @@
     loading = true;
     try {
         const token = localStorage.getItem('employee_token');
-        const res = await fetch(`${API_BASE}/admin/employees/${props.userId}`, {
+        const res = await fetch(`${API_BASE}/admin/employees/show/${props.userId}`, {
             headers: { 
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${token}`

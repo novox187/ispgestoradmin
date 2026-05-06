@@ -9,7 +9,7 @@
     import { fade, scale } from 'svelte/transition';
     import { API_BASE } from '$lib/config';
     import { Pagination } from '@skeletonlabs/skeleton-svelte';
-    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon } from '@lucide/svelte';
+    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon, PlusIcon } from '@lucide/svelte';
     import {
         DASHBOARD_LOAD_CONTEXT,
         fetchJsonWithRetry,
@@ -290,13 +290,14 @@
      <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
     <div class="flex items-center justify-between mb-8">
         <div>
-            <h1 class="text-3xl md:text-4xl font-bold text-foreground mb-2">Gestión de Usuarios</h1>
-            <p class="text-muted-foreground">Administra el personal y sus roles</p>
+            <h1 class="text-xl md:text-4xl font-bold text-foreground mb-2">Gestión de Usuarios</h1>
+            <p class="sm:text-sm text-xs text-gray-400 leading-relaxed">Administra el personal y sus roles</p>
         </div>
         <div class="flex items-end justify-center">
             <button onclick={()=> (showAddUser = true)}
-                class="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors hover:bg-white">
-                + Agregar Usuario
+                    class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl bg-gray-200 text-gray-900 text-xs sm:text-sm font-semibold shadow-lg transition-colors hover:bg-gray-300">
+                    <PlusIcon size={20} strokeWidth={3} fill="currentColor" />
+                    Nuevo
             </button>
         </div>
     </div>
