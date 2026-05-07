@@ -2,6 +2,7 @@
   import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
   import { XIcon } from '@lucide/svelte';
   import type { CapacitySnapshot } from '$lib/types/capacity';
+  import { formatMbps, pct, limitStringFromMbps, ratioDivisorFromMaxAndGuaranteed, ratioStringFromDivisor } from '$lib/utils/plan-calculations';
   type FeatureItem = { feature: string; order: number; highlighted: boolean };
   type Plan = {
     id: number;
@@ -79,24 +80,16 @@
   });
 
   const ratioDivisor = $derived.by(() => {
-    const d = Number(working.download);
-    const g = Number(guaranteedTargetDown);
-    if (!Number.isFinite(d) || d <= 0) return 1;
-    if (!Number.isFinite(g) || g <= 0) return 1;
-    return Math.max(1, Math.floor(d / g));
+    return ratioDivisorFromMaxAndGuaranteed(Number(working.download), Number(guaranteedTargetDown));
   });
 
-  const computedRatio = $derived(`1:${ratioDivisor}`);
+  const computedRatio = $derived(ratioStringFromDivisor(ratioDivisor));
 
   const computedDownloadLimit = $derived.by(() => {
-    const d = Number(working.download);
-    if (!Number.isFinite(d) || d <= 0) return '';
-    return `${Math.round(d)}M`;
+    return limitStringFromMbps(Number(working.download));
   });
   const computedUploadLimit = $derived.by(() => {
-    const u = Number(working.upload);
-    if (!Number.isFinite(u) || u <= 0) return '';
-    return `${Math.round(u)}M`;
+    return limitStringFromMbps(Number(working.upload));
   });
 
   const computedGuaranteedDown = $derived.by(() => {
@@ -126,17 +119,6 @@
   const wouldExhaustDown = $derived.by(() => totalDown > 0 && computedGuaranteedDown > remainingDown);
   const wouldExhaustUp = $derived.by(() => totalUp > 0 && computedGuaranteedUp > remainingUp);
   const canCreateWithCapacity = $derived.by(() => canCreate && !exceedsPhysicalDown && !exceedsPhysicalUp && !wouldExhaustDown && !wouldExhaustUp);
-
-  function formatMbps(v: number): string {
-    if (!Number.isFinite(v) || v <= 0) return '0 Mbps';
-    if (v >= 1000) return `${(v / 1000).toFixed(2).replace(/\.00$/, '')} Gbps`;
-    return `${Math.round(v)} Mbps`;
-  }
-
-  function pct(used: number, total: number): number {
-    if (!Number.isFinite(used) || !Number.isFinite(total) || total <= 0) return 0;
-    return Math.min(100, Math.max(0, (used / total) * 100));
-  }
 
   const planPctDown = $derived.by(() => pct(computedGuaranteedDown, Number(working.download)));
   const planPctUp = $derived.by(() => pct(computedGuaranteedUp, Number(working.upload)));

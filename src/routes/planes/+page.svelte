@@ -332,8 +332,22 @@
           })),
         })
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const code = (data as any)?.code;
+        const message = (data as any)?.message;
+        if (res.status === 409 && code === 'ISP_CAPACITY_EXHAUSTED') {
+          toast.error(message || 'Capacidad de ISP agotada');
+          await loadPlans();
+          throw new Error('ISP_CAPACITY_EXHAUSTED');
+        }
+        if (res.status === 409 && code === 'PLAN_SPEED_EXCEEDS_ISP_CAPACITY') {
+          toast.error(message || 'La velocidad del plan supera la capacidad física del ISP');
+          await loadPlans();
+          throw new Error('PLAN_SPEED_EXCEEDS_ISP_CAPACITY');
+        }
+        throw new Error(message || `HTTP ${res.status}`);
+      }
       const p = Array.isArray(data?.data) ? data.data[0] : data?.data;
       if (p) {
         const mapped: Plan = {
@@ -417,6 +431,11 @@
           toast.error((data as any)?.message || 'Capacidad de ISP agotada');
           await loadPlans();
           throw new Error('ISP_CAPACITY_EXHAUSTED');
+        }
+        if (res.status === 409 && (data as any)?.code === 'PLAN_SPEED_EXCEEDS_ISP_CAPACITY') {
+          toast.error((data as any)?.message || 'La velocidad del plan supera la capacidad física del ISP');
+          await loadPlans();
+          throw new Error('PLAN_SPEED_EXCEEDS_ISP_CAPACITY');
         }
         throw new Error((data as any)?.message || `HTTP ${res.status}`);
       }
@@ -523,7 +542,7 @@
       <ModalVerPlan open={showViewPlan} plan={currentPlan} onClose={closeView} />
     {/if}
     {#if showEditPlan}
-      <ModalEditarPlan open={showEditPlan} plan={currentPlan} onClose={closeEdit} onSave={savePlan} />
+      <ModalEditarPlan open={showEditPlan} plan={currentPlan} onClose={closeEdit} onSave={savePlan} {capacity} />
     {/if}
     {#if showCreatePlan}
       <ModalCrearPlan open={showCreatePlan} onClose={closeCreate} onCreate={createPlan} {capacity} />
