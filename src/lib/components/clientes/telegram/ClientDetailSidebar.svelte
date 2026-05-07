@@ -57,7 +57,15 @@
   let ipCheckStatus = $state<'available' | 'in_use_db' | 'in_use_router' | 'in_use_both' | null>(null);
 
   // Plans
-  type PlanOption = { id: number; name: string; monthly_price: number; download: number; upload: number };
+  type PlanOption = {
+    id: number;
+    name: string;
+    monthly_price: number;
+    download: number;
+    upload: number;
+    can_add_next_client?: boolean;
+    next_client_required_down_mbps?: number;
+  };
   let plans = $state<PlanOption[]>([]);
   let plansLoading = $state(false);
   let plansError = $state<string | null>(null);
@@ -144,7 +152,9 @@
         name: String(p.name),
         monthly_price: Number(p.monthly_price),
         download: Number(p.download_speed),
-        upload: Number(p.upload_speed)
+        upload: Number(p.upload_speed),
+        can_add_next_client: Boolean(p.can_add_next_client ?? true),
+        next_client_required_down_mbps: Number(p.next_client_required_down_mbps ?? 0)
       }));
     } catch (e) {
       console.error('Error cargando planes:', e);
@@ -269,6 +279,8 @@
         if (res.status === 422) {
           fieldErrors = payload.errors || {};
           errorMsg = payload.message || 'Errores de validación.';
+        } else if (res.status === 409 && payload?.code === 'ISP_CAPACITY_EXHAUSTED') {
+          errorMsg = payload.message || 'Capacidad de ISP agotada';
         } else {
           errorMsg = payload.message || `Error ${res.status}`;
         }
@@ -455,7 +467,13 @@
                                         <option disabled>Cargando planes...</option>
                                     {:else}
                                         {#each plans as p}
-                                            <option value={p.id} selected={form.plan_id === p.id}>{p.name}</option>
+                                            <option
+                                                value={p.id}
+                                                selected={form.plan_id === p.id}
+                                                disabled={!p.can_add_next_client && originalPlanId !== p.id}
+                                            >
+                                                {p.name}
+                                            </option>
                                         {/each}
                                     {/if}
                                 </select>

@@ -8,6 +8,7 @@
     price: number;
     download: number;
     upload: number;
+    ratio?: string;
     status: 'active' | 'inactive';
     clients: number;
     revenue: number;
@@ -98,6 +99,10 @@
             <div>
               <label for="upload" class="text-xs text-muted-foreground">Velocidad subida</label>
               <input id="upload" type="number" class="w-full px-3 py-2 rounded-lg bg-neutral-900" bind:value={working.upload} />
+            </div>
+            <div>
+              <label for="ratio" class="text-xs text-muted-foreground">Ratio</label>
+              <input id="ratio" class="w-full px-3 py-2 rounded-lg bg-neutral-900" placeholder="ej: 1:4" bind:value={working.ratio} />
             </div>
             <div class="md:col-span-2">
               <label class="flex items-center gap-2 text-xs text-muted-foreground">

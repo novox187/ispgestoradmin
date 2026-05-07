@@ -1,6 +1,8 @@
 <script lang="ts">
   import Encabezado from "$lib/components/Encabezado.svelte";
   import TablaPlanes from "$lib/components/planes/TablaPlanes.svelte";
+  import BarraCapacidad from "$lib/components/planes/BarraCapacidad.svelte";
+  import type { CapacitySnapshot } from "$lib/types/capacity";
   import ModalVerPlan from "$lib/components/planes/ModalVerPlan.svelte";
   import ModalEditarPlan from "$lib/components/planes/ModalEditarPlan.svelte";
   import ModalCrearPlan from "$lib/components/planes/ModalCrearPlan.svelte";
@@ -10,6 +12,7 @@
   import { fade, scale } from "svelte/transition";
   import { API_BASE } from "$lib/config";
   import { appState } from '$lib/stores/app.svelte';
+  import { toast } from 'svelte-sonner';
   import {
     DASHBOARD_LOAD_CONTEXT,
     fetchJsonWithRetry,
@@ -32,6 +35,7 @@
     price: number;
     download: number;
     upload: number;
+    ratio?: string;
     status: PlanStatus;
     clients: number;
     revenue: number;
@@ -51,6 +55,7 @@
 
   let allPlans = $state<Plan[]>([]);
   let loadingPlans = $state(false);
+  let capacity = $state<CapacitySnapshot | null>(null);
 
   const PLANES_CACHE_STORAGE = 'ispga_planes_summary_v1';
   let inFlight = false;
@@ -146,6 +151,7 @@
         { headers, signal: abortController.signal },
         { attempts: 3, baseDelayMs: 700 }
       );
+      capacity = (data && typeof data === 'object' && data.capacity) ? data.capacity as CapacitySnapshot : capacity;
       const list = Array.isArray(data?.data) ? data.data : data;
       allPlans = (list || []).map((p: any) => ({
         id: p.id,
@@ -155,6 +161,7 @@
         status: String(p.status).toLowerCase() === 'active' ? 'active' : 'inactive',
         download: Number(p.download_speed ?? 0),
         upload: Number(p.upload_speed ?? 0),
+        ratio: String(p.ratio ?? '1:1'),
         clients: Number(p.clients ?? 0),
         revenue: Number(p.revenue ?? 0),
         symmetric: Boolean(p.symmetric ?? false),
@@ -255,6 +262,7 @@
           status: String(p.status).toLowerCase() === 'active' ? 'active' : 'inactive',
           download: Number(p.download_speed ?? 0),
           upload: Number(p.upload_speed ?? 0),
+          ratio: String(p.ratio ?? '1:1'),
           clients: Number(p.clients ?? 0),
           revenue: Number(p.revenue ?? 0),
           features: Array.isArray(p.features)
@@ -280,7 +288,14 @@
   const currentPlan = $derived(allPlans.find(p => p.id === selectedPlanId) ?? null);
   function closeView() { showViewPlan = false; selectedPlanId = null }
   function closeEdit() { showEditPlan = false; selectedPlanId = null }
-  function openCreate() { showCreatePlan = true }
+  function openCreate() {
+    const remaining = Number(capacity?.remaining_down_mbps ?? 0);
+    if (remaining <= 0) {
+      toast.error('Capacidad de ISP agotada');
+      return;
+    }
+    showCreatePlan = true;
+  }
   function closeCreate() { showCreatePlan = false }
   async function savePlan(updated: Plan) {
     try {
@@ -297,6 +312,7 @@
           description: updated.description,
           download_speed: updated.download,
           upload_speed: updated.upload,
+          ratio: updated.ratio ?? '1:1',
           monthly_price: updated.price,
           is_active: updated.status === 'active',
           symmetric: updated.symmetric ?? false,
@@ -375,6 +391,7 @@
           description: payload.description,
           download_speed: payload.download,
           upload_speed: payload.upload,
+          ratio: payload.ratio ?? '1:1',
           monthly_price: payload.price,
           is_active: payload.status === 'active',
           symmetric: payload.symmetric ?? false,
@@ -394,8 +411,15 @@
           })),
         })
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 409 && (data as any)?.code === 'ISP_CAPACITY_EXHAUSTED') {
+          toast.error((data as any)?.message || 'Capacidad de ISP agotada');
+          await loadPlans();
+          throw new Error('ISP_CAPACITY_EXHAUSTED');
+        }
+        throw new Error((data as any)?.message || `HTTP ${res.status}`);
+      }
       const p = Array.isArray(data?.data) ? data.data[0] : data?.data;
       if (p) {
         const mapped: Plan = {
@@ -406,6 +430,7 @@
           status: String(p.status).toLowerCase() === 'active' ? 'active' : 'inactive',
           download: Number(p.download_speed ?? 0),
           upload: Number(p.upload_speed ?? 0),
+          ratio: String(p.ratio ?? '1:1'),
           clients: Number(p.clients ?? 0),
           revenue: Number(p.revenue ?? 0),
           features: Array.isArray(p.features)
@@ -434,10 +459,20 @@
         <h2 class="text-xl md:text-4xl font-bold tracking-tight">Gestión de Planes</h2>
         <p class="sm:text-sm text-xs text-gray-400 leading-relaxed">Administra los planes de internet disponibles</p>
       </div>
-      <button class=" flex gap-1 items-center px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-xs sm:text-sm font-semibold shadow-lg transition-colors" onclick={openCreate}>
+      <button
+        class={`flex gap-1 items-center px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-lg transition-colors ${
+          Number(capacity?.remaining_down_mbps ?? 0) <= 0
+            ? 'bg-gray-200/30 text-gray-200/60 cursor-not-allowed'
+            : 'bg-gray-200 text-gray-900'
+        }`}
+        disabled={Number(capacity?.remaining_down_mbps ?? 0) <= 0}
+        onclick={openCreate}
+      >
         <PlusIcon class="size-4" /> Nuevo 
       </button>
     </div>
+
+    <BarraCapacidad {capacity} />
 
     <div class="bg-card border border-neutral-800 rounded-lg p-6">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -491,7 +526,7 @@
       <ModalEditarPlan open={showEditPlan} plan={currentPlan} onClose={closeEdit} onSave={savePlan} />
     {/if}
     {#if showCreatePlan}
-      <ModalCrearPlan open={showCreatePlan} onClose={closeCreate} onCreate={createPlan} />
+      <ModalCrearPlan open={showCreatePlan} onClose={closeCreate} onCreate={createPlan} {capacity} />
     {/if}
   </div>
 

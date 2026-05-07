@@ -2,13 +2,13 @@
   import { onMount, setContext } from "svelte";
   import { fade, scale } from 'svelte/transition';
   import Encabezado from "$lib/components/Encabezado.svelte";
-  import MetricasCarta from "$lib/components/MetricasCarta.svelte";
   import Chart from "$lib/components/Chart.svelte";
   import TopUsuarios from "$lib/components/TopUsuarios.svelte";
   import EstadoRouter from "$lib/components/EstadoRouter.svelte";
-  import { Users, Loader2, CheckCircleIcon, XCircleIcon } from "@lucide/svelte";
+  import { Loader2, CheckCircleIcon, XCircleIcon } from "@lucide/svelte";
   import { appState } from '$lib/stores/app.svelte';
   import { API_BASE } from '$lib/config';
+  import type { CapacitySnapshot } from '$lib/types/capacity';
   import {
     DASHBOARD_LOAD_CONTEXT,
     fetchJsonWithRetry,
@@ -37,11 +37,6 @@
   }
 
   type DashboardCacheData = {
-    stats: {
-      active_users: number;
-      users_with_debt: number;
-      inactive_users: number;
-    };
     mikrotikStats: {
       online: boolean;
       activeClients: number;
@@ -49,16 +44,20 @@
       cpuLoad: string;
       uptime: string;
     };
+    capacity: CapacitySnapshot;
   };
 
   // Estado
   let selectedPeriod: Period = $state("WEEK");
   let isSidebarOpen = $state(false);
   let isNotificationsOpen = $state(false);
-  let stats = $state({
-    active_users: 0,
-    users_with_debt: 0,
-    inactive_users: 0
+  let capacity = $state<CapacitySnapshot>({
+    total_down_mbps: 0,
+    used_down_mbps: 0,
+    remaining_down_mbps: 0,
+    percent_used: 0,
+    warn_80: false,
+    reuse_ratio: 1
   });
 
   let mikrotikStats = $state({
@@ -149,15 +148,23 @@
   }
 
   function applyDashboardData(next: DashboardCacheData) {
-    stats.active_users = Number(next.stats.active_users || 0);
-    stats.users_with_debt = Number(next.stats.users_with_debt || 0);
-    stats.inactive_users = Number(next.stats.inactive_users || 0);
-
     mikrotikStats.online = Boolean(next.mikrotikStats.online);
     mikrotikStats.cpuLoad = String(next.mikrotikStats.cpuLoad || '0%');
     mikrotikStats.uptime = String(next.mikrotikStats.uptime || 'Offline');
     mikrotikStats.activeClients = Number(next.mikrotikStats.activeClients || 0);
     mikrotikStats.totalClients = Number(next.mikrotikStats.totalClients || 0);
+
+    capacity.total_down_mbps = Number(next.capacity.total_down_mbps || 0);
+    capacity.used_down_mbps = Number(next.capacity.used_down_mbps || 0);
+    capacity.remaining_down_mbps = Number(next.capacity.remaining_down_mbps || 0);
+    capacity.percent_used = Number(next.capacity.percent_used || 0);
+    capacity.total_up_mbps = Number((next.capacity as any).total_up_mbps || 0);
+    capacity.used_up_mbps = Number((next.capacity as any).used_up_mbps || 0);
+    capacity.remaining_up_mbps = Number((next.capacity as any).remaining_up_mbps || 0);
+    capacity.percent_used_down = Number((next.capacity as any).percent_used_down || 0);
+    capacity.percent_used_up = Number((next.capacity as any).percent_used_up || 0);
+    capacity.warn_80 = Boolean(next.capacity.warn_80);
+    capacity.reuse_ratio = Number(next.capacity.reuse_ratio || 1) || 1;
   }
 
   let dashboardAbort: AbortController | null = null;
@@ -194,17 +201,25 @@
         );
 
         const next: DashboardCacheData = {
-          stats: {
-            active_users: Number(data?.active_users ?? 0),
-            users_with_debt: Number(data?.users_with_debt ?? 0),
-            inactive_users: Number(data?.inactive_users ?? 0),
-          },
           mikrotikStats: {
             online: Boolean(data?.mikrotik?.online ?? false),
             cpuLoad: String(data?.mikrotik?.cpu_load ?? '0%'),
             uptime: String(data?.mikrotik?.uptime ?? 'Offline'),
             activeClients: Number(data?.mikrotik?.active_clients ?? 0),
             totalClients: Number(data?.mikrotik?.total_clients ?? 0),
+          },
+          capacity: {
+            total_down_mbps: Number(data?.capacity?.total_down_mbps ?? 0),
+            used_down_mbps: Number(data?.capacity?.used_down_mbps ?? 0),
+            remaining_down_mbps: Number(data?.capacity?.remaining_down_mbps ?? 0),
+            percent_used: Number(data?.capacity?.percent_used ?? 0),
+            total_up_mbps: Number(data?.capacity?.total_up_mbps ?? 0),
+            used_up_mbps: Number(data?.capacity?.used_up_mbps ?? 0),
+            remaining_up_mbps: Number(data?.capacity?.remaining_up_mbps ?? 0),
+            percent_used_down: Number(data?.capacity?.percent_used_down ?? 0),
+            percent_used_up: Number(data?.capacity?.percent_used_up ?? 0),
+            warn_80: Boolean(data?.capacity?.warn_80 ?? false),
+            reuse_ratio: Number(data?.capacity?.reuse_ratio ?? 1) || 1
           }
         };
 
@@ -275,6 +290,12 @@
     selectedPeriod = period;
     // Aquí podrías agregar lógica para actualizar los datos según el período
   }
+
+  function formatMbps(v: number): string {
+    if (!Number.isFinite(v) || v <= 0) return '0 Mbps';
+    if (v >= 1000) return `${(v / 1000).toFixed(2).replace(/\.00$/, '')} Gbps`;
+    return `${Math.round(v)} Mbps`;
+  }
 </script>
 
 <div class="flex h-screen w-full bg-[#0f0f0f] text-gray-100 overflow-hidden">
@@ -284,29 +305,25 @@
 
     <div class="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto w-full">
 
-      <!-- Metric Cards -->
-        <div
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
-        >
-          <MetricasCarta
-            title="USUARIOS ACTIVOS"
-            value={stats.active_users}
-            icon={Users}
-            tipo="activo"
-          />
-          <MetricasCarta 
-            title="USUARIOS CON DEUDA"
-            value={stats.users_with_debt}
-            icon={Users}
-            tipo="deuda"
-          />
-          <MetricasCarta
-            title="USUARIOS INACTIVOS"
-            value={stats.inactive_users}
-            icon={Users}
-            tipo="inactivo"
-          />
+      {#if capacity.warn_80}
+        <div class="bg-[#141414] border border-orange-900/60 text-orange-200 rounded-xl p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-1">
+              <div class="text-sm font-semibold">Advertencia de Capacidad</div>
+              <div class="text-xs text-orange-200/80">
+                Uso de ISP: {capacity.percent_used.toFixed(1)}% ({formatMbps(capacity.used_down_mbps)} / {formatMbps(capacity.total_down_mbps)})
+              </div>
+            </div>
+            <div class="text-xs text-orange-200/70">Reúso: {capacity.reuse_ratio}:1</div>
+          </div>
+          <div class="mt-3 h-2 w-full bg-[#0f0f0f] rounded">
+            <div
+              class="h-2 rounded bg-orange-500"
+              style={`width: ${Math.min(100, Math.max(0, capacity.percent_used))}%`}
+            ></div>
+          </div>
         </div>
+      {/if}
 
       <!-- Chart Section -->
         <div class="">

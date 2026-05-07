@@ -167,8 +167,12 @@
         // Auto-limpiar mensaje
         setTimeout(() => message = '', 3000);
       } else {
-        const err = await res.json();
-        alert('Error: ' + (err.message || 'No se pudo asignar el plan'));
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 409 && err?.code === 'ISP_CAPACITY_EXHAUSTED') {
+          alert('Capacidad de ISP agotada');
+        } else {
+          alert('Error: ' + (err.message || 'No se pudo asignar el plan'));
+        }
       }
     } catch (e) {
       alert('Error de conexión');
