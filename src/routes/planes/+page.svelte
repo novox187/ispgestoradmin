@@ -289,7 +289,7 @@
   function closeView() { showViewPlan = false; selectedPlanId = null }
   function closeEdit() { showEditPlan = false; selectedPlanId = null }
   function openCreate() {
-    const remaining = Number(capacity?.remaining_down_mbps ?? 0);
+    const remaining = Number(capacity?.plans_remaining_down_mbps ?? capacity?.remaining_down_mbps ?? 0);
     if (remaining <= 0) {
       toast.error('Capacidad de ISP agotada');
       return;
@@ -480,11 +480,11 @@
       </div>
       <button
         class={`flex gap-1 items-center px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-lg transition-colors ${
-          Number(capacity?.remaining_down_mbps ?? 0) <= 0
+          Number(capacity?.plans_remaining_down_mbps ?? capacity?.remaining_down_mbps ?? 0) <= 0
             ? 'bg-gray-200/30 text-gray-200/60 cursor-not-allowed'
             : 'bg-gray-200 text-gray-900'
         }`}
-        disabled={Number(capacity?.remaining_down_mbps ?? 0) <= 0}
+        disabled={Number(capacity?.plans_remaining_down_mbps ?? capacity?.remaining_down_mbps ?? 0) <= 0}
         onclick={openCreate}
       >
         <PlusIcon class="size-4" /> Nuevo 
@@ -539,7 +539,7 @@
     </div>
 
     {#if showViewPlan}
-      <ModalVerPlan open={showViewPlan} plan={currentPlan} onClose={closeView} />
+      <ModalVerPlan open={showViewPlan} plan={currentPlan} onClose={closeView} {capacity} />
     {/if}
     {#if showEditPlan}
       <ModalEditarPlan open={showEditPlan} plan={currentPlan} onClose={closeEdit} onSave={savePlan} {capacity} />

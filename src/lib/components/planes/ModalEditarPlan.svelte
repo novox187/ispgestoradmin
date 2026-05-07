@@ -97,17 +97,36 @@
   });
 
   const totalDown = $derived(Number(props.capacity?.total_down_mbps ?? 0));
-  const usedDown = $derived(Number(props.capacity?.used_down_mbps ?? 0));
-  const remainingDown = $derived(Number(props.capacity?.remaining_down_mbps ?? 0));
   const totalUp = $derived(Number(props.capacity?.total_up_mbps ?? 0));
-  const usedUp = $derived(Number(props.capacity?.used_up_mbps ?? 0));
-  const remainingUp = $derived(Number(props.capacity?.remaining_up_mbps ?? 0));
+  const assignedDown = $derived(Number(props.capacity?.plans_assigned_down_mbps ?? 0));
+  const assignedUp = $derived(Number(props.capacity?.plans_assigned_up_mbps ?? 0));
+  const currentDown = $derived(Number(props.plan?.download ?? 0));
+  const currentUp = $derived(Number(props.plan?.upload ?? 0));
+  const remainingForThisPlanDown = $derived.by(() => {
+    if (!props.capacity) return 0;
+    if (Number.isFinite(assignedDown) && assignedDown > 0) {
+      return Math.max(0, totalDown - Math.max(0, assignedDown - currentDown));
+    }
+    return Number(props.capacity?.plans_remaining_down_mbps ?? props.capacity?.remaining_down_mbps ?? 0);
+  });
+  const remainingForThisPlanUp = $derived.by(() => {
+    if (!props.capacity) return 0;
+    if (Number.isFinite(assignedUp) && assignedUp > 0) {
+      return Math.max(0, totalUp - Math.max(0, assignedUp - currentUp));
+    }
+    return Number(props.capacity?.plans_remaining_up_mbps ?? props.capacity?.remaining_up_mbps ?? 0);
+  });
 
   const exceedsPhysicalDown = $derived.by(() => totalDown > 0 && Number(working?.download ?? 0) > totalDown);
   const exceedsPhysicalUp = $derived.by(() => totalUp > 0 && Number(working?.upload ?? 0) > totalUp);
-  const wouldExhaustDown = $derived.by(() => totalDown > 0 && computedGuaranteedDown > remainingDown);
-  const wouldExhaustUp = $derived.by(() => totalUp > 0 && computedGuaranteedUp > remainingUp);
-  const canSaveWithCapacity = $derived.by(() => canSave && !exceedsPhysicalDown && !exceedsPhysicalUp && !wouldExhaustDown && !wouldExhaustUp);
+  const exceedsAvailableDown = $derived.by(() => totalDown > 0 && Number(working?.download ?? 0) > remainingForThisPlanDown);
+  const exceedsAvailableUp = $derived.by(() => totalUp > 0 && Number(working?.upload ?? 0) > remainingForThisPlanUp);
+  const capacityError = $derived.by(() => {
+    if (exceedsAvailableDown) return `Capacidad insuficiente: tiene ${Math.round(remainingForThisPlanDown)} megas disponibles de ${Math.round(totalDown)} totales`;
+    if (exceedsAvailableUp) return `Capacidad insuficiente: tiene ${Math.round(remainingForThisPlanUp)} megas disponibles de ${Math.round(totalUp)} totales`;
+    return null;
+  });
+  const canSaveWithCapacity = $derived.by(() => canSave && !exceedsPhysicalDown && !exceedsPhysicalUp && !exceedsAvailableDown && !exceedsAvailableUp);
 
   const planPctDown = $derived.by(() => pct(computedGuaranteedDown, Number(working?.download ?? 0)));
   const planPctUp = $derived.by(() => pct(computedGuaranteedUp, Number(working?.upload ?? 0)));
@@ -126,7 +145,7 @@
     saveErr = null;
     if (!working) return;
     if (!canSaveWithCapacity) {
-      saveErr = 'Completa los campos requeridos';
+      saveErr = capacityError || 'Completa los campos requeridos';
       return;
     }
 
@@ -149,7 +168,7 @@
       saveErr = msg.includes('PLAN_SPEED_EXCEEDS_ISP_CAPACITY')
         ? 'La velocidad del plan supera la capacidad física del ISP'
         : msg.includes('ISP_CAPACITY_EXHAUSTED')
-        ? 'Capacidad de ISP agotada'
+        ? (capacityError || 'Capacidad insuficiente')
         : 'Error al guardar';
     } finally {
       isSaving = false;
@@ -211,12 +230,14 @@
                     <label for="downloadSpeed" class="text-xs text-muted-foreground">Velocidad descarga (Mbps)</label>
                     <span class="text-rose-400 text-[10px]">Requerido</span>
                   </div>
-                  <input id="downloadSpeed" type="number" class={inputClass(!downloadValid || exceedsPhysicalDown)} bind:value={working.download} min="1" max={totalDown > 0 ? totalDown : undefined} />
+                  <input id="downloadSpeed" type="number" class={inputClass(!downloadValid || exceedsPhysicalDown || exceedsAvailableDown)} bind:value={working.download} min="1" max={totalDown > 0 ? totalDown : undefined} />
                   <div class="text-[11px] text-muted-foreground mt-1">Techo del plan (max-limit) por cliente.</div>
                   {#if !downloadValid}
                     <div class="text-[11px] text-rose-400 mt-1">Debe ser mayor a 0.</div>
                   {:else if exceedsPhysicalDown}
                     <div class="text-[11px] text-rose-400 mt-1">No puede superar la capacidad física ({formatMbps(totalDown)}).</div>
+                  {:else if exceedsAvailableDown}
+                    <div class="text-[11px] text-rose-400 mt-1">{capacityError}</div>
                   {/if}
                 </div>
                 <div>
@@ -224,12 +245,14 @@
                     <label for="uploadSpeed" class="text-xs text-muted-foreground">Velocidad subida (Mbps)</label>
                     <span class="text-rose-400 text-[10px]">Requerido</span>
                   </div>
-                  <input id="uploadSpeed" type="number" class={inputClass(!uploadValid || exceedsPhysicalUp)} bind:value={working.upload} min="1" max={totalUp > 0 ? totalUp : undefined} />
+                  <input id="uploadSpeed" type="number" class={inputClass(!uploadValid || exceedsPhysicalUp || exceedsAvailableUp)} bind:value={working.upload} min="1" max={totalUp > 0 ? totalUp : undefined} />
                   <div class="text-[11px] text-muted-foreground mt-1">Techo del plan (max-limit) por cliente.</div>
                   {#if !uploadValid}
                     <div class="text-[11px] text-rose-400 mt-1">Debe ser mayor a 0.</div>
                   {:else if exceedsPhysicalUp}
                     <div class="text-[11px] text-rose-400 mt-1">No puede superar la capacidad física ({formatMbps(totalUp)}).</div>
+                  {:else if exceedsAvailableUp}
+                    <div class="text-[11px] text-rose-400 mt-1">{capacityError}</div>
                   {/if}
                 </div>
                 <div>
@@ -305,19 +328,12 @@
 
                   {#if props.capacity}
                     <div class="mt-3 pt-3 border-t border-neutral-800">
-                      <div class="flex items-start justify-between gap-4">
-                        <div>
-                          <div class="text-xs text-muted-foreground">Capacidad ISP en tiempo real</div>
-                          <div class="text-[11px] text-muted-foreground mt-1">
-                            Disponible: {formatMbps(remainingDown)} ↓ · {formatMbps(remainingUp)} ↑
-                          </div>
-                        </div>
-                        <div class="text-[11px] text-muted-foreground">
-                          Venta 1 cliente: -{formatMbps(computedGuaranteedDown)} ↓ / -{formatMbps(computedGuaranteedUp)} ↑
-                        </div>
+                      <div class="text-xs text-muted-foreground">Capacidad disponible para planes</div>
+                      <div class="text-[11px] text-muted-foreground mt-1">
+                        Disponible: {formatMbps(remainingForThisPlanDown)} ↓ · {formatMbps(remainingForThisPlanUp)} ↑
                       </div>
-                      {#if wouldExhaustDown || wouldExhaustUp}
-                        <div class="text-[11px] text-rose-400 mt-2">Con este plan, no hay capacidad suficiente para vender 1 cliente.</div>
+                      {#if capacityError}
+                        <div class="text-[11px] text-rose-400 mt-2">{capacityError}</div>
                       {/if}
                     </div>
                   {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
   import { XIcon, Wifi, Users } from '@lucide/svelte';
+  import type { CapacitySnapshot } from '$lib/types/capacity';
   type Plan = {
     id: number;
     name: string;
@@ -13,7 +14,7 @@
     description?: string;
     features?: { feature: string; order: number; highlighted: boolean }[];
   };
-  const props = $props<{ open: boolean; plan: Plan | null; onClose: () => void }>();
+  const props = $props<{ open: boolean; plan: Plan | null; onClose: () => void; capacity?: CapacitySnapshot | null }>();
   const animation = 'transition transition-discrete opacity-0 translate-y-[80px] starting:data-[state=open]:opacity-0 starting:data-[state=open]:translate-y-[80px] data-[state=open]:opacity-100 data-[state=open]:translate-y-0';
 </script>
 
@@ -82,6 +83,15 @@
                 ${props.plan.revenue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
+
+            {#if props.capacity}
+              <div class="mt-4 pt-4 border-t border-white/10">
+                <div class="text-sm font-semibold">Uso del ISP (clientes activos)</div>
+                <div class="text-xs text-gray-400 mt-1">
+                  {Number(props.capacity.clients_percent_used_down ?? 0).toFixed(1)}% ↓ · {Number(props.capacity.clients_percent_used_up ?? 0).toFixed(1)}% ↑
+                </div>
+              </div>
+            {/if}
           </div>
           <div class="flex justify-end mt-3">
             <button class="px-4 py-2 rounded-lg bg-neutral-800 text-white hover:bg-neutral-700" onclick={() => props.onClose?.()}>Cerrar</button>
