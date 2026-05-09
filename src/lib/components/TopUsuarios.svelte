@@ -102,91 +102,167 @@
   }
 </script>
 
-<div class="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 md:p-6 h-full flex flex-col">
-  <div class="flex items-center justify-between mb-6">
-    <div class="flex items-center gap-2 text-xs font-mono text-gray-300">
-      <div class="w-2 h-2 bg-red-500 rounded-sm"></div>
-      <span class="font-bold tracking-wide">TOP DEUDORES</span>
+<div class="debtors-card">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <p class="text-[11px] font-medium text-slate-500 uppercase tracking-widest">Deuda acumulada</p>
+            <h3 class="text-sm font-semibold text-slate-200 mt-0.5">Top Deudores</h3>
+        </div>
+        {#if debtors.length > 0}
+            <span class="crit-badge">CRÍTICO</span>
+        {/if}
     </div>
-    <div class="bg-red-900/20 border border-red-900/50 text-red-500 px-3 py-1 rounded-md text-xs font-bold">
-      CRÍTICO
-    </div>
-  </div>
-  {#if errorMsg}
-    <div class="text-xs text-red-400 mb-3">{errorMsg}</div>
-  {/if}
 
-    <div class="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-      {#if loading}
-        {#each Array(3) as _}
-          <div class="animate-pulse flex items-center justify-between w-full py-2">
-             <div class="flex items-center gap-3 w-full">
-                <div class="w-10 h-10 rounded-lg bg-gray-800"></div>
-                <div class="flex-1 space-y-2">
-                   <div class="h-4 bg-gray-800 rounded w-3/4"></div>
-                   <div class="h-3 bg-gray-800 rounded w-1/2"></div>
-                </div>
-             </div>
-          </div>
-        {/each}
-      {:else if debtors.length === 0}
-        <div class="text-gray-500 text-sm text-center py-4">No hay clientes con deuda pendiente.</div>
-      {:else}
-        {#each debtors as debtor, i}
-          <div class="flex items-center justify-between w-full group" transition:fade>
-            <div class="flex items-center sm:gap-3 gap-1 w-full">
-              <div class="h-8 w-8 {i === 0 ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'} flex items-center justify-center rounded text-sm font-bold flex-shrink-0">
-                {i + 1}
-              </div>
-              
-              <div class="size-10 sm:size-12 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center text-gray-300 font-bold text-lg flex-shrink-0 border border-gray-700">
-                {debtor.full_name.charAt(0).toUpperCase()}
-              </div>
-              
-              <div class="flex flex-1 items-center justify-between bg-gray-800/30 hover:bg-gray-800/50 transition-colors p-2 rounded border border-transparent hover:border-gray-700">
-                <div class="flex flex-col min-w-0 mr-2">
-                  <span class="sm:text-sm text-xs font-bold text-gray-200 truncate" title={debtor.full_name}>
-                    {debtor.full_name}
-                  </span>
-                  <span class="sm:text-xs text-[11px]  text-gray-500 truncate">
-                    {debtor.pending_invoices_count} facturas pendientes
-                  </span>
-                </div>
-                
-                <div class="flex flex-col items-end">
-                   <span class="sm:text-sm text-xs font-bold text-red-400 whitespace-nowrap">
-                     {formatCurrency(Number(debtor.total_debt))}
-                   </span>
-                   <button 
-                      onclick={() => openModal(debtor.id)}
-                      class="text-[10px] text-blue-400 hover:text-blue-300 hover:underline cursor-pointer bg-transparent border-none p-0"
-                   >
-                      Ver cliente
-                   </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        {/each}
+    {#if errorMsg}
+        <p class="text-xs text-red-400/70 mb-3">{errorMsg}</p>
     {/if}
-  </div>
+
+    <div class="space-y-2 flex-1 overflow-y-auto custom-scrollbar">
+        {#if loading}
+            {#each Array(4) as _, i}
+                <div class="skeleton-row" style="animation-delay:{i * 80}ms">
+                    <div class="skeleton-avatar"></div>
+                    <div class="flex-1 space-y-1.5">
+                        <div class="h-3 bg-white/5 rounded w-3/4"></div>
+                        <div class="h-2.5 bg-white/[0.03] rounded w-1/2"></div>
+                    </div>
+                    <div class="h-4 bg-white/5 rounded w-16"></div>
+                </div>
+            {/each}
+        {:else if debtors.length === 0}
+            <div class="flex flex-col items-center justify-center py-10 text-center">
+                <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
+                    <span class="text-emerald-400 text-lg">✓</span>
+                </div>
+                <p class="text-sm font-medium text-slate-400">Sin deudas pendientes</p>
+                <p class="text-xs text-slate-600 mt-1">Todos los clientes al día</p>
+            </div>
+        {:else}
+            {#each debtors as debtor, i}
+                <div class="debtor-row" transition:fade>
+                    <!-- Rank -->
+                    <div class="rank-badge" class:rank-first={i === 0}>{i + 1}</div>
+
+                    <!-- Avatar -->
+                    <div class="avatar">
+                        {debtor.full_name.charAt(0).toUpperCase()}
+                    </div>
+
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-200 truncate leading-none" title={debtor.full_name}>
+                            {debtor.full_name}
+                        </p>
+                        <p class="text-[11px] text-slate-600 mt-0.5">
+                            {debtor.pending_invoices_count} fact. pendiente{debtor.pending_invoices_count !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+
+                    <!-- Debt + action -->
+                    <div class="flex flex-col items-end gap-0.5">
+                        <span class="text-sm font-bold text-red-400">{formatCurrency(Number(debtor.total_debt))}</span>
+                        <button
+                            onclick={() => openModal(debtor.id)}
+                            class="text-[10px] text-blue-400 hover:text-blue-300 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                        >Ver →</button>
+                    </div>
+                </div>
+            {/each}
+        {/if}
+    </div>
 </div>
 
-<ModalCliente 
-  open={showClientModal} 
-  clientId={selectedClientId} 
-  onClose={closeModal} 
-/>
+<ModalCliente open={showClientModal} clientId={selectedClientId} onClose={closeModal} />
 
 <style>
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #374151;
-    border-radius: 20px;
-  }
+    .debtors-card {
+        background: #111118;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 14px;
+        padding: 1.25rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .crit-badge {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: #f87171;
+        background: rgba(239,68,68,0.10);
+        border: 1px solid rgba(239,68,68,0.20);
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+    .debtor-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .debtor-row:hover {
+        background: rgba(255,255,255,0.03);
+        border-color: rgba(255,255,255,0.05);
+    }
+    .rank-badge {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.05);
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .rank-badge.rank-first {
+        background: rgba(239,68,68,0.15);
+        color: #f87171;
+    }
+    .avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Skeleton */
+    .skeleton-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        animation: skelPulse 1.5s ease-in-out infinite;
+    }
+    .skeleton-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.05);
+        flex-shrink: 0;
+    }
+    @keyframes skelPulse {
+        0%, 100% { opacity: 0.6; }
+        50%       { opacity: 1; }
+    }
+
+    /* Scrollbar */
+    .custom-scrollbar { overflow-y: auto; flex: 1; }
+    .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
 </style>

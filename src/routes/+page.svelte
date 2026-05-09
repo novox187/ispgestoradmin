@@ -5,6 +5,8 @@
   import Chart from "$lib/components/Chart.svelte";
   import TopUsuarios from "$lib/components/TopUsuarios.svelte";
   import EstadoRouter from "$lib/components/EstadoRouter.svelte";
+  import KpiCards from "$lib/components/KpiCards.svelte";
+  import CapacidadISP from "$lib/components/CapacidadISP.svelte";
   import { Loader2, CheckCircleIcon, XCircleIcon } from "@lucide/svelte";
   import { appState } from '$lib/stores/app.svelte';
   import { API_BASE } from '$lib/config';
@@ -20,22 +22,6 @@
   } from '$lib/utils/hybrid-cache';
 
   // Tipos e interfaces
-  type Period = "WEEK" | "MONTH" | "YEAR";
-
-  interface ChartDataset {
-    label: string;
-    data: number[];
-    borderColor: string;
-    backgroundColor: string;
-    tension: number;
-    fill?: boolean;
-  }
-
-  interface ChartData {
-    labels: string[];
-    datasets: ChartDataset[];
-  }
-
   type DashboardCacheData = {
     mikrotikStats: {
       online: boolean;
@@ -45,12 +31,34 @@
       uptime: string;
     };
     capacity: CapacitySnapshot;
+    clients: {
+      active: number;
+      suspended: number;
+      limited: number;
+      total: number;
+    };
+    invoicesSummary: {
+      pending_count: number;
+      pending_amount: number;
+      overdue_count: number;
+      invoiced_this_month: number;
+      paid_this_month: number;
+    };
   };
 
   // Estado
-  let selectedPeriod: Period = $state("WEEK");
   let isSidebarOpen = $state(false);
   let isNotificationsOpen = $state(false);
+
+  let clients = $state({ active: 0, suspended: 0, limited: 0, total: 0 });
+  let invoicesSummary = $state({
+    pending_count: 0,
+    pending_amount: 0,
+    overdue_count: 0,
+    invoiced_this_month: 0,
+    paid_this_month: 0,
+  });
+
   let capacity = $state<CapacitySnapshot>({
     total_down_mbps: 0,
     used_down_mbps: 0,
@@ -165,6 +173,20 @@
     capacity.percent_used_up = Number((next.capacity as any).percent_used_up || 0);
     capacity.warn_80 = Boolean(next.capacity.warn_80);
     capacity.reuse_ratio = Number(next.capacity.reuse_ratio || 1) || 1;
+
+    if (next.clients) {
+      clients.active    = Number(next.clients.active    ?? 0);
+      clients.suspended = Number(next.clients.suspended ?? 0);
+      clients.limited   = Number(next.clients.limited   ?? 0);
+      clients.total     = Number(next.clients.total     ?? 0);
+    }
+    if (next.invoicesSummary) {
+      invoicesSummary.pending_count       = Number(next.invoicesSummary.pending_count       ?? 0);
+      invoicesSummary.pending_amount      = Number(next.invoicesSummary.pending_amount      ?? 0);
+      invoicesSummary.overdue_count       = Number(next.invoicesSummary.overdue_count       ?? 0);
+      invoicesSummary.invoiced_this_month = Number(next.invoicesSummary.invoiced_this_month ?? 0);
+      invoicesSummary.paid_this_month     = Number(next.invoicesSummary.paid_this_month     ?? 0);
+    }
   }
 
   let dashboardAbort: AbortController | null = null;
@@ -220,7 +242,20 @@
             percent_used_up: Number(data?.capacity?.percent_used_up ?? 0),
             warn_80: Boolean(data?.capacity?.warn_80 ?? false),
             reuse_ratio: Number(data?.capacity?.reuse_ratio ?? 1) || 1
-          }
+          },
+          clients: {
+            active:    Number(data?.clients?.active    ?? 0),
+            suspended: Number(data?.clients?.suspended ?? 0),
+            limited:   Number(data?.clients?.limited   ?? 0),
+            total:     Number(data?.clients?.total     ?? 0),
+          },
+          invoicesSummary: {
+            pending_count:        Number(data?.invoices_summary?.pending_count        ?? 0),
+            pending_amount:       Number(data?.invoices_summary?.pending_amount       ?? 0),
+            overdue_count:        Number(data?.invoices_summary?.overdue_count        ?? 0),
+            invoiced_this_month:  Number(data?.invoices_summary?.invoiced_this_month  ?? 0),
+            paid_this_month:      Number(data?.invoices_summary?.paid_this_month      ?? 0),
+          },
         };
 
         applyDashboardData(next);
@@ -254,93 +289,44 @@
     };
   });
 
-  // Datos del gráfico
-  const chartData: ChartData = {
-    labels: ["Ene", "Feb", "Mar", "Abr", "May", "Jun"],
-    datasets: [
-      {
-        label: "Gastos",
-        data: [30, 40, 35, 50, 49, 60],
-        borderColor: "#10B981",
-        backgroundColor: "rgba(16, 185, 129, 0.1)",
-        tension: 0.4,
-        fill: true,
-      },
-      {
-        label: "Ventas",
-        data: [20, 25, 30, 35, 40, 45],
-        borderColor: "#3B82F6",
-        backgroundColor: "rgba(59, 130, 246, 0.1)",
-        tension: 0.4,
-        fill: true,
-      },
-      {
-        label: "Café",
-        data: [15, 20, 25, 30, 35, 40],
-        borderColor: "#F59E0B",
-        backgroundColor: "rgba(245, 158, 11, 0.1)",
-        tension: 0.4,
-        fill: true,
-      },
-    ],
-  };
 
-  // Manejar cambio de período
-  function handlePeriodChange(period: Period): void {
-    selectedPeriod = period;
-    // Aquí podrías agregar lógica para actualizar los datos según el período
-  }
-
-  function formatMbps(v: number): string {
-    if (!Number.isFinite(v) || v <= 0) return '0 Mbps';
-    if (v >= 1000) return `${(v / 1000).toFixed(2).replace(/\.00$/, '')} Gbps`;
-    return `${Math.round(v)} Mbps`;
-  }
 </script>
 
-<div class="flex h-screen w-full bg-[#0f0f0f] text-gray-100 overflow-hidden">
+<div class="flex h-screen w-full bg-[#09090f] text-gray-100 overflow-hidden">
 
   <main class="flex-1 overflow-y-auto">
     <Encabezado {toggleSidebar} {toggleNotifications} notificationCount={3} />
 
     <div class="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto w-full">
 
-      {#if capacity.warn_80}
-        <div class="bg-[#141414] border border-orange-900/60 text-orange-200 rounded-xl p-4">
-          <div class="flex items-start justify-between gap-4">
-            <div class="space-y-1">
-              <div class="text-sm font-semibold">Advertencia de Capacidad</div>
-              <div class="text-xs text-orange-200/80">
-                Uso de ISP: {capacity.percent_used.toFixed(1)}% ({formatMbps(capacity.used_down_mbps)} / {formatMbps(capacity.total_down_mbps)})
-              </div>
-            </div>
-            <div class="text-xs text-orange-200/70">Reúso: {capacity.reuse_ratio}:1</div>
-          </div>
-          <div class="mt-3 h-2 w-full bg-[#0f0f0f] rounded">
-            <div
-              class="h-2 rounded bg-orange-500"
-              style={`width: ${Math.min(100, Math.max(0, capacity.percent_used))}%`}
-            ></div>
-          </div>
-        </div>
-      {/if}
+      <!-- KPI Cards -->
+      <KpiCards
+        activeClients={clients.active}
+        suspendedClients={clients.suspended}
+        invoicedThisMonth={invoicesSummary.invoiced_this_month}
+        paidThisMonth={invoicesSummary.paid_this_month}
+        pendingCount={invoicesSummary.pending_count}
+        pendingAmount={invoicesSummary.pending_amount}
+      />
 
-      <!-- Chart Section -->
-        <div class="">
-          <Chart />
-        </div>
+      <!-- Gráfico financiero -->
+      <Chart />
 
-      <!-- Bottom Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <TopUsuarios />
-          <EstadoRouter 
-              online={mikrotikStats.online}
-              activeClients={mikrotikStats.activeClients}
-              totalClients={mikrotikStats.totalClients}
-              cpuLoad={mikrotikStats.cpuLoad}
-              uptime={mikrotikStats.uptime}
+      <!-- TopUsuarios + columna derecha -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <TopUsuarios />
+        <div class="flex flex-col gap-4">
+          <EstadoRouter
+            online={mikrotikStats.online}
+            activeClients={mikrotikStats.activeClients}
+            totalClients={mikrotikStats.totalClients}
+            cpuLoad={mikrotikStats.cpuLoad}
+            uptime={mikrotikStats.uptime}
           />
+          <CapacidadISP {capacity} />
         </div>
+      </div>
+
     </div>
   </main>
 

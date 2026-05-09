@@ -12,94 +12,129 @@
     } from '$lib/utils/hybrid-cache';
 
     //======================================================================
-    // 1. TIPOS Y DATOS (Finanzas)
+    // 1. TIPOS
     //======================================================================
-
-    type TimePeriod = 'year'; // Por ahora solo soportamos año
+    type TimePeriod = 'year';
 
     interface ChartDataItem {
         date: string;
-        invoiced: number; // Facturado
-        collected: number; // Cobrado
-        pending: number; // Pendiente
-        // Permite acceso dinámico por clave
-        [key: string]: string | number; 
+        invoiced: number;
+        collected: number;
+        pending: number;
+        [key: string]: string | number;
     }
 
-    interface ChartConfig {
-        [key: string]: { label: string; color: string; fill: string; unit: string };
+    interface SeriesConfig {
+        label: string;
+        color: string;
+        gradId: string;
     }
 
-    // Datos Mock iniciales
-    let chartData: ChartDataItem[] = [];
+    const config: Record<string, SeriesConfig> = {
+        invoiced:  { label: 'Facturado',  color: '#3b82f6', gradId: 'gFill0' },
+        collected: { label: 'Cobrado',    color: '#10b981', gradId: 'gFill1' },
+        pending:   { label: 'Pendiente',  color: '#f97316', gradId: 'gFill2' },
+    };
+
+    //======================================================================
+    // 2. ESTADO
+    //======================================================================
+    let chartData = $state<ChartDataItem[]>([]);
+    let chartYear = $state(new Date().getFullYear());
     let loading = $state(true);
     let error = $state<string | null>(null);
+    let revealed = $state(false);
 
     const CHART_COOKIE = 'ispga_dash_chart_v1';
     const loadBus = getContext<DashboardLoadBus | undefined>(DASHBOARD_LOAD_CONTEXT);
 
-    // Configuración de métricas
-    const config: ChartConfig = {
-        invoiced: {
-            label: "Facturado",
-            color: "#3b82f6", // Azul
-            fill: "url(#fillInvoiced)",
-            unit: "currency"
-        },
-        collected: {
-            label: "Cobrado",
-            color: "#10b981", // Verde
-            fill: "url(#fillCollected)",
-            unit: "currency"
-        },
-        pending: {
-            label: "Pendiente",
-            color: "#f97316", // Naranja
-            fill: "url(#fillPending)",
-            unit: "currency"
-        },
-    };
-
-    //======================================================================
-    // 2. ESTADO Y LÓGICA PRINCIPAL
-    //======================================================================
-
     let activeTab = $state<TimePeriod>('year');
     let chartContainer = $state<HTMLDivElement | null>(null);
-    let hoveredPoint = $state<{ x: number, data: ChartDataItem } | null>(null);
+    let hoveredPoint = $state<{ x: number; data: ChartDataItem } | null>(null);
     let abortController: AbortController | null = null;
     let inFlight = false;
-    
-    // Datos y dimensiones derivados
-    const data = $derived<ChartDataItem[]>(chartData);
-    
-    const width = 1000;
-    const height = 320;
-    const padding = { top: 20, right: 30, bottom: 30, left: 70 }; 
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
 
-    // Calcula el valor máximo de todas las series
+    const data = $derived<ChartDataItem[]>(chartData);
+
+    //======================================================================
+    // 3. DIMENSIONES (viewBox fijo, escala responsive)
+    //======================================================================
+    const W = 1000, H = 300;
+    const pad = { top: 20, right: 24, bottom: 36, left: 72 };
+    const cW = W - pad.left - pad.right;
+    const cH = H - pad.top - pad.bottom;
+
     const maxValue = $derived(
-        data.length > 0 
-            ? Math.max(...data.flatMap(d => [d.invoiced, d.collected, d.pending]), 0) * 1.1 // 10% margen
+        data.length > 0
+            ? Math.max(Math.max(...data.flatMap(d => [d.invoiced, d.collected, d.pending])) * 1.15, 1)
             : 1000
     );
+    const xStep = $derived(data.length > 1 ? cW / (data.length - 1) : cW);
 
-    const xStep = $derived(data.length > 1 ? chartWidth / (data.length - 1) : chartWidth);
+    //======================================================================
+    // 4. CURVAS SUAVES (Catmull-Rom → cúbica Bézier)
+    //======================================================================
+    function toPoints(values: number[]): { x: number; y: number }[] {
+        return values.map((v, i) => ({
+            x: pad.left + i * xStep,
+            y: pad.top + cH - (v / maxValue) * cH,
+        }));
+    }
 
+    const TENSION = 0.35;
+
+    function catmullRomLine(pts: { x: number; y: number }[]): string {
+        if (pts.length < 2) return '';
+        let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[Math.max(i - 1, 0)];
+            const p1 = pts[i];
+            const p2 = pts[i + 1];
+            const p3 = pts[Math.min(i + 2, pts.length - 1)];
+            const cp1x = p1.x + (p2.x - p0.x) * TENSION;
+            const cp1y = p1.y + (p2.y - p0.y) * TENSION;
+            const cp2x = p2.x - (p3.x - p1.x) * TENSION;
+            const cp2y = p2.y - (p3.y - p1.y) * TENSION;
+            d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)},${cp2x.toFixed(1)} ${cp2y.toFixed(1)},${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+        }
+        return d;
+    }
+
+    function catmullRomArea(pts: { x: number; y: number }[]): string {
+        if (pts.length === 0) return '';
+        const bottom = pad.top + cH;
+        const line = catmullRomLine(pts);
+        const last = pts.at(-1)!;
+        return `${line} L ${last.x.toFixed(1)} ${bottom} L ${pad.left.toFixed(1)} ${bottom} Z`;
+    }
+
+    const invoicedPts  = $derived(toPoints(data.map(d => d.invoiced)));
+    const collectedPts = $derived(toPoints(data.map(d => d.collected)));
+    const pendingPts   = $derived(toPoints(data.map(d => d.pending)));
+
+    const invoicedLine  = $derived(catmullRomLine(invoicedPts));
+    const collectedLine = $derived(catmullRomLine(collectedPts));
+    const pendingLine   = $derived(catmullRomLine(pendingPts));
+
+    const invoicedArea  = $derived(catmullRomArea(invoicedPts));
+    const collectedArea = $derived(catmullRomArea(collectedPts));
+    const pendingArea   = $derived(catmullRomArea(pendingPts));
+
+    //======================================================================
+    // 5. CARGA DE DATOS
+    //======================================================================
     async function loadChartData() {
         if (inFlight) return;
         inFlight = true;
         error = null;
         if (chartData.length === 0) loading = true;
+        revealed = false;
         try {
-            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+            const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
             const endpoint = `${API_BASE}/admin/dashboard/chart`;
             const headers: Record<string, string> = { Accept: 'application/json' };
             if (token) headers.Authorization = `Bearer ${token}`;
             loadBus?.start('chart', endpoint);
-
             if (abortController) abortController.abort();
             abortController = new AbortController();
 
@@ -108,32 +143,30 @@
                 { headers, signal: abortController.signal },
                 { attempts: 3, baseDelayMs: 700 }
             );
-            
-            // Transformar respuesta del backend al formato ChartDataItem
-            if (payload.labels && payload.datasets) {
-                const labels = payload.labels;
-                const invoicedData = payload.datasets[0]?.data || [];
-                const collectedData = payload.datasets[1]?.data || [];
-                const pendingData = payload.datasets[2]?.data || [];
 
-                chartData = labels.map((label: string, i: number) => ({
-                    date: label,
-                    invoiced: Number(invoicedData[i] || 0),
-                    collected: Number(collectedData[i] || 0),
-                    pending: Number(pendingData[i] || 0)
+            if (payload.labels && payload.datasets) {
+                const labels: string[] = payload.labels;
+                chartData = labels.map((label, i) => ({
+                    date:      label,
+                    invoiced:  Number(payload.datasets[0]?.data[i] ?? 0),
+                    collected: Number(payload.datasets[1]?.data[i] ?? 0),
+                    pending:   Number(payload.datasets[2]?.data[i] ?? 0),
                 }));
+                if (payload.year) chartYear = Number(payload.year);
                 writeCookieCache(CHART_COOKIE, chartData, { maxAgeSeconds: 60 * 60 * 24 });
             }
             loadBus?.success('chart');
         } catch (e: any) {
             if (e?.name === 'AbortError') return;
             const err = e as FetchErrorDetails;
-            const msg = typeof err?.message === 'string' && err.message ? err.message : 'Error cargando datos del gráfico';
+            const msg = typeof err?.message === 'string' && err.message ? err.message : 'Error cargando datos';
             loadBus?.error('chart', { endpoint: `${API_BASE}/admin/dashboard/chart`, status: err?.status, message: msg });
             error = msg;
         } finally {
             loading = false;
             inFlight = false;
+            // Trigger reveal animation after next paint
+            requestAnimationFrame(() => { revealed = true; });
         }
     }
 
@@ -142,10 +175,10 @@
         if (cached?.data && Array.isArray(cached.data) && cached.data.length > 0) {
             chartData = cached.data;
             loading = false;
+            requestAnimationFrame(() => { revealed = true; });
         }
         loadChartData();
         const interval = setInterval(loadChartData, 30000);
-
         return () => {
             clearInterval(interval);
             if (abortController) abortController.abort();
@@ -153,238 +186,323 @@
     });
 
     //======================================================================
-    // 3. UTILIDADES Y FORMATO
+    // 6. FORMATO
     //======================================================================
-
-    // Formato para el eje Y
-    function formatYValue(value: number): string {
-        if (value === 0) return "$0";
-        if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-        if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+    function fmtY(value: number): string {
+        if (value === 0) return '$0';
+        if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+        if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+        if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
         return `$${value}`;
     }
 
-    // Formato para los valores del Tooltip
-    function formatTooltipValue(key: keyof ChartDataItem, value: number): string {
-        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
+    function fmtTooltip(value: number): string {
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            maximumFractionDigits: 0,
+        }).format(value);
     }
-    
-    // Función para dibujar la ruta de línea
-    function createPath(values: number[], max: number) {
-        if (data.length <= 1) return '';
-        let path = '';
-        values.forEach((value, i) => {
-            const x = padding.left + i * xStep;
-            const y = padding.top + chartHeight - (value / max) * chartHeight;
-            path += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
-        });
-        return path;
-    }
-
-    // Función para dibujar la ruta de área
-    function createAreaPath(values: number[], max: number) {
-        if (data.length === 0) return '';
-        
-        let path = `M ${padding.left} ${padding.top + chartHeight}`;
-        values.forEach((value, i) => {
-            const x = padding.left + i * xStep;
-            const y = padding.top + chartHeight - (value / max) * chartHeight;
-            path += ` L ${x} ${y}`;
-        });
-        path += ` L ${padding.left + (data.length - 1) * xStep} ${padding.top + chartHeight}`;
-        path += ' Z';
-        return path;
-    }
-
-    // Rutas derivadas
-    const invoicedLinePath = $derived(createPath(data.map(d => d.invoiced), maxValue));
-    const invoicedAreaPath = $derived(createAreaPath(data.map(d => d.invoiced), maxValue));
-    const collectedLinePath = $derived(createPath(data.map(d => d.collected), maxValue));
-    const collectedAreaPath = $derived(createAreaPath(data.map(d => d.collected), maxValue));
-    const pendingLinePath = $derived(createPath(data.map(d => d.pending), maxValue));
-    const pendingAreaPath = $derived(createAreaPath(data.map(d => d.pending), maxValue));
 
     //======================================================================
-    // 4. LÓGICA DE INTERACCIÓN (Movimiento del Ratón)
+    // 7. HOVER / TOOLTIP
     //======================================================================
-    
-    function getClosestPoint(chartX: number): { x: number, data: ChartDataItem } | null {
+    function getClosest(chartX: number): { x: number; data: ChartDataItem } | null {
         if (data.length === 0) return null;
-        
-        let i = Math.round((chartX - padding.left) / xStep);
+        let i = Math.round((chartX - pad.left) / xStep);
         i = Math.max(0, Math.min(i, data.length - 1));
-
-        const x = padding.left + i * xStep;
-        return { x, data: data[i] };
+        return { x: pad.left + i * xStep, data: data[i] };
     }
 
-    function handleMouseMove(event: MouseEvent) {
+    function onMouseMove(e: MouseEvent) {
         if (!chartContainer) return;
-        
-        const svgElement = chartContainer.querySelector('svg');
-        if (!svgElement) return;
-
-        const rect = svgElement.getBoundingClientRect();
-        // Convertir coordenadas del ratón a la escala del viewBox SVG (0-1000)
-        const mouseX = (event.clientX - rect.left) / rect.width * width;
-
-        if (mouseX >= padding.left && mouseX <= width - padding.right) {
-            hoveredPoint = getClosestPoint(mouseX);
-        } else {
-            hoveredPoint = null;
-        }
+        const svg = chartContainer.querySelector('svg');
+        if (!svg) return;
+        const rect = svg.getBoundingClientRect();
+        const mouseX = ((e.clientX - rect.left) / rect.width) * W;
+        hoveredPoint = (mouseX >= pad.left && mouseX <= W - pad.right)
+            ? getClosest(mouseX)
+            : null;
     }
 
-    function handleMouseLeave() {
-        hoveredPoint = null;
-    }
+    function onMouseLeave() { hoveredPoint = null; }
+
+    //======================================================================
+    // 8. TOTALES ANUALES
+    //======================================================================
+    const now = new Date();
+    // Cap to current month only when showing the current year; past years show all 12 months.
+    const totals = $derived(
+        data.slice(0, chartYear === now.getFullYear() ? now.getMonth() + 1 : 12).reduce(
+            (acc, d) => ({
+                invoiced:  acc.invoiced  + d.invoiced,
+                collected: acc.collected + d.collected,
+                pending:   acc.pending   + d.pending,
+            }),
+            { invoiced: 0, collected: 0, pending: 0 }
+        )
+    );
 </script>
 
-<div class="p-6 bg-gray-900 text-gray-100 rounded-lg shadow-lg hidden md:block">
-    <div class="flex items-center justify-between mb-6">
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div class="chart-shell">
+
+    <!-- Header ──────────────────────────────────────────────── -->
+    <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
         <div>
-            <h2 class="text-xl font-bold">INGRESOS FINANCIEROS</h2>
-            <p class="text-gray-400">Facturación vs Recaudo (Año actual)</p>
+            <h2 class="text-base font-semibold text-slate-200 tracking-tight">Ingresos Financieros</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Facturación vs Recaudo · Año {chartYear}</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-5">
+            {#each Object.entries(config) as [, cfg]}
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full" style="background:{cfg.color};box-shadow:0 0 6px {cfg.color}55"></span>
+                    <span class="text-xs font-medium text-slate-400">{cfg.label}</span>
+                </div>
+            {/each}
         </div>
     </div>
 
-    <div class="bg-gray-800 rounded-lg p-4 mb-4">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex p-1 rounded-lg bg-gray-700 max-md:w-full">
-                <button class="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-gray-900 text-white">
-                    AÑO ACTUAL
-                </button>
-            </div>
-
-            <div class="flex items-center gap-6 max-md:order-1">
-                {#each Object.entries(config) as [key, value]}
-                    <div class="flex items-center gap-2 uppercase">
-                        <div
-                            class="w-2 h-2 rounded-sm rotate-45"
-                            style:background-color={value.color}
-                        ></div>
-                        <span class="text-sm font-medium text-gray-400">{value.label}</span>
-                    </div>
-                {/each}
-            </div>
+    <!-- Totales del año ─────────────────────────────────────── -->
+    {#if data.length > 0}
+        <div class="flex flex-wrap gap-3 md:gap-5 mb-5 pb-4 border-b border-white/5">
+            {#each Object.entries(config) as [key, cfg]}
+                <div class="total-chip">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{cfg.color}"></span>
+                    <span class="text-slate-500">{cfg.label}:</span>
+                    <span class="font-semibold" style="color:{cfg.color}">{fmtY(Math.round((totals as any)[key]))}</span>
+                </div>
+            {/each}
         </div>
+    {/if}
 
-        <div class="relative w-full">
-            {#if loading}
-                    <div class="flex items-center justify-center h-[320px] text-gray-400">
-                        Cargando datos...
-                    </div>
-                {:else if error}
-                    <div class="flex items-center justify-center h-[320px] text-red-400">
-                        {error}
-                    </div>
-                {:else}
-                    <div 
-                        class="md:aspect-[3/1] w-full" 
-                        style:height="{height}px"
-                        bind:this={chartContainer}
-                    >
-                        <svg
-                            viewBox={`0 0 ${width} ${height}`}
-                            class="w-full h-full overflow-visible"
-                            role="img"
-                            onmousemove={handleMouseMove}
-                            onmouseleave={handleMouseLeave}
-                        >
-                        <defs>
-                            <linearGradient id="fillInvoiced" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stop-color={config.invoiced.color} stop-opacity={0.3} />
-                                <stop offset="95%" stop-color={config.invoiced.color} stop-opacity={0.05} />
+    <!-- SVG Area ────────────────────────────────────────────── -->
+    <div class="relative w-full" bind:this={chartContainer}>
+        {#if loading}
+            <div class="chart-placeholder">
+                <div class="skeleton-bar" style="height:60%;animation-delay:0s"></div>
+                <div class="skeleton-bar" style="height:80%;animation-delay:0.1s"></div>
+                <div class="skeleton-bar" style="height:45%;animation-delay:0.2s"></div>
+                <div class="skeleton-bar" style="height:70%;animation-delay:0.3s"></div>
+                <div class="skeleton-bar" style="height:90%;animation-delay:0.4s"></div>
+                <div class="skeleton-bar" style="height:55%;animation-delay:0.5s"></div>
+            </div>
+        {:else if error}
+            <div class="flex items-center justify-center" style="height:{H}px">
+                <p class="text-sm text-red-400/70">{error}</p>
+            </div>
+        {:else}
+            <div
+                class="chart-svg-wrap"
+                class:chart-revealed={revealed}
+                style="height:{H}px"
+                role="img"
+                aria-label="Gráfico de ingresos financieros"
+                onmousemove={onMouseMove}
+                onmouseleave={onMouseLeave}
+            >
+                <svg
+                    viewBox="0 0 {W} {H}"
+                    class="w-full h-full overflow-visible"
+                    preserveAspectRatio="xMidYMid meet"
+                >
+                    <defs>
+                        <!-- Gradient fills per series -->
+                        {#each Object.entries(config) as [, cfg], gi}
+                            <linearGradient id={`gFill${gi}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%"   stop-color={cfg.color} stop-opacity="0.25"/>
+                                <stop offset="55%"  stop-color={cfg.color} stop-opacity="0.08"/>
+                                <stop offset="100%" stop-color={cfg.color} stop-opacity="0"/>
                             </linearGradient>
-                            <linearGradient id="fillCollected" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stop-color={config.collected.color} stop-opacity={0.3} />
-                                <stop offset="95%" stop-color={config.collected.color} stop-opacity={0.05} />
-                            </linearGradient>
-                            <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stop-color={config.pending.color} stop-opacity={0.3} />
-                                <stop offset="95%" stop-color={config.pending.color} stop-opacity={0.05} />
-                            </linearGradient>
-                        </defs>
-
-                        {#each Array(6) as _, i}
-                            {@const y = padding.top + (chartHeight / 5) * i}
-                            <line
-                                x1={padding.left} y1={y} x2={width - padding.right} y2={y}
-                                stroke="gray" stroke-width="1" stroke-dasharray="8 8" opacity={0.2}
-                            />
-                            {@const value = maxValue * (1 - i / 5)}
-                            <text
-                                x={padding.left - 10} y={y + 4} text-anchor="end"
-                                class="text-sm fill-gray-400"
-                            >
-                                {formatYValue(Math.round(value))}
-                            </text>
                         {/each}
 
-                        {#each data as point, i}
-                            {@const x = padding.left + xStep * i}
-                            <text
-                                x={x} y={height - padding.bottom + 20} text-anchor="middle"
-                                class="uppercase text-sm fill-gray-400"
-                            >
-                                {point.date}
-                            </text>
-                        {/each}
+                        <!-- Clip for smooth axis edge -->
+                        <clipPath id="chartClip">
+                            <rect x={pad.left} y={pad.top} width={cW} height={cH + 2}/>
+                        </clipPath>
+                    </defs>
 
-                        <path d={invoicedAreaPath} fill={config.invoiced.fill} fill-opacity={0.4} />
-                        <path d={collectedAreaPath} fill={config.collected.fill} fill-opacity={0.4} />
-                        <path d={pendingAreaPath} fill={config.pending.fill} fill-opacity={0.4} />
+                    <!-- Grid lines (horizontal) -->
+                    {#each Array(5) as _, i}
+                        {@const y = pad.top + (cH / 4) * i}
+                        {@const val = maxValue * (1 - i / 4)}
+                        <line
+                            x1={pad.left} y1={y}
+                            x2={W - pad.right} y2={y}
+                            stroke="rgba(255,255,255,0.05)"
+                            stroke-width="1"
+                            stroke-dasharray="4 6"
+                        />
+                        <text
+                            x={pad.left - 10} y={y + 4}
+                            text-anchor="end"
+                            font-size="11"
+                            fill="#475569"
+                        >{fmtY(Math.round(val))}</text>
+                    {/each}
 
-                        <path d={invoicedLinePath} fill="none" stroke={config.invoiced.color} stroke-width="2" />
-                        <path d={collectedLinePath} fill="none" stroke={config.collected.color} stroke-width="2" />
-                        <path d={pendingLinePath} fill="none" stroke={config.pending.color} stroke-width="2" />
+                    <!-- X-axis labels -->
+                    {#each data as point, i}
+                        {@const x = pad.left + xStep * i}
+                        <text
+                            x={x} y={H - pad.bottom + 18}
+                            text-anchor="middle"
+                            font-size="11"
+                            fill="#475569"
+                            font-weight="500"
+                        >{point.date}</text>
+                    {/each}
 
-                        {#if hoveredPoint}
-                            <line
-                                x1={hoveredPoint.x} y1={padding.top}
-                                x2={hoveredPoint.x} y2={height - padding.bottom}
-                                stroke="#555" stroke-width="1" stroke-dasharray="2,2"
-                            />
+                    <!-- Areas (clipped) -->
+                    <g clip-path="url(#chartClip)">
+                        <path d={invoicedArea}  fill="url(#gFill0)"/>
+                        <path d={collectedArea} fill="url(#gFill1)"/>
+                        <path d={pendingArea}   fill="url(#gFill2)"/>
+                    </g>
 
-                            {@const getY = (value: number) => padding.top + chartHeight - (value / maxValue) * chartHeight}
+                    <!-- Lines -->
+                    <g clip-path="url(#chartClip)">
+                        <path d={invoicedLine}  fill="none" stroke={config.invoiced.color}  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d={collectedLine} fill="none" stroke={config.collected.color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d={pendingLine}   fill="none" stroke={config.pending.color}   stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
 
-                            <circle cx={hoveredPoint.x} cy={getY(hoveredPoint.data.invoiced)} r="4" fill={config.invoiced.color} stroke="#333" stroke-width="2" />
-                            <circle cx={hoveredPoint.x} cy={getY(hoveredPoint.data.collected)} r="4" fill={config.collected.color} stroke="#333" stroke-width="2" />
-                            <circle cx={hoveredPoint.x} cy={getY(hoveredPoint.data.pending)} r="4" fill={config.pending.color} stroke="#333" stroke-width="2" />
-                        {/if}
-                        </svg>
-                    </div>
-
+                    <!-- Hover indicator -->
                     {#if hoveredPoint}
-                        {@const xRatio = hoveredPoint.x / width}
-                        {@const isLeftEdge = xRatio < 0.25}
-                        {@const isRightEdge = xRatio > 0.75}
-                        <div
-                            class="absolute bg-gray-700/95 backdrop-blur-sm text-gray-100 p-4 shadow-xl rounded-lg border border-gray-600 pointer-events-none z-50 min-w-[200px]"
-                            style:left="{xRatio * 100}%"
-                            style:top="10px"
-                            style:transform={isLeftEdge ? 'translate(10px, 0)' : isRightEdge ? 'translate(calc(-100% - 10px), 0)' : 'translate(-50%, 0)'}
-                        >
-                            <div class="font-bold text-center mb-2 border-b border-gray-600 pb-2">
-                                {hoveredPoint.data.date}
-                            </div>
-                            
-                            <div class="space-y-2">
-                                {#each Object.entries(config) as [key, { label, color }]}
-                                    {@const value = hoveredPoint.data[key] as number}
-                                    
-                                    <div class="flex items-center justify-between text-sm">
-                                        <div class="flex items-center">
-                                            <span class="w-2 h-2 rounded-full mr-2" style:background-color={color}></span>
-                                            <span>{label}:</span>
-                                        </div>
-                                        <span class="ml-auto font-medium">{formatTooltipValue(key as keyof ChartDataItem, value)}</span>
-                                    </div>
-                                {/each}
-                            </div>
-                        </div>
+                        {@const gY = (v: number) => pad.top + cH - (v / maxValue) * cH}
+                        <line
+                            x1={hoveredPoint.x} y1={pad.top}
+                            x2={hoveredPoint.x} y2={pad.top + cH}
+                            stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="3 3"
+                        />
+                        {#each Object.entries(config) as [key, cfg]}
+                            {@const cy = gY(hoveredPoint.data[key] as number)}
+                            <circle cx={hoveredPoint.x} cy={cy} r="5" fill={cfg.color} stroke="#0d0d18" stroke-width="2"/>
+                            <circle cx={hoveredPoint.x} cy={cy} r="9" fill="none" stroke={cfg.color} stroke-width="1" opacity="0.3"/>
+                        {/each}
                     {/if}
-            {/if}
-        </div>
+                </svg>
+
+                <!-- Tooltip -->
+                {#if hoveredPoint}
+                    {@const ratio = hoveredPoint.x / W}
+                    {@const isRight = ratio > 0.72}
+                    <div
+                        class="chart-tooltip"
+                        style="
+                            left:{ratio * 100}%;
+                            top:16px;
+                            transform:translate({isRight ? 'calc(-100% - 12px)' : ratio < 0.28 ? '8px' : '-50%'}, 0)
+                        "
+                        in:fade={{ duration: 80 }}
+                    >
+                        <p class="tooltip-date">{hoveredPoint.data.date}</p>
+                        {#each Object.entries(config) as [key, cfg]}
+                            <div class="tooltip-row">
+                                <span class="tooltip-dot" style="background:{cfg.color}"></span>
+                                <span class="tooltip-label">{cfg.label}</span>
+                                <span class="tooltip-value" style="color:{cfg.color}">{fmtTooltip(hoveredPoint.data[key] as number)}</span>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+        {/if}
     </div>
 </div>
+
+<style>
+    /* ── Shell ─────────────────────────────────────────────────────────── */
+    .chart-shell {
+        background: #0d0d16;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+
+    .total-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+    }
+
+    /* ── Chart reveal animation ──────────────────────────────────────── */
+    @keyframes chartReveal {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .chart-svg-wrap {
+        opacity: 0;
+        transition: none;
+    }
+    .chart-svg-wrap.chart-revealed {
+        animation: chartReveal 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    /* ── Loading skeleton ────────────────────────────────────────────── */
+    .chart-placeholder {
+        height: 300px;
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        padding: 0 72px 36px;
+    }
+    @keyframes skeletonPulse {
+        0%, 100% { opacity: 0.04; }
+        50%       { opacity: 0.10; }
+    }
+    .skeleton-bar {
+        flex: 1;
+        background: white;
+        border-radius: 4px 4px 0 0;
+        animation: skeletonPulse 1.6s ease-in-out infinite;
+    }
+
+    /* ── Tooltip ─────────────────────────────────────────────────────── */
+    .chart-tooltip {
+        position: absolute;
+        pointer-events: none;
+        z-index: 50;
+        background: rgba(15, 15, 26, 0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 12px;
+        padding: 12px 14px;
+        min-width: 200px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    .tooltip-date {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .tooltip-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+    }
+    .tooltip-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .tooltip-label {
+        font-size: 12px;
+        color: #64748b;
+        flex: 1;
+    }
+    .tooltip-value {
+        font-size: 12px;
+        font-weight: 600;
+    }
+</style>
