@@ -1,86 +1,54 @@
 <script lang="ts">
-  import Encabezado from "$lib/components/Encabezado.svelte";
-  import MikroTikActionCard from "$lib/components/mikrotik/MikroTikActionCard.svelte";
-  import { API_BASE } from "$lib/config";
-  import { toast } from 'svelte-sonner';
-  import { appState } from '$lib/stores/app.svelte';
-
-  let isSidebarOpen = $state(false);
-  let isNotificationsOpen = $state(false);
-  function toggleSidebar() { appState.toggleSidebar() }
-  function toggleNotifications() { appState.toggleNotifications() }
-
-  let useAsync = $state(false);
-
-  function handleNotify({ type, message }: { type: 'success' | 'error' | 'info', message: string }) {
-    toast[type](message);
-  }
-
-  function validateSync() {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return 'No hay conexión a internet. Verifica tu red.';
-    }
-    const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-    if (!token) {
-      return 'Tu sesión expiró. Inicia sesión nuevamente.';
-    }
-    return null;
-  }
-
-  async function syncQueues() {
-    const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/mikrotik/sync/queues/cleanup`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ async: useAsync })
-    });
-    let payload: any = null;
-    try { payload = await res.json(); } catch {}
-    if (!res.ok) {
-      return { ok: false, message: payload?.message || `Error ${res.status}` };
-    }
-    const msg = payload?.message || (useAsync ? 'Sincronización en cola.' : 'Sincronización completada.');
-    return { ok: true, message: msg };
-  }
+  import { MIKROTIK_MODULES } from '$lib/mikrotik/modules';
 </script>
 
-<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
-  <Encabezado {toggleSidebar} {toggleNotifications} />
+<div class="space-y-6">
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    <div class="bg-[#111111] border border-neutral-800 rounded-xl p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div class="space-y-1">
+          <h3 class="text-base md:text-lg font-semibold text-gray-100">Accesos rápidos</h3>
+          <p class="text-xs md:text-sm text-gray-400 leading-relaxed">
+            Entra a cada sección para operar colas, firewall, monitoreo y dispositivos.
+          </p>
+        </div>
+      </div>
 
-  <div class="p-4 md:p-6 max-w-5xl mx-auto w-full space-y-6">
-    <div class="space-y-1">
-      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight">MikroTik</h2>
-      <p class="text-sm text-gray-400 leading-relaxed">Sincroniza planes y clientes con una acción segura y controlada.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+        {#each MIKROTIK_MODULES.filter((m) => m.id !== 'overview') as m (m.id)}
+          <a
+            href={m.href}
+            class="group border border-neutral-800 rounded-xl p-4 bg-neutral-900/30 hover:bg-neutral-900/60 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <m.icon class="w-4 h-4 text-blue-300" />
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-gray-100 truncate">{m.label}</div>
+                <div class="text-xs text-gray-500 leading-snug line-clamp-2">{m.description}</div>
+              </div>
+            </div>
+          </a>
+        {/each}
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-4">
-      <MikroTikActionCard
-        title="Sincronizar MikroTik con planes y clientes"
-        description="Actualiza colas padre e hijas en MikroTik usando los planes activos y clientes con IP válida."
-        actionLabel="Sincronizar"
-        modalTitle="Confirmar sincronización con limpieza"
-        modalMessage="Se crearán o actualizarán colas de planes y clientes, y se eliminarán colas huérfanas."
-        modalSecondaryMessage="Esta acción afecta la configuración de /queue/simple en el Router."
-        modalDetailsTitle="Elementos afectados"
-        modalDetailsItems={[
-          'Colas padre asociadas a planes activos',
-          'Colas hijas de clientes activos con IP válida',
-          'Colas huérfanas que ya no existan en la base de datos'
-        ]}
-        confirmText="Confirmar sincronización"
-        cancelText="Cancelar"
-        modalType="warning"
-        validate={validateSync}
-        onAction={syncQueues}
-        onNotify={handleNotify}
-      >
-      </MikroTikActionCard>
+    <div class="bg-[#111111] border border-neutral-800 rounded-xl p-5">
+      <div class="space-y-1">
+        <h3 class="text-base md:text-lg font-semibold text-gray-100">Guía de uso</h3>
+        <p class="text-xs md:text-sm text-gray-400 leading-relaxed">
+          Los cambios de configuración deben validarse antes de aplicarse al router. Usa “Colas” para sincronización segura y
+          “Firewall” para preparar reglas con validaciones en tiempo real.
+        </p>
+      </div>
+
+      <div class="mt-4 border border-neutral-800 rounded-xl p-4 bg-neutral-900/30">
+        <div class="text-xs font-mono text-gray-400 tracking-wide mb-1">RECOMENDACIÓN</div>
+        <div class="text-sm text-gray-200 leading-relaxed">
+          Ejecuta sincronizaciones de colas fuera de horas pico y revisa el estado del router en Monitoreo antes de aplicar cambios.
+        </div>
+      </div>
     </div>
   </div>
-
-</main>
+</div>

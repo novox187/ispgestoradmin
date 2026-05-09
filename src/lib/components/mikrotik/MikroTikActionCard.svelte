@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Loader2 } from '@lucide/svelte';
+  import { AlertTriangle, Loader2 } from '@lucide/svelte';
   import ModalConfirmacion from '$lib/components/common/ModalConfirmacion.svelte';
+  import type { Component } from 'svelte';
 
   type NotifyPayload = { type: 'success' | 'error' | 'info'; message: string };
   type ActionResult = { ok: boolean; message: string };
@@ -9,6 +10,7 @@
     title: string;
     description: string;
     actionLabel: string;
+    icon?: Component<any>;
     modalTitle: string;
     modalMessage: string;
     modalDetailsTitle?: string;
@@ -32,6 +34,7 @@
   let validationError = $state<string | null>(null);
   let acknowledged = $state(false);
   let useAsync = $state(props.useAsync || false);
+  const Icon = $derived(props.icon);
 
   function validateBeforeOpen() {
     if (loading) return false;
@@ -89,32 +92,53 @@
 </script>
 
 <!-- svelte-ignore slot_element_deprecated -->
-<div class="card bg-surface-100-900 border border-neutral-800 rounded-xl p-5 space-y-4">
-  <div class="space-y-1">
-    <h3 class="sm:text-lg font-semibold text-foreground">{props.title}</h3>
-    <p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">{props.description}</p>
+<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-[#141414] to-[#0d0d0d] p-6 shadow-xl">
+  <div class="flex items-start justify-between gap-4">
+    <div class="flex items-start gap-3 min-w-0">
+      <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+        {#if Icon}
+          <Icon class="w-5 h-5 text-blue-300" />
+        {:else}
+          <AlertTriangle class="w-5 h-5 text-blue-300" />
+        {/if}
+      </div>
+      <div class="space-y-1 min-w-0">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-100 truncate">{props.title}</h3>
+        <p class="text-xs sm:text-sm text-gray-400 leading-relaxed">
+          {props.description}
+        </p>
+      </div>
+    </div>
+
+    <div class="hidden sm:flex items-center gap-2">
+      <span class="text-[10px] font-mono tracking-wide px-2 py-1 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-200">
+        Operación sensible
+      </span>
+    </div>
   </div>
 
   {#if props.acknowledgeLabel}
-    <label class="flex items-center gap-2 text-xs text-muted-foreground">
-      <input type="checkbox" bind:checked={acknowledged} />
+    <label class="flex items-center gap-2 text-xs text-gray-300 mt-4">
+      <input type="checkbox" bind:checked={acknowledged} class="accent-blue-500" />
       <span>{props.acknowledgeLabel}</span>
     </label>
   {/if}
 
-  <slot />
+  <div class="mt-4">
+    <slot />
+  </div>
 
   {#if validationError}
-    <div class="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2" role="alert">
+    <div class="mt-4 text-xs text-red-200 bg-red-600/10 border border-red-500/20 rounded-xl px-4 py-3" role="alert">
       {validationError}
     </div>
   {/if}
 
-  <div class="flex items-center justify-between gap-3">
-    <div class="flex items-center gap-4">
+  <div class="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="flex items-center gap-3">
       <button
         type="button"
-        class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium transition-colors disabled:opacity-60 flex items-center"
+        class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-colors disabled:opacity-60 flex items-center gap-2 shadow-lg shadow-blue-900/20"
         onclick={validateBeforeOpen}
         disabled={loading || props.actionDisabled}
         aria-busy={loading}
@@ -124,13 +148,13 @@
         {/if}
         {props.actionLabel}
       </button>
-      <label class="flex items-center gap-2 text-[10px] sm:text-sm text-muted-foreground">
-        <input type="checkbox" bind:checked={useAsync} />
-        Ejecutar en segundo plano
-      </label>
     </div>
+    <label class="flex items-center gap-2 text-xs sm:text-sm text-gray-300">
+      <input type="checkbox" bind:checked={useAsync} class="accent-blue-500" />
+      Ejecutar en segundo plano
+      <span class="text-[10px] sm:text-xs text-gray-500">(recomendado fuera de horas pico)</span>
+    </label>
   </div>
-  <span class="text-[10px] sm:text-sm text-muted-foreground text-amber-200">Recomendado fuera de horas pico.</span>
 </div>
 
 <ModalConfirmacion
