@@ -1,29 +1,67 @@
-<script>
-  // @ts-ignore
-  import { LayoutDashboard, FlaskConical, Smartphone, Shield, Mail, Settings, Lock, User, MoreVertical, Users, Wifi, CreditCard, Zap, Bell, UserCog, LogOut } from '@lucide/svelte';
+<script lang="ts">
+  import {
+    LayoutDashboard, Users, Wifi, Zap, CreditCard,
+    Router, UserCog, Lock, User, MoreVertical, Settings, LogOut
+  } from '@lucide/svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { API_BASE } from '$lib/config';
-  import { fade, fly } from 'svelte/transition';
-  
+  import { fly } from 'svelte/transition';
+
   let { isOpen = $bindable(false) } = $props();
-  
-  const menuItems = [
-    { label: 'DASHBOARD', icon: LayoutDashboard, path: '/' },
-    { label: 'CLIENTES', icon: Users, path: '/clientes' },
-    { label: 'PLANES', icon: Wifi, path: '/planes' },
-    { label: 'PROVEEDORES', icon: Zap, path: '/proveedores' },
-    { label: 'FACTURACION', icon: CreditCard, path: '/facturas' },
-    { label: 'MIKROTIK', icon: Settings, path: '/mikrotik', locked: false },
-    { label: 'USUARIOS', icon: UserCog, path: '/usuarios', locked: false },
+
+  type NavItem = {
+    label: string;
+    icon: any;
+    path: string;
+    locked?: boolean;
+  };
+
+  type NavGroup = {
+    label: string;
+    items: NavItem[];
+  };
+
+  const navGroups: NavGroup[] = [
+    {
+      label: 'General',
+      items: [
+        { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      ]
+    },
+    {
+      label: 'Gestión',
+      items: [
+        { label: 'Clientes', icon: Users, path: '/clientes' },
+        { label: 'Planes', icon: Wifi, path: '/planes' },
+      ]
+    },
+    {
+      label: 'Finanzas',
+      items: [
+        { label: 'Facturación', icon: CreditCard, path: '/facturas' },
+        { label: 'Proveedores', icon: Zap, path: '/proveedores' },
+      ]
+    },
+    {
+      label: 'Infraestructura',
+      items: [
+        { label: 'MikroTik', icon: Router, path: '/mikrotik' },
+      ]
+    },
+    {
+      label: 'Sistema',
+      items: [
+        { label: 'Usuarios', icon: UserCog, path: '/usuarios' },
+      ]
+    },
   ];
-  
+
   function closeSidebar() {
     isOpen = false;
   }
-  
-  /** @param {string} path */
-  function isActive(path) {
+
+  function isActive(path: string) {
     const current = $page.url.pathname;
     return path === '/' ? current === '/' : current.startsWith(path);
   }
@@ -34,16 +72,16 @@
   let userRole = $state('Sin Rol');
 
   $effect(() => {
-      const storedName = localStorage.getItem('employee_nombre');
-      const storedRole = localStorage.getItem('employee_role');
-      if (storedName) userName = storedName;
-      if (storedRole) userRole = storedRole.toUpperCase();
+    const storedName = localStorage.getItem('employee_nombre');
+    const storedRole = localStorage.getItem('employee_role');
+    if (storedName) userName = storedName;
+    if (storedRole) userRole = storedRole.toUpperCase();
   });
 
   async function handleLogout() {
     if (loggingOut) return;
     loggingOut = true;
-    const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
     try {
       if (token) {
         await fetch(`${API_BASE}/employee/logout`, {
@@ -63,129 +101,136 @@
   }
 </script>
 
-<!-- Overlay para móvil -->
+<!-- Mobile overlay -->
 {#if isOpen}
-  <div 
+  <div
     class="fixed inset-0 bg-black/50 z-40 lg:hidden"
     onclick={closeSidebar}
     onkeydown={(e) => e.key === 'Enter' && closeSidebar()}
     role="button"
     tabindex="0"
-    aria-label="Close sidebar"
+    aria-label="Cerrar menú"
   ></div>
 {/if}
 
 <aside class="
-  w-64 bg-[#0d0d0d] border-r border-neutral-800 flex flex-col p-5
+  w-60 bg-[#0a0a0a] border-r border-neutral-800/60 flex flex-col
   fixed lg:static inset-y-0 left-0 z-50
   transform transition-transform duration-300 ease-in-out
   {isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
 ">
-  <!-- Logo Section -->
-  <div class="p-6 border-b border-neutral-800">
+  <!-- Logo -->
+  <div class="px-5 py-5 border-b border-neutral-800/60">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-white rounded flex items-center justify-center">
-        <User class="w-6 h-6 text-black" />
+      <div class="w-8 h-8 bg-white rounded-md flex items-center justify-center shrink-0">
+        <span class="text-black font-black text-xs">NT</span>
       </div>
-      <div>
-        <div class="text-white font-bold text-lg tracking-widest">NOVATACH</div>
-        <div class="text-gray-500 text-xs font-mono uppercase">Conexión donde no llega nadie</div>
+      <div class="min-w-0">
+        <div class="text-white font-bold text-sm tracking-widest leading-tight">NOVATACH</div>
+        <div class="text-neutral-600 text-[10px] font-mono truncate">Panel de administración</div>
       </div>
     </div>
   </div>
 
   <!-- Navigation -->
-  <nav class="flex-1 p-4 overflow-y-auto">
-    <div class="mb-6">
-      <div class="flex items-center gap-2 mb-3 px-3">
-        <div class="w-2 h-2 bg-blue-500 rounded-sm"></div>
-        <span class="text-blue-500 text-xs font-mono font-bold tracking-wide">TOOLS</span>
+  <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-4">
+    {#each navGroups as group}
+      <div>
+        <div class="px-2 mb-1">
+          <span class="text-[10px] font-mono font-semibold text-neutral-600 uppercase tracking-widest">
+            {group.label}
+          </span>
+        </div>
+        <ul class="space-y-0.5">
+          {#each group.items as item}
+            <li>
+              {#if item.locked}
+                <span class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-neutral-600 cursor-not-allowed select-none">
+                  <item.icon class="w-4 h-4 shrink-0" />
+                  <span class="flex-1">{item.label}</span>
+                  <Lock class="w-3 h-3" />
+                </span>
+              {:else}
+                <a
+                  href={item.path}
+                  onclick={() => closeSidebar()}
+                  class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150
+                    {isActive(item.path)
+                      ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60 border border-transparent'}"
+                >
+                  <item.icon class="w-4 h-4 shrink-0 {isActive(item.path) ? 'text-blue-400' : ''}" />
+                  <span class="flex-1">{item.label}</span>
+                  {#if isActive(item.path)}
+                    <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                  {/if}
+                </a>
+              {/if}
+            </li>
+          {/each}
+        </ul>
       </div>
-      <ul class="space-y-0.5">
-        {#each menuItems as item}
-          <li>
-            {#if item.locked}
-              <button
-                class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-mono transition-colors text-gray-600"
-                aria-label="{item.label}"
-                disabled
-              >
-                <item.icon class="w-4 h-4" />
-                <span class="flex-1 text-left font-medium tracking-wide">{item.label}</span>
-                <Lock class="w-3.5 h-3.5" />
-              </button>
-            {:else}
-              <a
-                href={item.path}
-                class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-mono transition-colors {isActive(item.path) ? 'bg-gray-800/50 text-white border-l-2 border-blue-500' : 'text-gray-300 hover:text-white hover:bg-gray-800/30'}"
-                aria-label="{item.label}"
-                onclick={() => closeSidebar()}
-              >
-                <item.icon class="w-4 h-4" />
-                <span class="flex-1 text-left font-medium tracking-wide">{item.label}</span>
-              </a>
-            {/if}
-          </li>
-        {/each}
-      </ul>
-    </div>
+    {/each}
   </nav>
 
-  <!-- User Profile -->
-  <div class="p-4 border-t border-neutral-800/50 mt-auto">
+  <!-- User section -->
+  <div class="px-3 py-3 border-t border-neutral-800/60">
     <div class="relative">
-      <button 
-        class="w-full group flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-800/50 transition-all duration-300 border border-transparent hover:border-neutral-700/50 outline-none focus:ring-2 focus:ring-blue-500/20"
+      <button
         onclick={() => (userMenuOpen = !userMenuOpen)}
-        aria-label="User menu"
+        aria-label="Menú de usuario"
         aria-expanded={userMenuOpen}
+        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-neutral-800/60 border border-transparent hover:border-neutral-700/40 transition-all duration-150 outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50"
       >
-        <div class="relative">
-          <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full opacity-75 blur group-hover:opacity-100 transition duration-500"></div>
-          <div class="relative w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-white font-bold text-lg border border-neutral-800">
+        <div class="relative shrink-0">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
             {userName.charAt(0).toUpperCase()}
           </div>
-          <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-neutral-900 rounded-full"></div>
+          <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-[#0a0a0a] rounded-full"></div>
         </div>
-        
         <div class="flex-1 min-w-0 text-left">
-          <div class="text-white font-bold text-sm truncate group-hover:text-blue-400 transition-colors">{userName}</div>
-          <div class="text-gray-500 text-[10px] font-mono truncate tracking-tight">{userRole}</div>
+          <div class="text-white text-xs font-semibold truncate leading-tight">{userName}</div>
+          <div class="text-neutral-500 text-[10px] font-mono truncate">{userRole}</div>
         </div>
-
-        <div class="text-gray-500 group-hover:text-white transition-transform duration-300 {userMenuOpen ? 'rotate-180' : ''}">
-          <MoreVertical class="w-4 h-4" />
-        </div>
+        <MoreVertical class="w-3.5 h-3.5 text-neutral-600 shrink-0 transition-transform duration-200 {userMenuOpen ? 'rotate-90' : ''}" />
       </button>
 
       {#if userMenuOpen}
-        <div 
-          transition:fly={{ y: 10, duration: 200 }}
-          class="absolute bottom-full left-0 w-full mb-2 bg-neutral-900/95 backdrop-blur-xl border border-neutral-800 rounded-xl shadow-2xl overflow-hidden z-20"
+        <div
+          transition:fly={{ y: 6, duration: 150 }}
+          class="absolute bottom-full left-0 w-full mb-1.5 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl overflow-hidden z-20"
         >
           <div class="p-1 space-y-0.5">
-             <a href="/perfil" onclick={() => { userMenuOpen = false; closeSidebar(); }} class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors group/item">
-                <User class="w-4 h-4 text-gray-500 group-hover/item:text-blue-400 transition-colors" />
-                <span class="font-medium">Mi Perfil</span>
-             </a>
-             <a href="/configuraciones" onclick={() => { userMenuOpen = false; closeSidebar(); }} class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors group/item">
-                <Settings class="w-4 h-4 text-gray-500 group-hover/item:text-blue-400 transition-colors" />
-                <span class="font-medium">Configuraciones</span>
-             </a>
-             <div class="h-px bg-neutral-800/50 my-1 mx-2"></div>
-             <button 
-                class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors group/item"
-                onclick={(e) => { e.stopPropagation(); handleLogout(); }} 
-                disabled={loggingOut}
-              >
-                {#if loggingOut}
-                  <div class="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin"></div>
-                  <span>Cerrando...</span>
-                {:else}
-                  <LogOut class="w-4 h-4 text-red-400/70 group-hover/item:text-red-400 transition-colors" />
-                  <span>Cerrar sesión</span>
-                {/if}
-              </button>
+            <a
+              href="/perfil"
+              onclick={() => { userMenuOpen = false; closeSidebar(); }}
+              class="flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            >
+              <User class="w-3.5 h-3.5 text-neutral-500" />
+              Mi perfil
+            </a>
+            <a
+              href="/configuraciones"
+              onclick={() => { userMenuOpen = false; closeSidebar(); }}
+              class="flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            >
+              <Settings class="w-3.5 h-3.5 text-neutral-500" />
+              Configuraciones
+            </a>
+            <div class="h-px bg-neutral-800 my-1 mx-1"></div>
+            <button
+              onclick={(e) => { e.stopPropagation(); handleLogout(); }}
+              disabled={loggingOut}
+              class="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+            >
+              {#if loggingOut}
+                <div class="w-3.5 h-3.5 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin"></div>
+                Cerrando sesión...
+              {:else}
+                <LogOut class="w-3.5 h-3.5" />
+                Cerrar sesión
+              {/if}
+            </button>
           </div>
         </div>
       {/if}

@@ -51,6 +51,6 @@ export const MIKROTIK_MODULES: MikrotikModule[] = [
 		description: 'Gestión de equipos, credenciales y perfiles por router.',
 		href: '/mikrotik/dispositivos',
 		icon: Smartphone,
-		status: 'coming_soon'
+		status: 'ready'
 	}
 ];
