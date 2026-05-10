@@ -6,6 +6,165 @@ html {
 	color-scheme: dark;
 }
 
-@import '@skeletonlabs/skeleton'; 
-@import '@skeletonlabs/skeleton-svelte'; 
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton-svelte';
 @import '@skeletonlabs/skeleton/themes/cerberus';
+
+/* ================================================================
+   ISP GESTOR — SISTEMA DE DISEÑO
+   Nomenclatura: --color-[familia]-[shade]
+   WCAG 2.1 AA: contraste mínimo 4.5:1 garantizado sobre surface-base
+   Verificado: text-primary ~18:1, text-secondary ~11:1, text-muted ~7:1
+   ================================================================ */
+
+@theme {
+  /* --- Superficies — Jerarquía de profundidad visual (azul-marino oscuro) --- */
+  --color-surface-base:     #07091a;   /* Fondo más profundo      */
+  --color-surface-card:     #0b0f26;   /* Sidebar / panel lateral */
+  --color-surface-elevated: #101629;   /* Tarjetas y secciones    */
+  --color-surface-overlay:  #152035;   /* Dropdowns, tooltips     */
+  --color-surface-hover:    #1a2840;   /* Hover de ítems de lista */
+  --color-surface-selected: #1b2d50;   /* Ítem activo/seleccionado*/
+
+  /* --- Texto — Contraste WCAG 2.1 AA verificado --- */
+  --color-text-primary:   #eef2ff;   /* Contraste ≈17:1 sobre surface-base */
+  --color-text-secondary: #c4ceea;   /* Contraste ≈11:1 */
+  --color-text-muted:     #8898b8;   /* Contraste ≈7:1  */
+  --color-text-disabled:  #506280;   /* Decorativo — estados inactivos */
+
+  /* --- Primario — Azul corporativo ISP --- */
+  --color-primary-50:  #eef4ff;
+  --color-primary-100: #dce8ff;
+  --color-primary-200: #b8d0ff;
+  --color-primary-300: #82b0ff;
+  --color-primary-400: #4d8fff;
+  --color-primary-500: #2570ff;
+  --color-primary-600: #1452e0;
+  --color-primary-700: #1040be;
+  --color-primary-800: #112f90;
+  --color-primary-900: #112070;
+  --color-primary-950: #0a1445;
+
+  /* --- Éxito — Estado ACTIVO (esmeralda) --- */
+  --color-success-100: #d0fae6;
+  --color-success-200: #a4f3cc;
+  --color-success-300: #6ae3aa;
+  --color-success-400: #32c686;
+  --color-success-500: #14a869;
+  --color-success-600: #0c8550;
+  --color-success-700: #09663e;
+  --color-success-900: #054027;
+
+  /* --- Advertencia — Estado SUSPENDIDO (ámbar) --- */
+  --color-warning-100: #fff4cc;
+  --color-warning-200: #ffe896;
+  --color-warning-300: #ffd354;
+  --color-warning-400: #ffbb1f;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #c97c04;
+  --color-warning-700: #9c5e02;
+  --color-warning-900: #6d3f00;
+
+  /* --- Peligro — Estado CANCELADO / Errores (rojo) --- */
+  --color-danger-100: #ffe4e4;
+  --color-danger-200: #ffc5c5;
+  --color-danger-300: #ff9b9b;
+  --color-danger-400: #ff6464;
+  --color-danger-500: #f53b3b;
+  --color-danger-600: #cc1f1f;
+  --color-danger-700: #a81515;
+  --color-danger-900: #6e0b0b;
+
+  /* --- Información — Estado LIMITADO (cyan) --- */
+  --color-info-100: #e0f4ff;
+  --color-info-200: #bae7fd;
+  --color-info-300: #7dd5fc;
+  --color-info-400: #36bcf8;
+  --color-info-500: #0ca5e9;
+  --color-info-600: #0283c7;
+  --color-info-700: #0369a1;
+  --color-info-900: #0c4a6e;
+}
+
+/* ================================================================
+   Componentes reutilizables del sistema
+   ================================================================ */
+@layer components {
+  /* Campo de formulario base */
+  .isp-input {
+    @apply w-full px-3 py-2 rounded-lg text-sm text-text-primary
+           bg-surface-base border border-white/[0.08]
+           placeholder:text-text-disabled
+           transition-all duration-150
+           focus:outline-none
+           focus-visible:ring-2 focus-visible:ring-primary-500
+           focus-visible:ring-offset-1 focus-visible:ring-offset-surface-elevated
+           focus-visible:border-primary-500/40
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Etiqueta de campo */
+  .isp-label {
+    @apply block text-[11px] font-semibold text-text-muted mb-1.5 uppercase tracking-widest;
+  }
+
+  /* Tarjeta de sección */
+  .isp-card {
+    @apply bg-surface-elevated rounded-xl border border-white/[0.06] p-5 space-y-4;
+  }
+
+  /* Encabezado de sección dentro de tarjeta */
+  .isp-section-header {
+    @apply flex items-center gap-2 pb-3 border-b border-white/[0.06];
+  }
+
+  /* Botón primario */
+  .isp-btn-primary {
+    @apply px-5 py-2.5 rounded-lg bg-primary-600 text-white font-semibold text-sm
+           hover:bg-primary-500 active:bg-primary-700
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-150
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400
+           focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base
+           inline-flex items-center gap-2 shadow-lg shadow-primary-900/40;
+  }
+
+  /* Botón secundario / ghost */
+  .isp-btn-ghost {
+    @apply px-5 py-2.5 rounded-lg border border-white/10 text-text-secondary text-sm font-medium
+           hover:bg-surface-hover hover:text-text-primary hover:border-white/20
+           transition-all duration-150
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+           focus-visible:ring-offset-1;
+  }
+
+  /* Badge de estado de servicio */
+  .status-badge-active    { @apply bg-success-500/15 text-success-400 border border-success-500/25; }
+  .status-badge-suspended { @apply bg-warning-500/15 text-warning-400 border border-warning-500/25; }
+  .status-badge-cancelled { @apply bg-danger-500/15  text-danger-400  border border-danger-500/25;  }
+  .status-badge-limited   { @apply bg-info-500/15    text-info-400    border border-info-500/25;    }
+  .status-badge-inactive  { @apply bg-white/5 text-text-muted border border-white/10; }
+}
+
+/* ================================================================
+   Enfoque visible global — WCAG 2.1 SC 2.4.7
+   ================================================================ */
+*:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* ================================================================
+   Scrollbar ISP — delgado y discreto
+   ================================================================ */
+.scrollbar-isp {
+  scrollbar-width: thin;
+  scrollbar-color: #1e2d50 transparent;
+}
+.scrollbar-isp::-webkit-scrollbar { width: 4px; height: 4px; }
+.scrollbar-isp::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-isp::-webkit-scrollbar-thumb {
+  background: #1e2d50;
+  border-radius: 8px;
+}
+.scrollbar-isp::-webkit-scrollbar-thumb:hover { background: #2a3e6a; }

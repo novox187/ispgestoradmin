@@ -1,8 +1,8 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import { 
-        Send, Paperclip, MoreVertical, Phone, Mail, 
-        MapPin, CreditCard, User, X, ArrowLeft
+    import {
+        Send, Paperclip, MoreVertical, CreditCard,
+        ArrowLeft, MessageSquare, UserCheck, UserX, Info
     } from '@lucide/svelte';
     import ClientDetailSidebar from './ClientDetailSidebar.svelte';
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
@@ -31,9 +31,9 @@
         [key: string]: any;
     }
 
-    let { 
-        client = null, 
-        messages = [], 
+    let {
+        client = null,
+        messages = [],
         loading = false,
         isDetailOpen = false
     }: {
@@ -52,7 +52,7 @@
     let showConfirmModal = $state(false);
     let actionType = $state<'suspend' | 'activate' | null>(null);
     let actionLoading = $state(false);
-    
+
     let showAddFundsModal = $state(false);
     let isAdmin = $state(false);
     let detailMounted = $state(false);
@@ -90,9 +90,7 @@
         }
     });
 
-    function toggleDropdown() {
-        showDropdown = !showDropdown;
-    }
+    function toggleDropdown() { showDropdown = !showDropdown; }
 
     function handleActionClick(action: 'suspend' | 'activate') {
         showDropdown = false;
@@ -106,11 +104,8 @@
     }
 
     async function executeAction() {
-        if (!client || !client.id) {
-            toast.error("ID de cliente inválido.");
-            return;
-        }
-        
+        if (!client || !client.id) { toast.error("ID de cliente inválido."); return; }
+
         actionLoading = true;
         try {
             const token = localStorage.getItem('employee_token');
@@ -119,20 +114,16 @@
                 'Accept': 'application/json'
             };
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            
-            const endpoint = actionType === 'suspend' 
+
+            const endpoint = actionType === 'suspend'
                 ? `${API_BASE}/admin/clientes/${client.id}/suspend`
                 : `${API_BASE}/admin/clientes/${client.id}/activate`;
-                
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers
-            });
-            
+
+            const res = await fetch(endpoint, { method: 'POST', headers });
+
             if (res.ok) {
                 const data = await res.json();
                 toast.success(`Cliente ${actionType === 'suspend' ? 'suspendido' : 'activado'} correctamente.`);
-                // actualizamos el estado local
                 if (client) {
                     const newStatus = actionType === 'suspend' ? 'SUSPENDED' : 'ACTIVE';
                     if ('status' in client) client.status = newStatus;
@@ -155,9 +146,7 @@
 
     function handleWindowClick(e: MouseEvent) {
         const target = e.target as HTMLElement;
-        if (showDropdown && !target.closest('.dropdown-container')) {
-            showDropdown = false;
-        }
+        if (showDropdown && !target.closest('.dropdown-container')) showDropdown = false;
     }
 
     function handleSendMessage() {
@@ -173,15 +162,9 @@
         }
     }
 
-    function toggleDetail() {
-        dispatch('toggleDetail');
-    }
-    
-    function goBack() {
-        dispatch('back');
-    }
+    function toggleDetail() { dispatch('toggleDetail'); }
+    function goBack() { dispatch('back'); }
 
-    // Auto-scroll to bottom when messages change
     $effect(() => {
         if (messages.length && chatContainer) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -191,76 +174,143 @@
     function getInitials(name: string) {
         return name ? name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : '';
     }
+
+    function isClientActive(c: Client) {
+        return c.status?.toUpperCase() === 'ACTIVE' || c.service_status?.toUpperCase() === 'ACTIVE';
+    }
 </script>
 
 <svelte:window onclick={handleWindowClick} />
 
-<div class="flex flex-1 h-full bg-[#0f0f0f] relative overflow-hidden">
+<div class="flex flex-1 h-full bg-surface-base relative overflow-hidden">
+
     {#if !client}
-        <!-- Empty State -->
-        <div class="flex-1 flex flex-col items-center justify-center text-neutral-500 p-8 select-none">
-            <div class="bg-[#1c1c1e] p-4 rounded-full mb-4">
-                <User class="size-12 opacity-50" />
+        <!-- Estado vacío — selección de cliente -->
+        <div class="flex-1 flex flex-col items-center justify-center p-8 select-none" role="status" aria-label="Ningún cliente seleccionado">
+            <div class="relative mb-6">
+                <div class="size-20 rounded-3xl bg-surface-elevated flex items-center justify-center border border-white/[0.06] shadow-xl">
+                    <MessageSquare class="size-9 text-primary-600/60" aria-hidden="true" />
+                </div>
+                <div class="absolute -top-1 -right-1 size-5 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center">
+                    <div class="size-2 rounded-full bg-primary-400/60"></div>
+                </div>
             </div>
-            <h3 class="text-lg font-medium text-white mb-2">Selecciona un cliente</h3>
-            <p class="text-sm max-w-xs text-center">Elige un cliente de la lista para ver su historial de chat y detalles.</p>
+            <h3 class="text-base font-bold text-text-primary mb-2">Selecciona un cliente</h3>
+            <p class="text-sm text-text-muted text-center max-w-[240px] leading-relaxed">
+                Elige un cliente de la lista para ver su historial de soporte y gestionar su cuenta.
+            </p>
         </div>
+
     {:else}
-        <!-- Main Chat Area -->
-        <div class="flex-1 flex flex-col min-w-0 chat-layer" class:chat-hidden={detailVisible} aria-hidden={detailVisible}>
-            
-            <!-- Header -->
-            <header class="h-16 border-b border-neutral-800 flex items-center justify-between px-4 bg-[#1c1c1e]/50 backdrop-blur-md sticky top-0 z-10">
+        <!-- Área principal de chat -->
+        <div
+            class="flex-1 flex flex-col min-w-0 chat-layer"
+            class:chat-hidden={detailVisible}
+            aria-hidden={detailVisible}
+        >
+            <!-- Barra superior -->
+            <header class="h-14 border-b border-white/[0.06] flex items-center justify-between px-4 bg-surface-card/60 backdrop-blur-md sticky top-0 z-10">
                 <div class="flex items-center gap-3">
-                    <button onclick={goBack} class="md:hidden text-neutral-400 hover:text-white mr-2">
-                        <ArrowLeft class="size-5" />
-                    </button>
-                    
-                    <button 
-                        onclick={toggleDetail}
-                        class="flex items-center gap-3  p-2 rounded-lg transition-colors group text-left"
+                    <button
+                        onclick={goBack}
+                        aria-label="Volver a la lista"
+                        class="md:hidden text-text-muted hover:text-text-primary p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
                     >
-                        <div class="size-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                        <ArrowLeft class="size-4" />
+                    </button>
+
+                    <button
+                        onclick={toggleDetail}
+                        class="flex items-center gap-3 p-1.5 rounded-lg hover:bg-surface-hover transition-colors group text-left"
+                        aria-label="Ver detalles de {client.name}"
+                    >
+                        <div
+                            class="size-9 rounded-full bg-gradient-to-br from-primary-700 to-primary-900 flex items-center justify-center text-white text-xs font-bold shadow-md"
+                            aria-hidden="true"
+                        >
                             {getInitials(client.name)}
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
+                            <h2 class="text-sm font-bold text-text-primary group-hover:text-primary-300 transition-colors">
                                 {client.name}
                             </h2>
-                            <span class="text-xs flex items-center gap-1.5">
-                                <span class="size-2 rounded-full {(client.status?.toUpperCase() === 'ACTIVE' || client.service_status?.toUpperCase() === 'ACTIVE') ? 'bg-green-500' : 'bg-red-500'}"></span>
-                                <span class="text-neutral-400">{(client.status?.toUpperCase() === 'ACTIVE' || client.service_status?.toUpperCase() === 'ACTIVE') ? 'En línea' : 'Desconectado'}</span>
+                            <span class="text-[11px] flex items-center gap-1.5">
+                                <span
+                                    class="size-1.5 rounded-full {isClientActive(client) ? 'bg-success-400' : 'bg-text-disabled'}"
+                                    aria-hidden="true"
+                                ></span>
+                                <span class="text-text-muted">
+                                    {isClientActive(client) ? 'Servicio activo' : 'Servicio inactivo'}
+                                </span>
                             </span>
                         </div>
                     </button>
                 </div>
 
-                <div class="flex items-center gap-2 relative dropdown-container">
-                    <button onclick={toggleDropdown} disabled={actionLoading} class="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-colors disabled:opacity-50" title="Opciones del cliente">
+                <!-- Menú de acciones -->
+                <div class="relative dropdown-container">
+                    <button
+                        onclick={toggleDropdown}
+                        disabled={actionLoading}
+                        aria-label="Opciones del cliente"
+                        aria-expanded={showDropdown}
+                        aria-haspopup="menu"
+                        class="p-2 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-50"
+                    >
                         {#if actionLoading}
-                            <div class="size-5 border-2 border-neutral-400 border-t-white rounded-full animate-spin"></div>
+                            <div class="size-4 border-2 border-text-muted border-t-text-primary rounded-full animate-spin"></div>
                         {:else}
-                            <MoreVertical class="size-5" />
+                            <MoreVertical class="size-4" />
                         {/if}
                     </button>
-                    
+
                     {#if showDropdown}
-                        <div class="absolute top-full right-0 mt-2 w-48 bg-[#1c1c1e] rounded-xl border border-neutral-800 shadow-xl overflow-hidden z-50">
-                            <button onclick={() => { showDropdown = false; toggleDetail(); }} class="w-full text-left px-4 py-2 text-sm text-neutral-300 hover:bg-white/5 transition-colors">
-                                Ver Detalles
+                        <div
+                            class="absolute top-full right-0 mt-2 w-52 bg-surface-overlay rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden z-50"
+                            role="menu"
+                            aria-label="Acciones del cliente"
+                        >
+                            <button
+                                onclick={() => { showDropdown = false; toggleDetail(); }}
+                                role="menuitem"
+                                class="w-full text-left px-4 py-2.5 text-sm text-text-secondary hover:bg-surface-hover
+                                       hover:text-text-primary transition-colors flex items-center gap-2.5"
+                            >
+                                <Info class="size-3.5 text-primary-400" aria-hidden="true" />
+                                Ver detalles
                             </button>
-                            {#if (client?.status?.toUpperCase() === 'ACTIVE') || (client?.service_status?.toUpperCase() === 'ACTIVE')}
-                                <button onclick={() => handleActionClick('suspend')} class="w-full text-left px-4 py-2 text-sm text-yellow-400 hover:bg-yellow-500/10 transition-colors border-t border-neutral-800">
-                                    Suspender
+
+                            {#if isClientActive(client)}
+                                <button
+                                    onclick={() => handleActionClick('suspend')}
+                                    role="menuitem"
+                                    class="w-full text-left px-4 py-2.5 text-sm text-warning-400 hover:bg-warning-900/30
+                                           transition-colors border-t border-white/[0.06] flex items-center gap-2.5"
+                                >
+                                    <UserX class="size-3.5" aria-hidden="true" />
+                                    Suspender cliente
                                 </button>
                             {:else}
-                                <button onclick={() => handleActionClick('activate')} class="w-full text-left px-4 py-2 text-sm text-green-400 hover:bg-green-500/10 transition-colors border-t border-neutral-800">
-                                    Activar
+                                <button
+                                    onclick={() => handleActionClick('activate')}
+                                    role="menuitem"
+                                    class="w-full text-left px-4 py-2.5 text-sm text-success-400 hover:bg-success-900/30
+                                           transition-colors border-t border-white/[0.06] flex items-center gap-2.5"
+                                >
+                                    <UserCheck class="size-3.5" aria-hidden="true" />
+                                    Activar cliente
                                 </button>
                             {/if}
+
                             {#if isAdmin}
-                                <button onclick={() => { showDropdown = false; showAddFundsModal = true; }} class="w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-blue-500/10 transition-colors border-t border-neutral-800 flex items-center gap-2">
-                                    <CreditCard class="size-4" /> Agregar Fondos
+                                <button
+                                    onclick={() => { showDropdown = false; showAddFundsModal = true; }}
+                                    role="menuitem"
+                                    class="w-full text-left px-4 py-2.5 text-sm text-primary-400 hover:bg-primary-900/30
+                                           transition-colors border-t border-white/[0.06] flex items-center gap-2.5"
+                                >
+                                    <CreditCard class="size-3.5" aria-hidden="true" />
+                                    Agregar fondos
                                 </button>
                             {/if}
                         </div>
@@ -268,50 +318,71 @@
                 </div>
             </header>
 
-            <!-- Messages -->
-            <div 
+            <!-- Mensajes -->
+            <div
                 bind:this={chatContainer}
-                class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
+                class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-isp"
+                role="log"
+                aria-label="Historial de mensajes"
+                aria-live="polite"
+                aria-atomic="false"
             >
                 {#if loading}
-                    <div class="flex justify-center p-8">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <div class="flex justify-center py-10" aria-busy="true" aria-label="Cargando mensajes...">
+                        <div class="flex flex-col items-center gap-3 text-text-muted">
+                            <div class="size-8 border-2 border-surface-elevated border-t-primary-500 rounded-full animate-spin"></div>
+                            <span class="text-xs">Cargando historial...</span>
+                        </div>
                     </div>
                 {:else if messages.length === 0}
-                    <div class="text-center text-neutral-500 mt-10 text-sm">
-                        <p>No hay mensajes en esta conversación.</p>
-                        <p class="text-xs mt-1">Envía un mensaje para comenzar.</p>
+                    <div class="flex flex-col items-center justify-center py-16 text-center text-text-muted">
+                        <MessageSquare class="size-8 opacity-25 mb-3" aria-hidden="true" />
+                        <p class="text-sm font-medium text-text-secondary">Sin mensajes aún</p>
+                        <p class="text-xs mt-1">Envía el primer mensaje para iniciar la conversación.</p>
                     </div>
                 {:else}
                     {#each messages as msg (msg.id)}
-                        <div class="flex flex-col {msg.sender === 'me' ? 'items-end' : 'items-start'} w-full">
-                            <div class="flex items-end gap-2 max-w-[85%] {msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}">
+                        <div
+                            class="flex flex-col {msg.sender === 'me' ? 'items-end' : 'items-start'}"
+                            role="article"
+                            aria-label="Mensaje de {msg.sender === 'me' ? 'operador' : client.name}"
+                        >
+                            <div class="flex items-end gap-2 max-w-[80%] {msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}">
                                 {#if msg.sender !== 'me'}
-                                    <div class="size-6 rounded-full bg-neutral-700 flex items-center justify-center text-[10px] text-white shrink-0 mb-1">
+                                    <div
+                                        class="size-6 rounded-full bg-gradient-to-br from-primary-700 to-primary-900 flex items-center justify-center text-[9px] text-white font-bold shrink-0 mb-4"
+                                        aria-hidden="true"
+                                    >
                                         {getInitials(client.name)}
                                     </div>
                                 {/if}
-                                
-                                <div class="relative group">
-                                    <div class="px-4 py-2 rounded-2xl text-sm shadow-sm
-                                        {msg.sender === 'me' 
-                                            ? 'bg-blue-600 text-white rounded-br-none' 
-                                            : 'bg-[#2c2c2e] text-white rounded-bl-none'}">
+
+                                <div>
+                                    <div
+                                        class="px-3.5 py-2 rounded-2xl text-sm leading-relaxed
+                                               {msg.sender === 'me'
+                                                   ? 'bg-primary-600 text-white rounded-br-sm shadow-md shadow-primary-900/30'
+                                                   : 'bg-surface-elevated text-text-primary rounded-bl-sm border border-white/[0.05]'}"
+                                    >
                                         <p>{msg.text}</p>
                                         {#if msg.attachments?.length}
                                             <div class="mt-2 space-y-1">
                                                 {#each msg.attachments as file}
-                                                    <div class="flex items-center gap-2 bg-black/20 p-2 rounded text-xs">
-                                                        <Paperclip class="size-3" />
-                                                        <span class="truncate max-w-[150px]">{file.name}</span>
+                                                    <div class="flex items-center gap-2 bg-black/20 p-2 rounded-lg text-xs">
+                                                        <Paperclip class="size-3 shrink-0" aria-hidden="true" />
+                                                        <span class="truncate max-w-[140px]">{file.name}</span>
                                                     </div>
                                                 {/each}
                                             </div>
                                         {/if}
                                     </div>
-                                    <span class="text-[10px] text-neutral-500 mt-1 block {msg.sender === 'me' ? 'text-right' : 'text-left'}">
+                                    <time
+                                        class="text-[10px] text-text-disabled mt-1 block
+                                               {msg.sender === 'me' ? 'text-right' : 'text-left'}"
+                                        datetime={msg.time}
+                                    >
                                         {msg.time}
-                                    </span>
+                                    </time>
                                 </div>
                             </div>
                         </div>
@@ -319,38 +390,55 @@
                 {/if}
             </div>
 
-            <!-- Input Area -->
-            <div class="p-4 bg-[#1c1c1e] border-t border-neutral-800">
-                <div class="flex items-end gap-3 bg-[#0f0f0f] p-2 rounded-xl border border-neutral-800 focus-within:border-blue-500/50 transition-colors">
-                    <button class="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-                        <Paperclip class="size-5" />
+            <!-- Área de entrada de mensaje -->
+            <div class="p-3 bg-surface-card border-t border-white/[0.06]">
+                <div
+                    class="flex items-end gap-2 bg-surface-elevated rounded-xl border border-white/[0.06]
+                           focus-within:border-primary-600/40 focus-within:ring-1 focus-within:ring-primary-500/30 transition-all p-2"
+                >
+                    <button
+                        aria-label="Adjuntar archivo"
+                        class="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+                    >
+                        <Paperclip class="size-4" />
                     </button>
-                    
-                    <textarea 
+
+                    <textarea
                         bind:value={newMessage}
                         onkeydown={handleKeyDown}
                         placeholder="Escribe un mensaje..."
-                        class="flex-1 bg-transparent text-white text-sm max-h-32 min-h-[40px] py-2 resize-none focus:outline-none custom-scrollbar placeholder-neutral-500"
+                        aria-label="Mensaje para {client.name}"
+                        class="flex-1 bg-transparent text-text-primary text-sm max-h-28 min-h-[36px] py-1.5
+                               resize-none focus:outline-none scrollbar-isp placeholder:text-text-disabled"
                         rows="1"
                     ></textarea>
 
-                    <button 
+                    <button
                         onclick={handleSendMessage}
                         disabled={!newMessage.trim()}
-                        class="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-blue-500/20"
+                        aria-label="Enviar mensaje"
+                        class="p-2 rounded-lg transition-all duration-150 shrink-0
+                               {newMessage.trim()
+                                   ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-md shadow-primary-900/40'
+                                   : 'bg-surface-hover text-text-disabled cursor-not-allowed'}"
                     >
-                        <Send class="size-5" />
+                        <Send class="size-4" />
                     </button>
                 </div>
+                <p class="text-[10px] text-text-disabled text-center mt-1.5">
+                    Enter para enviar · Shift+Enter para nueva línea
+                </p>
             </div>
         </div>
 
-        <!-- Detail Panel (Overlay/Sidebar) -->
+        <!-- Panel de detalle (deslizante) -->
         {#if detailMounted}
             <div
-                class="detail-layer bg-[#0f0f0f] flex flex-col"
+                class="detail-layer bg-surface-base flex flex-col"
                 class:detail-open={detailVisible}
                 aria-hidden={!detailVisible}
+                role="complementary"
+                aria-label="Detalles del cliente"
             >
                 <ClientDetailSidebar {client} onClose={toggleDetail} on:updated />
             </div>
@@ -369,8 +457,8 @@
     on:cancel={closeConfirmModal}
 />
 
-<ModalAddFunds 
-    bind:open={showAddFundsModal} 
+<ModalAddFunds
+    bind:open={showAddFundsModal}
     {client}
     on:success={(e) => dispatch('updated', e.detail)}
 />
@@ -419,19 +507,5 @@
     .detail-layer.detail-open {
         transform: translate3d(0, 0, 0);
         pointer-events: auto;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #3f3f46;
-        border-radius: 3px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #52525b;
     }
 </style>

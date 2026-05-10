@@ -360,19 +360,19 @@
 
 </script>
 
-<div class="flex flex-col h-screen bg-[#0f0f0f] overflow-hidden w-full">
-    <!-- Global Header -->
+<div class="flex flex-col h-screen bg-surface-base overflow-hidden w-full">
+    <!-- Encabezado global -->
     <Encabezado {toggleSidebar} {toggleNotifications} />
-    
-    <!-- Main Content Area (Split View) -->
+
+    <!-- Área principal (vista dividida) -->
     <div class="flex-1 flex overflow-hidden relative">
-        
-        <!-- Sidebar -->
+
+        <!-- Sidebar de clientes -->
         <div class="{showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-auto h-full">
-            <ClientListSidebar 
-                {clients} 
-                {selectedClientId} 
-                {searchTerm} 
+            <ClientListSidebar
+                {clients}
+                {selectedClientId}
+                {searchTerm}
                 {statusFilter}
                 loading={loadingClients}
                 on:select={handleSelectClient}
@@ -381,9 +381,9 @@
             />
         </div>
 
-        <!-- Chat Area -->
+        <!-- Área de chat / detalle -->
         <div class="{!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 h-full min-w-0">
-            <ClientChatArea 
+            <ClientChatArea
                 client={selectedClient}
                 messages={selectedClientMessages}
                 loading={loadingMessages}
@@ -395,18 +395,24 @@
             />
         </div>
 
+        <!-- FAB — Agregar cliente -->
         <button
             type="button"
             onclick={() => showAddClient = true}
-            class="{showChatOnMobile ? 'hidden md:inline-flex' : 'inline-flex'} absolute bottom-4 left-4 z-20 items-center justify-center p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
-            title="Nuevo Cliente"
+            aria-label="Agregar nuevo cliente"
+            class="{showChatOnMobile ? 'hidden md:inline-flex' : 'inline-flex'}
+                   absolute bottom-5 left-5 z-20 items-center justify-center
+                   size-13 bg-primary-600 text-white rounded-full shadow-xl
+                   hover:bg-primary-500 hover:scale-105 active:scale-95
+                   transition-all duration-150 shadow-primary-900/40
+                   focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2"
         >
-            <Plus class="size-6" />
+            <Plus class="size-5" />
         </button>
-        
+
     </div>
 
-    <!-- Modals -->
+    <!-- Modal de creación -->
     {#if showAddClient}
         <ModalCrearCliente
             newClient={{
@@ -414,29 +420,38 @@
                 email: newClient.email,
                 phone: newClient.phone,
                 plan: newClient.plan,
-status: newClient.status === 'cancelled' ? undefined : newClient.status as 'active' | 'suspended' | 'inactive' | undefined
+                status: newClient.status === 'cancelled' ? undefined : newClient.status as 'active' | 'suspended' | 'inactive' | undefined
             }}
             {showAddClient}
-            handleAddClient={() => {}} 
+            handleAddClient={() => {}}
             on:close={handleCloseModal}
             on:created={handleCreated}
         />
     {/if}
 
-    <!-- Indicador de carga -->
+    <!-- Indicador de estado de carga -->
     {#if indicatorVisible}
-        <div class="fixed bottom-4 right-4 z-[60]" in:scale={{ duration: 140, start: 0.9 }} out:fade={{ duration: 140 }}>
+        <div
+            class="fixed bottom-5 right-5 z-[60]"
+            in:scale={{ duration: 140, start: 0.9 }}
+            out:fade={{ duration: 140 }}
+        >
             <button
-                class="flex items-center gap-2 bg-[#141414] border border-gray-800 text-gray-200 px-3 py-2 rounded-lg shadow-lg max-w-[320px]"
+                class="flex items-center gap-2 bg-surface-overlay border border-white/[0.08] text-text-secondary
+                       px-3.5 py-2.5 rounded-xl shadow-xl max-w-[300px] transition-colors
+                       hover:bg-surface-hover"
                 onclick={() => overallStatus === 'error' && loadClients()}
+                aria-label={overallStatus === 'error' ? 'Reintentar carga — ' + overallMessage : 'Estado de sincronización'}
             >
                 {#if overallStatus === 'loading'}
-                    <Loader2 class="w-4 h-4 animate-spin text-blue-400 flex-shrink-0" />
+                    <Loader2 class="size-3.5 animate-spin text-primary-400 shrink-0" aria-hidden="true" />
+                    <span class="text-xs text-text-muted">Sincronizando...</span>
                 {:else if overallStatus === 'success'}
-                    <CheckCircleIcon class="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <CheckCircleIcon class="size-3.5 text-success-400 shrink-0" aria-hidden="true" />
+                    <span class="text-xs text-text-muted">Al día</span>
                 {:else if overallStatus === 'error'}
-                    <XCircleIcon class="w-4 h-4 text-red-500 flex-shrink-0" />
-                    <span class="text-xs truncate">{overallMessage}</span>
+                    <XCircleIcon class="size-3.5 text-danger-400 shrink-0" aria-hidden="true" />
+                    <span class="text-xs text-danger-400 truncate">{overallMessage || 'Error de conexión'}</span>
                 {/if}
             </button>
         </div>
