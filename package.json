@@ -39,6 +39,8 @@
 		"@lucide/svelte": "^0.546.0",
 		"jspdf": "^3.0.4",
 		"jspdf-autotable": "^5.0.2",
+		"laravel-echo": "^1.16.1",
+		"pusher-js": "^8.4.0",
 		"recharts": "^3.3.0",
 		"svelte-sonner": "^1.0.7"
 	}

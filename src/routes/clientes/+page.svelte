@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, setContext } from 'svelte';
+    import { onMount, onDestroy, setContext } from 'svelte';
     import { fade, scale } from 'svelte/transition';
     import { toast } from 'svelte-sonner';
     import { API_BASE } from '$lib/config';
@@ -56,10 +56,16 @@
 
     // Selected Client State
     let selectedClientId = $state<number | null>(null);
-    let selectedClient = $state<any>(null); // Full client data
+    let selectedClient = $state<any>(null);
     let selectedClientMessages = $state<any[]>([]);
     let loadingMessages = $state(false);
     let isDetailOpen = $state(false);
+
+    // Active ticket tracked for WebSocket subscription
+    let activeTicketId = $state<number | null>(null);
+    let activeTicketStatus = $state<string>('open');
+    let activeClientIdForWs = $state<number | null>(null);
+    let echoInstance: any = null;
 
     // Derived state for mobile view
     let showChatOnMobile = $derived(selectedClientId !== null);
@@ -233,54 +239,152 @@
         return 'inactive';
     }
 
+    // ── WebSocket ─────────────────────────────────────────────────────────────
+
+    async function initEmployeeWebSocket(ticketId: number, clientId: number | null = null) {
+        if (echoInstance) {
+            if (activeTicketId) echoInstance.leave(`ticket.${activeTicketId}`);
+            if (activeClientIdForWs) echoInstance.leave(`client.${activeClientIdForWs}`);
+        }
+
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
+        if (!token) return;
+
+        try {
+            const [{ default: Echo }, { default: Pusher }] = await Promise.all([
+                import('laravel-echo'),
+                import('pusher-js'),
+            ]);
+            (window as any).Pusher = Pusher;
+
+            if (!echoInstance) {
+                echoInstance = new Echo({
+                    broadcaster:       'reverb',
+                    key:               import.meta.env.VITE_REVERB_APP_KEY ?? 'isp-chat-key',
+                    wsHost:            import.meta.env.VITE_REVERB_HOST ?? 'localhost',
+                    wsPort:            Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+                    wssPort:           Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+                    forceTLS:          (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
+                    enabledTransports: ['ws', 'wss'],
+                    authEndpoint:      `${API_BASE}/broadcasting/auth`,
+                    auth: { headers: { Authorization: `Bearer ${token}` } },
+                });
+            }
+
+            echoInstance
+                .private(`ticket.${ticketId}`)
+                .listen('.message.sent', (payload: any) => {
+                    if (payload.sender !== 'user' && payload.sender !== 'system') return;
+                    if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
+                    selectedClientMessages = mergeSorted(selectedClientMessages, [mapApiMessage(payload)]);
+                });
+
+            if (clientId) {
+                echoInstance
+                    .private(`client.${clientId}`)
+                    .listen('.client.event', (payload: any) => {
+                        if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
+                        selectedClientMessages = mergeSorted(selectedClientMessages, [mapClientEvent(payload)]);
+                    });
+                activeClientIdForWs = clientId;
+            }
+
+            activeTicketId = ticketId;
+        } catch (e) {
+            console.warn('WebSocket no disponible en modo admin', e);
+        }
+    }
+
+    function mapApiMessage(m: any) {
+        return {
+            id:         m.id,
+            ticket_id:  m.ticket_id ?? null,
+            text:       m.text ?? m.message ?? '',
+            sender:     m.sender === 'agent' ? 'me' : (m.sender === 'system' ? 'system' : 'them'),
+            time:       m.formatted_datetime ?? new Date(m.timestamp ?? m.created_at).toLocaleString('es'),
+            timestamp:  m.timestamp ?? m.created_at ?? '',
+            event_type: m.event_type ?? null,
+            metadata:   m.metadata ?? null,
+            attachments: (m.attachments ?? []).map((a: any) => ({
+                name:     a.original_name,
+                url:      a.file_url,
+                type:     a.type,
+                file_url: a.file_url,
+            })),
+        };
+    }
+
+    function mapClientEvent(e: any) {
+        return {
+            id:          e.id,
+            ticket_id:   null as null,
+            text:        e.text ?? '',
+            sender:      'system' as const,
+            time:        e.formatted_datetime ?? '',
+            timestamp:   e.timestamp ?? '',
+            event_type:  e.event_type ?? null,
+            metadata:    e.metadata ?? null,
+            attachments: [] as any[],
+        };
+    }
+
+    function mergeSorted(msgs: any[], evts: any[]) {
+        return [...msgs, ...evts].sort((a, b) => {
+            const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return ta - tb;
+        });
+    }
+
+    // ── Carga de cliente y mensajes ────────────────────────────────────────────
+
     async function handleSelectClient(event: CustomEvent<number>) {
         const id = event.detail;
         selectedClientId = id;
         loadingMessages = true;
-        isDetailOpen = false; // Close detail on new selection
+        isDetailOpen = false;
         selectedClientMessages = [];
+        activeTicketId = null;
+        activeTicketStatus = 'open';
+        activeClientIdForWs = null;
+
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
+        const headers: Record<string, string> = { Accept: 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
 
         try {
-            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-            const res = await fetch(`${API_BASE}/admin/clientes/full/${id}`, {
-                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
-            });
+            // 1. Cargar datos completos del cliente
+            const clientRes = await fetch(`${API_BASE}/admin/clientes/full/${id}`, { headers });
+            if (!clientRes.ok) throw new Error('Error cargando detalles del cliente');
+            const clientData = await clientRes.json();
+            selectedClient = { ...clientData, status: normalizeStatus(clientData.status || clientData.service_status) };
 
-            if (!res.ok) throw new Error('Error cargando detalles del cliente');
-            
-            const data = await res.json();
-            
-            // Transform data for the view
-            // The API returns the client object directly
-            selectedClient = {
-                ...data,
-                status: normalizeStatus(data.status || data.estado)
-            };
+            // 2. Buscar el ticket activo del cliente en el nuevo endpoint de chat
+            //    Cargamos las conversaciones y buscamos el ticket de este cliente
+            const convRes = await fetch(`${API_BASE}/admin/chat/conversations?per_page=100`, { headers });
+            if (convRes.ok) {
+                const convData = await convRes.json();
+                const ticket = (convData.data ?? []).find((t: any) => t.client?.id === id);
 
-            // Process tickets/messages
-            // The API includes 'soportes' relation
-            const tickets = data.soportes || data.tickets || [];
-            
-            // Flatten messages from tickets
-            let allMessages: any[] = [];
-            tickets.forEach((ticket: any) => {
-                if (ticket.messages && Array.isArray(ticket.messages)) {
-                    const ticketMsgs = ticket.messages.map((m: any) => ({
-                        id: m.id,
-                        text: m.message,
-                        sender: m.user_id ? 'me' : 'them', // Logic depends on backend structure. Assuming user_id means employee? Or check against client_id?
-                        // Usually: if message.user_id matches client.user_id, it's 'them'. If it matches current admin, it's 'me'.
-                        // For simplicity: if m.sender_type === 'App\Models\User' (Admin) -> 'me', 'App\Models\Client' -> 'them'
-                        time: new Date(m.created_at).toLocaleString(),
-                        attachments: m.attachments || []
-                    }));
-                    allMessages = [...allMessages, ...ticketMsgs];
+                if (ticket) {
+                    activeTicketId = ticket.ticket_id;
+                    activeTicketStatus = ticket.status ?? 'open';
+                    const clientId: number | null = ticket.client?.id ?? null;
+
+                    // 3. Cargar mensajes del ticket
+                    const msgRes = await fetch(`${API_BASE}/admin/chat/${ticket.ticket_id}/messages?per_page=50`, { headers });
+                    if (msgRes.ok) {
+                        const msgData = await msgRes.json();
+                        const msgs = (msgData.messages ?? []).reverse().map(mapApiMessage);
+                        const evts = (msgData.events ?? []).map(mapClientEvent);
+                        selectedClientMessages = mergeSorted(msgs, evts);
+                        activeTicketStatus = msgData.ticket?.status ?? activeTicketStatus;
+
+                        // 4. Suscribir al WebSocket de ese ticket y canal del cliente
+                        initEmployeeWebSocket(ticket.ticket_id, clientId);
+                    }
                 }
-            });
-
-            // Sort by date
-            selectedClientMessages = allMessages.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-
+            }
         } catch (e) {
             console.error(e);
             toast.error('No se pudieron cargar los mensajes');
@@ -303,17 +407,76 @@
         loadClients();
     }
 
-    function handleSendMessage(event: CustomEvent<string>) {
-        // Mock sending for now
+    async function handleSendMessage(event: CustomEvent<string>) {
         const text = event.detail;
-        selectedClientMessages = [...selectedClientMessages, {
-            id: Date.now(),
+        if (!text.trim() || !activeTicketId) {
+            if (!activeTicketId) toast.error('No hay un ticket activo para este cliente.');
+            return;
+        }
+
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
+        if (!token) { toast.error('No autenticado.'); return; }
+
+        // Optimistic update
+        const tempMsg = {
+            id:          `temp-${Date.now()}`,
             text,
-            sender: 'me',
-            time: new Date().toLocaleTimeString(),
-            attachments: []
-        }];
-        toast.success('Mensaje enviado (Simulado)');
+            sender:      'me',
+            time:        new Date().toLocaleString('es'),
+            event_type:  null,
+            metadata:    null,
+            attachments: [],
+        };
+        selectedClientMessages = [...selectedClientMessages, tempMsg];
+
+        try {
+            const formData = new FormData();
+            formData.append('message', text);
+
+            const res = await fetch(`${API_BASE}/admin/chat/${activeTicketId}/messages`, {
+                method:  'POST',
+                headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+                body:    formData,
+            });
+
+            if (!res.ok) {
+                selectedClientMessages = selectedClientMessages.filter(m => m.id !== tempMsg.id);
+                const errData = await res.json().catch(() => ({}));
+                toast.error(errData.message || 'Error al enviar el mensaje.');
+                return;
+            }
+
+            const saved = await res.json();
+            // Reemplazar mensaje temporal con la respuesta real del servidor
+            selectedClientMessages = selectedClientMessages.map(m =>
+                m.id === tempMsg.id ? mapApiMessage(saved) : m
+            );
+        } catch (err) {
+            selectedClientMessages = selectedClientMessages.filter(m => m.id !== tempMsg.id);
+            toast.error('Error de red al enviar el mensaje.');
+        }
+    }
+
+    async function handleCloseTicket() {
+        if (!activeTicketId) return;
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
+        if (!token) { toast.error('No autenticado.'); return; }
+        try {
+            const res = await fetch(`${API_BASE}/admin/chat/${activeTicketId}/status`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ status: 'closed' }),
+            });
+            if (res.ok) {
+                activeTicketStatus = 'closed';
+                toast.success('Ticket cerrado correctamente.');
+            } else {
+                const err = await res.json().catch(() => ({}));
+                toast.error(err.message || 'No se pudo cerrar el ticket.');
+            }
+        } catch {
+            toast.error('Error de red al cerrar el ticket.');
+        }
     }
 
     function handleToggleDetail() {
@@ -350,12 +513,19 @@
         }
 
         loadClients();
-        const interval = setInterval(loadClients, 60000); // 60s
-        
+        const interval = setInterval(loadClients, 60000);
+
         return () => {
             clearInterval(interval);
             if (abortController) abortController.abort();
         };
+    });
+
+    onDestroy(() => {
+        if (echoInstance) {
+            echoInstance.disconnect();
+            echoInstance = null;
+        }
     });
 
 </script>
@@ -388,10 +558,13 @@
                 messages={selectedClientMessages}
                 loading={loadingMessages}
                 {isDetailOpen}
+                {activeTicketId}
+                ticketStatus={activeTicketStatus}
                 on:sendMessage={handleSendMessage}
                 on:toggleDetail={handleToggleDetail}
                 on:back={() => selectedClientId = null}
                 on:updated={handleClientUpdated}
+                on:closeTicket={handleCloseTicket}
             />
         </div>
 

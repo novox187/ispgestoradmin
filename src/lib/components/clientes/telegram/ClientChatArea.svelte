@@ -2,7 +2,8 @@
     import { createEventDispatcher } from 'svelte';
     import {
         Send, Paperclip, MoreVertical, CreditCard,
-        ArrowLeft, MessageSquare, UserCheck, UserX, Info
+        ArrowLeft, MessageSquare, UserCheck, UserX, Info,
+        Wallet, CheckCircle, ExternalLink, LockKeyhole
     } from '@lucide/svelte';
     import ClientDetailSidebar from './ClientDetailSidebar.svelte';
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
@@ -17,9 +18,12 @@
 
     interface Message {
         id: number | string;
+        ticket_id?: number | string | null;
         text: string;
-        sender: 'me' | 'them';
+        sender: 'me' | 'them' | 'system';
         time: string;
+        event_type?: string | null;
+        metadata?: Record<string, any> | null;
         attachments?: Attachment[];
     }
 
@@ -35,12 +39,16 @@
         client = null,
         messages = [],
         loading = false,
-        isDetailOpen = false
+        isDetailOpen = false,
+        activeTicketId = null,
+        ticketStatus = 'open',
     }: {
         client?: Client | null;
         messages?: Message[];
         loading?: boolean;
         isDetailOpen?: boolean;
+        activeTicketId?: number | null;
+        ticketStatus?: string;
     } = $props();
 
     const dispatch = createEventDispatcher();
@@ -313,6 +321,18 @@
                                     Agregar fondos
                                 </button>
                             {/if}
+
+                            {#if activeTicketId && ticketStatus !== 'closed'}
+                                <button
+                                    onclick={() => { showDropdown = false; dispatch('closeTicket'); }}
+                                    role="menuitem"
+                                    class="w-full text-left px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-900/30
+                                           transition-colors border-t border-white/[0.06] flex items-center gap-2.5"
+                                >
+                                    <LockKeyhole class="size-3.5" aria-hidden="true" />
+                                    Cerrar ticket
+                                </button>
+                            {/if}
                         </div>
                     {/if}
                 </div>
@@ -341,93 +361,176 @@
                         <p class="text-xs mt-1">Envía el primer mensaje para iniciar la conversación.</p>
                     </div>
                 {:else}
-                    {#each messages as msg (msg.id)}
-                        <div
-                            class="flex flex-col {msg.sender === 'me' ? 'items-end' : 'items-start'}"
-                            role="article"
-                            aria-label="Mensaje de {msg.sender === 'me' ? 'operador' : client.name}"
-                        >
-                            <div class="flex items-end gap-2 max-w-[80%] {msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}">
-                                {#if msg.sender !== 'me'}
-                                    <div
-                                        class="size-6 rounded-full bg-gradient-to-br from-primary-700 to-primary-900 flex items-center justify-center text-[9px] text-white font-bold shrink-0 mb-4"
-                                        aria-hidden="true"
-                                    >
-                                        {getInitials(client.name)}
-                                    </div>
-                                {/if}
+                    {#each messages as msg, i (msg.id)}
 
-                                <div>
-                                    <div
-                                        class="px-3.5 py-2 rounded-2xl text-sm leading-relaxed
-                                               {msg.sender === 'me'
-                                                   ? 'bg-primary-600 text-white rounded-br-sm shadow-md shadow-primary-900/30'
-                                                   : 'bg-surface-elevated text-text-primary rounded-bl-sm border border-white/[0.05]'}"
-                                    >
-                                        <p>{msg.text}</p>
-                                        {#if msg.attachments?.length}
-                                            <div class="mt-2 space-y-1">
-                                                {#each msg.attachments as file}
-                                                    <div class="flex items-center gap-2 bg-black/20 p-2 rounded-lg text-xs">
-                                                        <Paperclip class="size-3 shrink-0" aria-hidden="true" />
-                                                        <span class="truncate max-w-[140px]">{file.name}</span>
-                                                    </div>
-                                                {/each}
-                                            </div>
-                                        {/if}
+                        <!-- ── Separador de ticket ── -->
+                        {#if msg.ticket_id && messages[i - 1]?.ticket_id !== msg.ticket_id}
+                            <div class="flex items-center gap-3 my-2 select-none">
+                                <div class="flex-1 h-px bg-white/[0.06]"></div>
+                                <span class="text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full border border-white/[0.08] bg-surface-elevated text-text-disabled">
+                                    Ticket #{msg.ticket_id}
+                                </span>
+                                <div class="flex-1 h-px bg-white/[0.06]"></div>
+                            </div>
+                        {/if}
+
+                        <!-- ── Evento del sistema: wallet_funded ── -->
+                        {#if msg.event_type === 'wallet_funded' && msg.metadata}
+                            {@const meta = msg.metadata}
+                            <div class="flex justify-center my-1" role="article" aria-label="Recarga de billetera">
+                                <div class="w-full max-w-xs rounded-2xl border border-emerald-700/30 bg-emerald-950/30 p-4 shadow-md">
+
+                                    <div class="flex items-center gap-2 mb-2.5">
+                                        <div class="rounded-full bg-emerald-500/20 p-1.5">
+                                            <Wallet class="size-3.5 text-emerald-400" aria-hidden="true" />
+                                        </div>
+                                        <span class="text-xs font-semibold text-emerald-300">Recarga de billetera</span>
+                                        <CheckCircle class="size-3.5 text-emerald-400 ml-auto" aria-hidden="true" />
                                     </div>
-                                    <time
-                                        class="text-[10px] text-text-disabled mt-1 block
-                                               {msg.sender === 'me' ? 'text-right' : 'text-left'}"
-                                        datetime={msg.time}
-                                    >
-                                        {msg.time}
-                                    </time>
+
+                                    <div class="text-xl font-bold text-emerald-400 mb-1">
+                                        +${Number(meta.amount ?? 0).toFixed(2)}
+                                        <span class="text-xs font-normal opacity-60">{meta.currency ?? 'USD'}</span>
+                                    </div>
+
+                                    {#if meta.description}
+                                        <p class="text-xs text-text-muted mb-2">{meta.description}</p>
+                                    {/if}
+
+                                    {#if meta.receipt_url}
+                                        <a
+                                            href={meta.receipt_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="block rounded-xl overflow-hidden border border-emerald-700/20 mb-2 hover:opacity-90 transition-opacity"
+                                            aria-label="Ver comprobante"
+                                        >
+                                            <img
+                                                src={meta.receipt_url}
+                                                alt="Comprobante de pago"
+                                                class="w-full max-h-40 object-cover"
+                                                loading="lazy"
+                                            />
+                                            <div class="flex items-center justify-center gap-1 bg-emerald-900/40 py-1 text-[10px] text-emerald-300">
+                                                <ExternalLink class="size-3" aria-hidden="true" />
+                                                Ver comprobante completo
+                                            </div>
+                                        </a>
+                                    {/if}
+
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[10px] text-text-disabled">
+                                            Por: {meta.actor_name ?? 'Administrador'}
+                                        </span>
+                                        <time class="text-[10px] text-text-disabled" datetime={msg.time}>
+                                            {msg.time}
+                                        </time>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                        <!-- ── Mensajes normales ── -->
+                        {:else}
+                            <div
+                                class="flex flex-col {msg.sender === 'me' ? 'items-end' : 'items-start'}"
+                                role="article"
+                                aria-label="Mensaje de {msg.sender === 'me' ? 'operador' : client.name}"
+                            >
+                                <div class="flex items-end gap-2 max-w-[80%] {msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}">
+                                    {#if msg.sender !== 'me'}
+                                        <div
+                                            class="size-6 rounded-full bg-gradient-to-br from-primary-700 to-primary-900 flex items-center justify-center text-[9px] text-white font-bold shrink-0 mb-4"
+                                            aria-hidden="true"
+                                        >
+                                            {getInitials(client.name)}
+                                        </div>
+                                    {/if}
+
+                                    <div>
+                                        <div
+                                            class="px-3.5 py-2 rounded-2xl text-sm leading-relaxed
+                                                   {msg.sender === 'me'
+                                                       ? 'bg-primary-600 text-white rounded-br-sm shadow-md shadow-primary-900/30'
+                                                       : 'bg-surface-elevated text-text-primary rounded-bl-sm border border-white/[0.05]'}"
+                                        >
+                                            <p>{msg.text}</p>
+                                            {#if msg.attachments?.length}
+                                                <div class="mt-2 space-y-1">
+                                                    {#each msg.attachments as file}
+                                                        {#if file.url && (file.name?.match(/\.(jpg|jpeg|png|gif|webp)$/i) || file.type?.startsWith('image/'))}
+                                                            <a href={file.url} target="_blank" rel="noopener noreferrer" class="block rounded-lg overflow-hidden border border-white/10 hover:opacity-90 transition-opacity">
+                                                                <img src={file.url} alt={file.name} class="w-full max-h-40 object-cover" loading="lazy" />
+                                                            </a>
+                                                        {:else}
+                                                            <div class="flex items-center gap-2 bg-black/20 p-2 rounded-lg text-xs">
+                                                                <Paperclip class="size-3 shrink-0" aria-hidden="true" />
+                                                                <span class="truncate max-w-[140px]">{file.name}</span>
+                                                            </div>
+                                                        {/if}
+                                                    {/each}
+                                                </div>
+                                            {/if}
+                                        </div>
+                                        <time
+                                            class="text-[10px] text-text-disabled mt-1 block {msg.sender === 'me' ? 'text-right' : 'text-left'}"
+                                            datetime={msg.time}
+                                        >
+                                            {msg.time}
+                                        </time>
+                                    </div>
+                                </div>
+                            </div>
+                        {/if}
+
                     {/each}
                 {/if}
             </div>
 
             <!-- Área de entrada de mensaje -->
             <div class="p-3 bg-surface-card border-t border-white/[0.06]">
-                <div
-                    class="flex items-end gap-2 bg-surface-elevated rounded-xl border border-white/[0.06]
-                           focus-within:border-primary-600/40 focus-within:ring-1 focus-within:ring-primary-500/30 transition-all p-2"
-                >
-                    <button
-                        aria-label="Adjuntar archivo"
-                        class="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+                {#if ticketStatus === 'closed'}
+                    <div class="flex items-center justify-center gap-2 py-3 text-text-muted text-xs">
+                        <LockKeyhole class="size-3.5 text-rose-400" />
+                        <span>Este ticket está <span class="text-rose-400 font-medium">cerrado</span>. El cliente puede dejar una calificación.</span>
+                    </div>
+                {:else}
+                    <div
+                        class="flex items-end gap-2 bg-surface-elevated rounded-xl border border-white/[0.06]
+                               focus-within:border-primary-600/40 focus-within:ring-1 focus-within:ring-primary-500/30 transition-all p-2"
                     >
-                        <Paperclip class="size-4" />
-                    </button>
+                        <button
+                            aria-label="Adjuntar archivo"
+                            class="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+                        >
+                            <Paperclip class="size-4" />
+                        </button>
 
-                    <textarea
-                        bind:value={newMessage}
-                        onkeydown={handleKeyDown}
-                        placeholder="Escribe un mensaje..."
-                        aria-label="Mensaje para {client.name}"
-                        class="flex-1 bg-transparent text-text-primary text-sm max-h-28 min-h-[36px] py-1.5
-                               resize-none focus:outline-none scrollbar-isp placeholder:text-text-disabled"
-                        rows="1"
-                    ></textarea>
+                        <textarea
+                            bind:value={newMessage}
+                            onkeydown={handleKeyDown}
+                            placeholder="Escribe un mensaje..."
+                            aria-label="Mensaje para {client.name}"
+                            class="flex-1 bg-transparent text-text-primary text-sm max-h-28 min-h-[36px] py-1.5
+                                   resize-none focus:outline-none scrollbar-isp placeholder:text-text-disabled"
+                            rows="1"
+                        ></textarea>
 
-                    <button
-                        onclick={handleSendMessage}
-                        disabled={!newMessage.trim()}
-                        aria-label="Enviar mensaje"
-                        class="p-2 rounded-lg transition-all duration-150 shrink-0
-                               {newMessage.trim()
-                                   ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-md shadow-primary-900/40'
-                                   : 'bg-surface-hover text-text-disabled cursor-not-allowed'}"
-                    >
-                        <Send class="size-4" />
-                    </button>
-                </div>
-                <p class="text-[10px] text-text-disabled text-center mt-1.5">
-                    Enter para enviar · Shift+Enter para nueva línea
-                </p>
+                        <button
+                            onclick={handleSendMessage}
+                            disabled={!newMessage.trim()}
+                            aria-label="Enviar mensaje"
+                            class="p-2 rounded-lg transition-all duration-150 shrink-0
+                                   {newMessage.trim()
+                                       ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-md shadow-primary-900/40'
+                                       : 'bg-surface-hover text-text-disabled cursor-not-allowed'}"
+                        >
+                            <Send class="size-4" />
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-text-disabled text-center mt-1.5">
+                        Enter para enviar · Shift+Enter para nueva línea
+                    </p>
+                {/if}
             </div>
         </div>
 
