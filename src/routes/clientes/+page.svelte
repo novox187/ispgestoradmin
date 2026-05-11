@@ -328,8 +328,10 @@
         };
     }
 
-    function mergeSorted(msgs: any[], evts: any[]) {
-        return [...msgs, ...evts].sort((a, b) => {
+    function mergeSorted(existing: any[], incoming: any[]) {
+        const seen = new Set(existing.map((m: any) => String(m.id)));
+        const deduped = incoming.filter((m: any) => !seen.has(String(m.id)));
+        return [...existing, ...deduped].sort((a, b) => {
             const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
             const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
             return ta - tb;
@@ -369,6 +371,16 @@
             // Suscribirse al canal del cliente siempre (wallet_funded y otros eventos)
             await initEcho();
             subscribeToClient(id);
+
+            // Cargar eventos del cliente independientemente de si tiene ticket activo
+            const evtsRes = await fetch(`${API_BASE}/admin/chat/client/${id}/events`, { headers });
+            if (evtsRes.ok) {
+                const evtsData = await evtsRes.json();
+                const clientEvts = (evtsData.events ?? []).map(mapClientEvent);
+                if (clientEvts.length > 0) {
+                    selectedClientMessages = mergeSorted(selectedClientMessages, clientEvts);
+                }
+            }
 
             // 2. Buscar el ticket activo del cliente en el nuevo endpoint de chat
             //    Cargamos las conversaciones y buscamos el ticket de este cliente
