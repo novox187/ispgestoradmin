@@ -2,10 +2,12 @@
     import {
         X, User, Calendar, DollarSign, FileText, ChevronDown,
         Search, AlertTriangle, CheckCircle2, Loader2, Info,
-        Receipt, BadgePercent, Clock,
+        Receipt, BadgePercent, Clock, Settings,
     } from '@lucide/svelte';
     import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
+    import { goto } from '$app/navigation';
     import { API_BASE } from '$lib/config';
+    import ModalConfigGuard, { type ConfigCheckResult } from './ModalConfigGuard.svelte';
     import {
         calcTotals, validateInvoiceForm, buildInvoicePayload,
         filterClients, isPossibleDuplicate, defaultDescription,
@@ -48,6 +50,10 @@
     let step        = $state<'form' | 'confirm'>('form');
     let submitting  = $state(false);
     let submitError = $state('');
+
+    // Config guard (shown when server rejects with missing/invalid config)
+    let configGuardOpen   = $state(false);
+    let configGuardResult = $state<ConfigCheckResult | null>(null);
 
     // Clientes
     let allClients       = $state<ClientSummary[]>([]);
@@ -218,6 +224,18 @@
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
+                // Config validation error — open the guard modal instead of inline error
+                if (res.status === 422 && data.config_url) {
+                    configGuardResult = {
+                        valid:    false,
+                        missing:  data.details ?? {},
+                        invalid:  {},
+                        messages: [data.error ?? 'Configuración de facturación incompleta'],
+                    };
+                    configGuardOpen = true;
+                    step = 'form';
+                    return;
+                }
                 const msg = data.error || data.message || (data.errors ? JSON.stringify(data.errors) : 'Error desconocido');
                 submitError = msg;
                 step = 'form';
@@ -790,3 +808,9 @@
     </Dialog.Positioner>
   </Portal>
 </Dialog>
+
+<ModalConfigGuard
+    bind:open={configGuardOpen}
+    result={configGuardResult}
+    onClose={() => { configGuardOpen = false; }}
+/>

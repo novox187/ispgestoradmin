@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import {
     Settings, Database, Shield, Bell, ChevronRight,
-    Users, Bot, Sliders, Building2, Lock
+    Users, Bot, Sliders, Building2, Lock, Receipt
   } from '@lucide/svelte';
   import Encabezado from '$lib/components/Encabezado.svelte';
   import { appState } from '$lib/stores/app.svelte';
@@ -43,6 +43,13 @@
           icon: Database,
           path: '/configuraciones/importacion',
           badge: 'Herramienta',
+        },
+        {
+          id: 'facturacion',
+          label: 'Facturación',
+          description: 'Datos fiscales, impuestos y resoluciones legales',
+          icon: Receipt,
+          path: '/configuraciones/facturacion',
         },
       ],
     },

@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     Database, Shield, Bell, Building2, Bot, Users,
-    ChevronRight, Sliders, Lock, Sparkles, CheckCircle2
+    ChevronRight, Sliders, Lock, Sparkles, CheckCircle2, Receipt
   } from '@lucide/svelte';
 
   type ConfigCard = {
@@ -27,6 +27,17 @@
       badgeColor: 'blue',
       status: 'available',
       features: ['Importar planes', 'Importar clientes', 'Asignar planes', 'Importar facturas históricas'],
+    },
+    {
+      id: 'facturacion',
+      label: 'Configuración de Facturación',
+      description: 'Datos fiscales del emisor, tasa de impuesto activa, moneda y resoluciones legales que se graban en cada factura.',
+      icon: Receipt,
+      path: '/configuraciones/facturacion',
+      badge: 'Fiscal',
+      badgeColor: 'blue',
+      status: 'available',
+      features: ['Datos del emisor', 'Tasa de impuesto (IVA)', 'Moneda y símbolo', 'Resolución legal', 'Parámetros de cobro'],
     },
     {
       id: 'seguridad',
@@ -60,17 +71,6 @@
       badgeColor: 'neutral',
       status: 'coming_soon',
       features: ['Plantillas de email', 'Alertas de vencimiento', 'Notificaciones push', 'Integraciones'],
-    },
-    {
-      id: 'empresa',
-      label: 'Datos de Empresa',
-      description: 'Configura la información corporativa, logotipo y datos que aparecen en facturas y comunicaciones.',
-      icon: Building2,
-      path: '/configuraciones/empresa',
-      badge: 'Próximamente',
-      badgeColor: 'neutral',
-      status: 'coming_soon',
-      features: ['Razón social', 'Datos de contacto', 'Logotipo personalizado', 'Pie de facturas'],
     },
     {
       id: 'workers',

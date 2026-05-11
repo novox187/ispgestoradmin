@@ -11,6 +11,38 @@
 
     let { open, invoice, onClose } = $props();
 
+    // ── Datos del emisor desde el snapshot congelado ──────────────────────────
+    // El snapshot almacena cada clave como { value, _public }
+    function snapVal(key: string): string {
+        const snap = invoice?.configuration_snapshot;
+        if (!snap) return '';
+        const entry = snap[key];
+        if (entry && typeof entry === 'object' && 'value' in entry) return String(entry.value ?? '');
+        // soporte para snapshots planos (valor directo)
+        return String(snap[key] ?? '');
+    }
+
+    // Emisor: usa snapshot si existe, cae a BRAND como fallback visual
+    const issuer = $derived({
+        name:    snapVal('issuer_name')    || BRAND.nameUpper,
+        address: snapVal('issuer_address') || BRAND.contact.address,
+        nit:     snapVal('issuer_nit')     || BRAND.contact.nit,
+        email:   snapVal('issuer_email')   || BRAND.contact.email,
+        phone:   snapVal('issuer_phone')   || BRAND.contact.phone,
+        website: BRAND.contact.website,
+    });
+
+    // Impuesto: calcula la tasa real desde el snapshot
+    const taxRate = $derived((): number => {
+        const r = parseFloat(snapVal('tax_rate'));
+        return isNaN(r) ? 0 : r;
+    });
+    const taxLabel = $derived((): string => {
+        const name = snapVal('tax_name') || 'Impuestos';
+        const pct  = (taxRate() * 100).toFixed(0);
+        return `${name} (${pct}%)`;
+    });
+
     // ── Helpers de estado ─────────────────────────────────────────────────────
     type StatusKey = 'paid' | 'pending' | 'failed' | 'cancelled' | 'draft';
 
@@ -72,18 +104,19 @@
         doc.setFillColor(15, 15, 25);
         doc.rect(0, 0, pageW, 42, 'F');
 
-        // Nombre empresa (izquierda)
+        // Nombre empresa (izquierda) — desde snapshot
+        const snap = issuer;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.setTextColor(255, 255, 255);
-        doc.text(BRAND.nameUpper, margin, 18);
+        doc.text(snap.name, margin, 18);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(180, 180, 190);
         doc.text(BRAND.slogan, margin, 24);
-        doc.text(BRAND.contact.address, margin, 29);
-        doc.text(`NIT: ${BRAND.contact.nit}  |  ${BRAND.contact.email}  |  ${BRAND.contact.phone}`, margin, 34);
+        doc.text(snap.address, margin, 29);
+        doc.text(`NIT: ${snap.nit}  |  ${snap.email}  |  ${snap.phone}`, margin, 34);
 
         // Nº factura (derecha)
         doc.setFont('helvetica', 'bold');
@@ -144,7 +177,7 @@
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(20, 20, 30);
-        doc.text(BRAND.nameUpper, margin, y);
+        doc.text(snap.name, margin, y);
         doc.text(invoice.client?.name || 'Sin nombre', pageW / 2 + 2, y);
 
         y += 5;
@@ -152,10 +185,10 @@
         doc.setFontSize(8.5);
         doc.setTextColor(70, 70, 80);
         const companyLines = [
-            BRAND.contact.address,
-            `NIT: ${BRAND.contact.nit}`,
-            BRAND.contact.email,
-            BRAND.contact.website,
+            snap.address,
+            `NIT: ${snap.nit}`,
+            snap.email,
+            snap.website,
         ];
         const clientLines = [
             invoice.client?.address || 'Dirección no registrada',
@@ -209,7 +242,7 @@
         doc.text('Subtotal', totalsX + 2, afterTable + 7);
         doc.text(`$${fmt(invoice.amount)}`, rightCol, afterTable + 7, { align: 'right' });
 
-        doc.text('Impuestos (15%)', totalsX + 2, afterTable + 13);
+        doc.text(taxLabel(), totalsX + 2, afterTable + 13);
         doc.text(`$${fmt(invoice.tax_amount)}`, rightCol, afterTable + 13, { align: 'right' });
 
         doc.setLineWidth(0.4);
@@ -245,7 +278,7 @@
         const terms = [
             '1. El pago de esta factura debe realizarse antes de la fecha de vencimiento indicada.',
             '2. Los pagos vencidos pueden generar suspensión del servicio según los términos del contrato.',
-            '3. Para disputas o consultas, contáctenos en: ' + BRAND.contact.email,
+            '3. Para disputas o consultas, contáctenos en: ' + snap.email,
             '4. Esta factura es válida como comprobante fiscal de la prestación del servicio.',
         ];
         terms.forEach((t, i) => doc.text(t, margin + 4, termsY + 12 + i * 4));
@@ -258,7 +291,7 @@
             doc.setFontSize(7.5);
             doc.setTextColor(160, 160, 175);
             doc.text(
-                `${BRAND.nameUpper}  |  ${BRAND.contact.website}  |  Generado el ${new Date().toLocaleDateString()}`,
+                `${snap.name}  |  ${snap.website}  |  Generado el ${new Date().toLocaleDateString()}`,
                 margin,
                 pageH - 6,
             );
@@ -354,12 +387,12 @@
                 <div class="flex items-center gap-2 text-xs text-neutral-500 uppercase tracking-wider">
                   <Building2 class="size-3.5" /> De
                 </div>
-                <div class="text-base font-bold text-white">{BRAND.nameUpper}</div>
+                <div class="text-base font-bold text-white">{issuer.name}</div>
                 <div class="space-y-0.5 text-sm text-neutral-400">
-                  <p>{BRAND.contact.address}</p>
-                  <p>NIT: {BRAND.contact.nit}</p>
-                  <p>{BRAND.contact.email}</p>
-                  <p>{BRAND.contact.website}</p>
+                  <p>{issuer.address}</p>
+                  <p>NIT: {issuer.nit}</p>
+                  <p>{issuer.email}</p>
+                  <p>{issuer.website}</p>
                 </div>
               </div>
 
@@ -425,7 +458,7 @@
                   <span>${fmt(invoice.amount)}</span>
                 </div>
                 <div class="flex justify-between text-sm text-neutral-400">
-                  <span>Impuestos (15%)</span>
+                  <span>{taxLabel()}</span>
                   <span>${fmt(invoice.tax_amount)}</span>
                 </div>
                 <div class="border-t border-neutral-700 pt-2 flex justify-between text-lg font-bold text-white">

@@ -8,6 +8,7 @@
     import TablaFacturas from "$lib/components/facturas/TablaFacturas.svelte";
     import ModalCrearFactura from "$lib/components/facturas/ModalCrearFactura.svelte";
     import ModalVerFactura from "$lib/components/facturas/ModalVerFactura.svelte";
+    import ModalConfigGuard, { type ConfigCheckResult } from "$lib/components/facturas/ModalConfigGuard.svelte";
     import { appState } from '$lib/stores/app.svelte';
     import {
         DASHBOARD_LOAD_CONTEXT,
@@ -202,49 +203,70 @@
     }
 
     let showCreateModal = $state(false);
-    let showViewModal = $state(false);
+    let showViewModal   = $state(false);
     let selectedInvoice = $state<Invoice | null>(null);
-    
-    // Estado de carga específico para el proceso de facturación automática
+
+    // Config guard
+    let configGuardOpen   = $state(false);
+    let configGuardResult = $state<ConfigCheckResult | null>(null);
+    // After guard is dismissed without fixing config, what action was intended?
+    let pendingAction = $state<'create' | 'generate' | null>(null);
+
     let generatingAuto = $state(false);
 
-    /**
-     * Invoca la función de generación de facturas automáticas en la API.
-     * Muestra indicadores de carga, maneja errores y recarga la lista de facturas
-     * en caso de éxito, usando el sistema de hybrid-cache (loadBus) para la UI global.
-     * Mantenimiento: Si la ruta de la API cambia o se requieren nuevos encabezados, actualizar endpoint y headers.
-     */
+    function getToken() {
+        return typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
+    }
+
+    async function checkConfig(): Promise<ConfigCheckResult> {
+        const token = getToken();
+        const res = await fetch(`${API_BASE}/admin/invoices/config-check`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        });
+        return res.json();
+    }
+
     async function handleGenerateAuto() {
-        // Validar que no se estén procesando facturas simultáneamente
         if (generatingAuto) return;
-        
+
+        // Preflight config check
+        const check = await checkConfig();
+        if (!check.valid) {
+            configGuardResult = check;
+            pendingAction     = 'generate';
+            configGuardOpen   = true;
+            return;
+        }
+
         generatingAuto = true;
         try {
-            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+            const token    = getToken();
             const endpoint = `${API_BASE}/admin/invoices/generate-auto`;
             const headers: Record<string, string> = { Accept: 'application/json' };
             if (token) headers.Authorization = `Bearer ${token}`;
 
             loadBus.start('generate-auto', endpoint);
 
-            // Llamada HTTP POST al endpoint de generación automática
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers
-            });
-
+            const res  = await fetch(endpoint, { method: 'POST', headers });
             const data = await res.json().catch(() => ({ message: 'Respuesta inválida del servidor' }));
 
-            if (!res.ok) throw new Error(data.error || data.message || 'Error generando facturas');
+            if (!res.ok) {
+                // Server-side validation also returns config errors in the same shape
+                if (res.status === 422 && data.valid === false) {
+                    configGuardResult = data;
+                    pendingAction     = 'generate';
+                    configGuardOpen   = true;
+                    loadBus.error('generate-auto', { endpoint, message: 'Configuración incompleta' });
+                    return;
+                }
+                throw new Error(data.error || data.message || 'Error generando facturas');
+            }
 
-            // Confirmación exitosa en el UI y recarga de la tabla
             loadBus.success('generate-auto');
             loadInvoices();
-            
             alert(`✅ ${data.message || 'Facturas generadas'}. Se generaron ${data.count || 0} facturas nuevas.`);
 
         } catch (e: any) {
-            // Manejo de errores con feedback apropiado
             console.error('Error generando facturas automáticas:', e);
             const message = e.message || 'Error desconocido';
             loadBus.error('generate-auto', { endpoint: `${API_BASE}/admin/invoices/generate-auto`, message });
@@ -254,7 +276,15 @@
         }
     }
 
-    function handleCreate() {
+    async function handleCreate() {
+        // Preflight config check before opening the form
+        const check = await checkConfig();
+        if (!check.valid) {
+            configGuardResult = check;
+            pendingAction     = 'create';
+            configGuardOpen   = true;
+            return;
+        }
         showCreateModal = true;
     }
 
@@ -376,6 +406,12 @@
     {#if showViewModal}
         <ModalVerFactura open={showViewModal} invoice={selectedInvoice} onClose={handleCloseView} />
     {/if}
+
+    <ModalConfigGuard
+        bind:open={configGuardOpen}
+        result={configGuardResult}
+        onClose={() => { configGuardOpen = false; pendingAction = null; }}
+    />
 
     <!-- Indicador de carga -->
     {#if indicatorVisible}
