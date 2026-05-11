@@ -252,13 +252,17 @@
             ]);
             (window as any).Pusher = Pusher;
 
+            const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? 'http';
+            const reverbTLS    = reverbScheme === 'https';
+            const reverbPort   = Number(import.meta.env.VITE_REVERB_PORT ?? (reverbTLS ? 443 : 80));
+
             echoInstance = new Echo({
                 broadcaster:       'reverb',
                 key:               import.meta.env.VITE_REVERB_APP_KEY ?? 'isp-chat-key',
                 wsHost:            import.meta.env.VITE_REVERB_HOST ?? 'localhost',
-                wsPort:            Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-                wssPort:           Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-                forceTLS:          (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
+                wsPort:            reverbPort,
+                wssPort:           reverbPort,
+                forceTLS:          reverbTLS,
                 enabledTransports: ['ws', 'wss'],
                 authEndpoint:      `${API_BASE}/broadcasting/auth`,
                 auth: { headers: { Authorization: `Bearer ${token}` } },
