@@ -11,7 +11,7 @@ html {
 @import '@skeletonlabs/skeleton/themes/cerberus';
 
 /* ================================================================
-   ISP GESTOR — SISTEMA DE DISEÑO
+   IRON LINK — SISTEMA DE DISEÑO
    Nomenclatura: --color-[familia]-[shade]
    WCAG 2.1 AA: contraste mínimo 4.5:1 garantizado sobre surface-base
    Verificado: text-primary ~18:1, text-secondary ~11:1, text-muted ~7:1
@@ -32,7 +32,7 @@ html {
   --color-text-muted:     #8898b8;   /* Contraste ≈7:1  */
   --color-text-disabled:  #506280;   /* Decorativo — estados inactivos */
 
-  /* --- Primario — Azul corporativo ISP --- */
+  /* --- Primario — Azul corporativo Iron Link --- */
   --color-primary-50:  #eef4ff;
   --color-primary-100: #dce8ff;
   --color-primary-200: #b8d0ff;

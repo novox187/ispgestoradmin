@@ -8,7 +8,7 @@
   }
 </script>
 
-<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
+<main class="flex-1 overflow-y-auto bg-[#09090f] text-gray-100">
   <Encabezado {toggleSidebar} />
 
 <div class="container mx-auto px-4 py-8">

@@ -530,7 +530,7 @@
 
 </script>
 
-<div class="flex flex-col h-screen bg-surface-base overflow-hidden w-full">
+<div class="flex flex-col h-screen bg-[#09090f] overflow-hidden w-full">
     <!-- Encabezado global -->
     <Encabezado {toggleSidebar} {toggleNotifications} />
 

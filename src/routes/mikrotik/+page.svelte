@@ -3,7 +3,7 @@
 </script>
 
 <div class="space-y-6">
-  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 xl:grid-cols-1 gap-4">
     <div class="bg-[#111111] border border-neutral-800 rounded-xl p-5">
       <div class="flex items-start justify-between gap-4">
         <div class="space-y-1">
@@ -31,23 +31,6 @@
             </div>
           </a>
         {/each}
-      </div>
-    </div>
-
-    <div class="bg-[#111111] border border-neutral-800 rounded-xl p-5">
-      <div class="space-y-1">
-        <h3 class="text-base md:text-lg font-semibold text-gray-100">Guía de uso</h3>
-        <p class="text-xs md:text-sm text-gray-400 leading-relaxed">
-          Los cambios de configuración deben validarse antes de aplicarse al router. Usa “Colas” para sincronización segura y
-          “Firewall” para preparar reglas con validaciones en tiempo real.
-        </p>
-      </div>
-
-      <div class="mt-4 border border-neutral-800 rounded-xl p-4 bg-neutral-900/30">
-        <div class="text-xs font-mono text-gray-400 tracking-wide mb-1">RECOMENDACIÓN</div>
-        <div class="text-sm text-gray-200 leading-relaxed">
-          Ejecuta sincronizaciones de colas fuera de horas pico y revisa el estado del router en Monitoreo antes de aplicar cambios.
-        </div>
       </div>
     </div>
   </div>

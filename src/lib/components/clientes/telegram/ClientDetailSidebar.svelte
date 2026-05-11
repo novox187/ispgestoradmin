@@ -335,10 +335,10 @@
   }
 </script>
 
-<div class="h-full flex flex-col bg-surface-base text-text-primary">
+<div class="h-full flex flex-col bg-[#09090fbd] text-text-primary">
 
     <!-- Encabezado del perfil -->
-    <div class="px-5 py-4 border-b border-white/[0.06] bg-surface-card shrink-0">
+    <div class="px-5 py-4 border-b border-white/[0.06] bg-[#09090f] shrink-0">
         <div class="flex items-start justify-between gap-4">
             <div class="flex items-center gap-4">
                 <!-- Avatar -->

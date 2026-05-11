@@ -284,7 +284,7 @@
 
 </script>
 
-<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100 h-screen">
+<main class="flex-1 overflow-y-auto bg-[#09090f] text-gray-100 h-screen">
     
      <Encabezado {toggleSidebar} {toggleNotifications} />
      <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">

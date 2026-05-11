@@ -3,6 +3,7 @@
     import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
     import jsPDF from 'jspdf';
     import autoTable from 'jspdf-autotable';
+    import { BRAND } from '$lib/brand';
 
     let { open, invoice, onClose } = $props();
 
@@ -31,12 +32,12 @@
 
         // Header - Company Info
         doc.setFontSize(20);
-        doc.text('NOVATACH', 14, 22);
-        
+        doc.text(BRAND.nameUpper, 14, 22);
+
         doc.setFontSize(10);
-        doc.text('Dirección de la empresa', 14, 30);
-        doc.text('NIT: 123456789', 14, 35);
-        doc.text('contacto@novatach.com', 14, 40);
+        doc.text(BRAND.contact.address, 14, 30);
+        doc.text(`NIT: ${BRAND.contact.nit}`, 14, 35);
+        doc.text(BRAND.contact.email, 14, 40);
 
         // Header - Invoice Info
         doc.setFontSize(16);
@@ -116,10 +117,10 @@
             <!-- Emisor (Hardcoded por ahora o desde config) -->
             <div>
                 <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">De</h3>
-                <div class="text-white font-bold text-lg">NOVATACH</div>
-                <div class="text-gray-300 text-sm">Dirección de la empresa</div>
-                <div class="text-gray-300 text-sm">NIT: 123456789</div>
-                <div class="text-gray-300 text-sm">contacto@novatach.com</div>
+                <div class="text-white font-bold text-lg">{BRAND.nameUpper}</div>
+                <div class="text-gray-300 text-sm">{BRAND.contact.address}</div>
+                <div class="text-gray-300 text-sm">NIT: {BRAND.contact.nit}</div>
+                <div class="text-gray-300 text-sm">{BRAND.contact.email}</div>
             </div>
 
             <!-- Cliente -->

@@ -7,26 +7,30 @@
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import { appState } from '$lib/stores/app.svelte';
-	
+    import { BRAND } from '$lib/brand';
+
 	let { children } = $props();
 
     const isLogin = $derived($page.url.pathname === '/login');
 
+    // Título dinámico basado en la ruta actual
+    const pageSection = $derived.by(() => {
+        const path = $page.url.pathname;
+        if (path === '/') return 'Dashboard';
+        const segment = path.replace(/^\/+/, '').split('/')[0];
+        return segment.charAt(0).toUpperCase() + segment.slice(1);
+    });
+
     function guard() {
         if (typeof window === 'undefined') return;
         const token = localStorage.getItem('employee_token');
-        const role = (localStorage.getItem('employee_role') || '').toLowerCase();
-        const userId = localStorage.getItem('employee_id');
 
         const path = $page.url.pathname;
-        // Permitimos cualquier rol que no esté vacío, ya que el backend maneja los permisos reales
-        // El frontend solo debe validar que exista una sesión activa
         if (!token && path !== '/login') {
             goto('/login', { replaceState: true });
             return;
         }
-        
-        // Si hay token y estamos en login, redirigir al home
+
         if (token && path === '/login') {
             goto('/', { replaceState: true });
         }
@@ -37,7 +41,6 @@
     });
 
     $effect(() => {
-        // Run guard on navigation
         const p = $page.url.pathname;
         guard();
     });
@@ -45,6 +48,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<title>{BRAND.pageTitle(pageSection)}</title>
 </svelte:head>
 
 <div class="flex h-screen min-w-dvw bg-[#0f0f0f] text-gray-100 ">

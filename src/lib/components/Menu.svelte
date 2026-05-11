@@ -6,7 +6,9 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { API_BASE } from '$lib/config';
+  import { BRAND } from '$lib/brand';
   import { fly } from 'svelte/transition';
+  import LogoComponent from '$lib/assets/logos/LogoComponent.svelte';
 
   let { isOpen = $bindable(false) } = $props();
 
@@ -122,12 +124,10 @@
   <!-- Logo -->
   <div class="px-5 py-5 border-b border-neutral-800/60">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 bg-white rounded-md flex items-center justify-center shrink-0">
-        <span class="text-black font-black text-xs">NT</span>
-      </div>
+      <LogoComponent size={48} color="white" title={BRAND.logoAlt} />
       <div class="min-w-0">
-        <div class="text-white font-bold text-sm tracking-widest leading-tight">NOVATACH</div>
-        <div class="text-neutral-600 text-[10px] font-mono truncate">Panel de administración</div>
+        <div class="text-white font-bold text-sm tracking-widest leading-tight">{BRAND.nameUpper}</div>
+        <div class="text-neutral-600 text-[10px] font-mono truncate">{BRAND.tagline}</div>
       </div>
     </div>
   </div>
