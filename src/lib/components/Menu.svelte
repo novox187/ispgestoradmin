@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     LayoutDashboard, Users, Wifi, Zap, CreditCard,
-    Router, UserCog, Lock, User, MoreVertical, Settings, LogOut
+    Router, UserCog, Lock, User, MoreVertical, Settings, LogOut, SlidersHorizontal
   } from '@lucide/svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
@@ -55,6 +55,7 @@
       label: 'Sistema',
       items: [
         { label: 'Usuarios', icon: UserCog, path: '/usuarios' },
+        { label: 'Configuraciones', icon: SlidersHorizontal, path: '/configuraciones' },
       ]
     },
   ];
@@ -208,14 +209,6 @@
             >
               <User class="w-3.5 h-3.5 text-neutral-500" />
               Mi perfil
-            </a>
-            <a
-              href="/configuraciones"
-              onclick={() => { userMenuOpen = false; closeSidebar(); }}
-              class="flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-            >
-              <Settings class="w-3.5 h-3.5 text-neutral-500" />
-              Configuraciones
             </a>
             <div class="h-px bg-neutral-800 my-1 mx-1"></div>
             <button

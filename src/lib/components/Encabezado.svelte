@@ -16,20 +16,23 @@
   /**
    * @param {string} path
    */
+  const segmentLabels: Record<string, string> = {
+    '': 'DASHBOARD',
+    'clientes': 'CLIENTES',
+    'planes': 'PLANES',
+    'facturas': 'FACTURACIÓN',
+    'proveedores': 'PROVEEDORES',
+    'mikrotik': 'MIKROTIK',
+    'usuarios': 'USUARIOS',
+    'configuraciones': 'CONFIGURACIONES',
+    'perfil': 'MI PERFIL',
+  };
+
   function getHeaderTitle(path: string) {
-    // Eliminar barras iniciales o finales para aislar el nombre de la ruta
-    let routeName = path.replace(/^\/+|\/+$/g, "");
-
-    // Si la ruta está vacía (es la raíz '/'), retornar 'DASHBOARD'
-    if (routeName === "") {
-      return "DASHBOARD";
-    }
-
-    // Si no es la raíz, convertir la primera parte de la ruta a mayúsculas
-    // Ejemplo: /users/123 -> USERS
-    // Ejemplo: /settings -> SETTINGS
-    const firstSegment = routeName.split("/")[0];
-    return firstSegment.toUpperCase();
+    const routeName = path.replace(/^\/+|\/+$/g, '');
+    if (routeName === '') return 'DASHBOARD';
+    const firstSegment = routeName.split('/')[0];
+    return segmentLabels[firstSegment] ?? firstSegment.toUpperCase();
   }
 
   // Calcular el título reactivamente

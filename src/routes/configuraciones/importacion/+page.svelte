@@ -1,17 +1,20 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { API_BASE } from '$lib/config';
-  import Encabezado from '$lib/components/Encabezado.svelte';
-  import { appState } from '$lib/stores/app.svelte';
   import ImportZone from '$lib/components/import/ImportZone.svelte';
   import PreviewTable from '$lib/components/import/PreviewTable.svelte';
   import HistoryTable from '$lib/components/import/HistoryTable.svelte';
   import AssignPlanStep from '$lib/components/import/steps/AssignPlanStep.svelte';
-  
+  import {
+    Database, Download, CheckCircle2, AlertCircle,
+    ChevronLeft, ChevronRight, SkipForward
+  } from '@lucide/svelte';
+
   interface Step {
     id: number;
     table: string;
     title: string;
+    shortTitle: string;
     description: string;
     skippable: boolean;
     customView?: boolean;
@@ -43,60 +46,63 @@
     preview: Array<Record<string, any>>;
   }
 
-  // Definición de pasos para el Wizard
   const steps: Step[] = [
     {
       id: 1,
       table: 'plans',
-      title: '1. Importar Planes',
-      description: 'Primero, define los planes de internet que ofrecerás. Esto creará las colas base en Mikrotik.',
-      skippable: true
+      title: 'Importar Planes',
+      shortTitle: 'Planes',
+      description: 'Define los planes de internet disponibles. Se crearán las colas base en Mikrotik.',
+      skippable: true,
     },
     {
       id: 2,
       table: 'clients',
-      title: '2. Importar Clientes',
+      title: 'Importar Clientes',
+      shortTitle: 'Clientes',
       description: 'Registra la información personal de tus clientes. Se crearán sus billeteras automáticamente.',
-      skippable: true
+      skippable: true,
     },
     {
       id: 3,
-      // Ya no usa tabla 'clients_plans' para carga, sino asignación manual
-      table: 'clients_plans', 
-      title: '3. Asignar Planes',
-      description: 'Selecciona los clientes sin plan y asígnales uno. Esto creará las colas en Mikrotik.',
+      table: 'clients_plans',
+      title: 'Asignar Planes',
+      shortTitle: 'Asignación',
+      description: 'Selecciona los clientes sin plan y asígnales uno. Se crearán las colas en Mikrotik.',
       skippable: true,
-      customView: true // Nuevo flag para renderizar vista personalizada
+      customView: true,
     },
     {
-        id: 4,
-        table: 'invoices',
-        title: '4. Importar Facturas (Opcional)',
-        description: 'Si tienes facturas históricas, puedes importarlas aquí.',
-        skippable: true
-    }
+      id: 4,
+      table: 'invoices',
+      title: 'Importar Facturas',
+      shortTitle: 'Facturas',
+      description: 'Importa facturas históricas de tu sistema anterior (paso opcional).',
+      skippable: true,
+    },
   ];
 
-  let currentStepIndex = 0;
-  $: currentStep = steps[currentStepIndex];
-  $: selectedTable = currentStep.table;
+  let currentStepIndex = $state(0);
+  let history = $state<HistoryItem[]>([]);
+  let validationResult = $state<ValidationResult | null>(null);
+  let isUploading = $state(false);
+  let isProcessing = $state(false);
+  let isDownloading = $state(false);
+  let uploadFile = $state<File | null>(null);
+  let errorMessage = $state('');
+  let successMessage = $state('');
+  let availablePlans = $state<Plan[]>([]);
+  let planAssignments = $state<Record<number, string>>({});
 
-  let history: HistoryItem[] = [];
-  let validationResult: ValidationResult | null = null;
-  let isUploading = false;
-  let isProcessing = false;
-  let isDownloading = false;
-  let uploadFile: File | null = null;
-  let errorMessage = '';
-  let successMessage = '';
+  const currentStep = $derived(steps[currentStepIndex]);
 
   async function loadHistory() {
     try {
       const res = await fetch(`${API_BASE}/admin/import/history`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('employee_token')}`,
-          'Accept': 'application/json'
-        }
+          Authorization: `Bearer ${localStorage.getItem('employee_token')}`,
+          Accept: 'application/json',
+        },
       });
       if (res.ok) {
         const data = await res.json();
@@ -107,22 +113,20 @@
     }
   }
 
-  let availablePlans: Plan[] = [];
-  
   async function loadPlans() {
     try {
-        const res = await fetch(`${API_BASE}/plans`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('employee_token')}`,
-                'Accept': 'application/json'
-            }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            availablePlans = data.data || [];
-        }
+      const res = await fetch(`${API_BASE}/plans`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('employee_token')}`,
+          Accept: 'application/json',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        availablePlans = data.data || [];
+      }
     } catch (e) {
-        console.error('Error loading plans:', e);
+      console.error('Error loading plans:', e);
     }
   }
 
@@ -131,13 +135,9 @@
     loadPlans();
   });
 
-  // Mapa para guardar las asignaciones de planes (rowIndex -> planId)
-  let planAssignments: Record<number, string> = {};
-
   function handlePlanAssignment(event: CustomEvent<{ rowIndex: number; planId: string }>) {
     const { rowIndex, planId } = event.detail;
     planAssignments[rowIndex] = planId;
-    // También podemos actualizar el objeto validationResult.preview para que refleje el cambio visualmente si quisiéramos
   }
 
   function nextStep() {
@@ -167,24 +167,18 @@
   }
 
   async function handleDownloadTemplate() {
-    if (!selectedTable) return;
-    
     isDownloading = true;
     errorMessage = '';
-    
     try {
-      const res = await fetch(`${API_BASE}/admin/import/template/${selectedTable}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('employee_token')}`,
-        }
+      const res = await fetch(`${API_BASE}/admin/import/template/${currentStep.table}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('employee_token')}` },
       });
-      
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `template_${selectedTable}.csv`;
+        a.download = `template_${currentStep.table}.csv`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -192,7 +186,7 @@
       } else {
         errorMessage = 'Error al descargar la plantilla';
       }
-    } catch (e) {
+    } catch {
       errorMessage = 'Error de conexión';
     } finally {
       isDownloading = false;
@@ -205,34 +199,28 @@
     errorMessage = '';
     successMessage = '';
     validationResult = null;
-
-    if (!selectedTable) {
-      errorMessage = 'Error interno: tabla no seleccionada';
-      return;
-    }
-
     isUploading = true;
+
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('table', selectedTable);
+    formData.append('table', currentStep.table);
 
     try {
       const res = await fetch(`${API_BASE}/admin/import/validate`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('employee_token')}`,
-          'Accept': 'application/json'
+          Authorization: `Bearer ${localStorage.getItem('employee_token')}`,
+          Accept: 'application/json',
         },
-        body: formData
+        body: formData,
       });
-
       if (res.ok) {
         validationResult = await res.json();
       } else {
         const err = await res.json();
         errorMessage = err.message || 'Error en la validación';
       }
-    } catch (e) {
+    } catch {
       errorMessage = 'Error al subir el archivo';
     } finally {
       isUploading = false;
@@ -240,46 +228,40 @@
   }
 
   async function handleProcessImport() {
-    if (!uploadFile || !selectedTable) return;
-    
+    if (!uploadFile) return;
     isProcessing = true;
     errorMessage = '';
+
     const formData = new FormData();
     formData.append('file', uploadFile);
-    formData.append('table', selectedTable);
-    
-    // Si estamos en el paso de planes (id:3) y hay asignaciones, enviarlas
+    formData.append('table', currentStep.table);
     if (currentStep.id === 3 && Object.keys(planAssignments).length > 0) {
-        formData.append('plan_assignments', JSON.stringify(planAssignments));
+      formData.append('plan_assignments', JSON.stringify(planAssignments));
     }
 
     try {
       const res = await fetch(`${API_BASE}/admin/import/process`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('employee_token')}`,
-          'Accept': 'application/json'
+          Authorization: `Bearer ${localStorage.getItem('employee_token')}`,
+          Accept: 'application/json',
         },
-        body: formData
+        body: formData,
       });
-
       if (res.ok) {
-        successMessage = 'Importación completada exitosamente. Pasando al siguiente paso...';
+        successMessage = 'Importación completada. Avanzando al siguiente paso...';
         validationResult = null;
         uploadFile = null;
         loadHistory();
-        
-        // Auto-advance after short delay
         setTimeout(() => {
-            nextStep();
-            successMessage = ''; // Clear message for next step
+          nextStep();
+          successMessage = '';
         }, 2000);
-
       } else {
         const err = await res.json();
         errorMessage = err.message || 'Error al procesar la importación';
       }
-    } catch (e) {
+    } catch {
       errorMessage = 'Error de conexión';
     } finally {
       isProcessing = false;
@@ -287,18 +269,16 @@
   }
 
   async function handleRollback(event: CustomEvent<number>) {
-    if (!confirm('¿Estás seguro de que quieres revertir esta importación? Esta acción eliminará los registros creados.')) return;
-    
+    if (!confirm('¿Revertir esta importación? Se eliminarán los registros creados.')) return;
     const id = event.detail;
     try {
       const res = await fetch(`${API_BASE}/admin/import/rollback/${id}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('employee_token')}`,
-          'Accept': 'application/json'
-        }
+          Authorization: `Bearer ${localStorage.getItem('employee_token')}`,
+          Accept: 'application/json',
+        },
       });
-
       if (res.ok) {
         successMessage = 'Importación revertida correctamente';
         loadHistory();
@@ -306,182 +286,197 @@
         const err = await res.json();
         errorMessage = err.message || 'Error al revertir';
       }
-    } catch (e) {
+    } catch {
       errorMessage = 'Error de conexión';
     }
   }
-
-  function toggleSidebar() {
-    appState.toggleSidebar();
-  }
 </script>
 
-<main class="flex-1 overflow-y-auto bg-[#0f0f0f] text-gray-100">
-  <Encabezado {toggleSidebar} />
+<div class="px-4 md:px-8 py-8 max-w-6xl">
 
-<div class="container mx-auto px-4 py-8">
-  <div class="mb-8">
-    <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Asistente de Importación</h1>
-    <p class="text-gray-600 dark:text-gray-400 mt-2">Sigue los pasos para importar tus datos y sincronizar con Mikrotik correctamente.</p>
+  <!-- Header -->
+  <div class="mb-6">
+    <div class="flex items-center gap-2.5 mb-1.5">
+      <Database class="w-5 h-5 text-primary-400" />
+      <h2 class="text-lg font-semibold text-neutral-100">Asistente de Importación</h2>
+    </div>
+    <p class="text-sm text-neutral-500">
+      Sigue los pasos para importar tus datos y sincronizarlos con Mikrotik correctamente.
+    </p>
   </div>
 
-  <!-- Stepper Navigation -->
+  <!-- Stepper -->
   <div class="mb-8">
-    <div class="flex items-center justify-between relative">
-        <div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-gray-200 dark:bg-gray-700 -z-10"></div>
-        {#each steps as step, index}
-            <button 
-                class="flex flex-col items-center group focus:outline-none"
-                on:click={() => goToStep(index)}
-            >
-                <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors duration-200
-                    {index === currentStepIndex ? 'bg-blue-600 border-blue-600 text-white' : 
-                     index < currentStepIndex ? 'bg-green-500 border-green-500 text-white' : 
-                     'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400'}">
-                    {#if index < currentStepIndex}
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    {:else}
-                        {step.id}
-                    {/if}
-                </div>
-                <span class="mt-2 text-xs font-medium {index === currentStepIndex ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">
-                    {step.title}
-                </span>
-            </button>
-        {/each}
-    </div>
-  </div>
-
-  {#if errorMessage}
-    <div class="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded relative mb-4" role="alert">
-      <span class="block sm:inline">{errorMessage}</span>
-    </div>
-  {/if}
-
-  {#if successMessage}
-    <div class="bg-green-100 dark:bg-green-900/20 border border-green-400 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded relative mb-4" role="alert">
-      <span class="block sm:inline">{successMessage}</span>
-    </div>
-  {/if}
-
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-    <!-- Panel Izquierdo: Instrucciones y Acciones -->
-    <div class="col-span-1 space-y-6">
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border-l-4 border-blue-500">
-        <h2 class="text-xl font-bold mb-2 text-gray-800 dark:text-white">{currentStep.title}</h2>
-        <p class="text-gray-600 dark:text-gray-300 mb-6">{currentStep.description}</p>
-        
-        {#if !currentStep.customView}
-            <div class="space-y-4">
-            <button
-                class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
-                disabled={isDownloading}
-                on:click={handleDownloadTemplate}
-            >
-                {#if isDownloading}
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Descargando...
-                {:else}
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    1. Descargar Plantilla CSV
-                {/if}
-            </button>
-
-            <div class="relative">
-                <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
-                </div>
-                <div class="relative flex justify-center">
-                <span class="px-2 bg-white dark:bg-gray-800 text-sm text-gray-500">Luego</span>
-                </div>
-            </div>
-
-            <ImportZone on:fileSelected={handleFileSelected} />
-            
-            {#if isUploading}
-                <div class="mt-2 text-center text-sm text-blue-600 dark:text-blue-400 font-medium">Analizando archivo...</div>
-            {/if}
-            </div>
-        {/if}
-      </div>
-      
-      <!-- Navegación entre pasos -->
-      <div class="flex justify-between items-center">
+    <div class="flex items-center gap-0">
+      {#each steps as step, index}
         <button
-            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-4 py-2 disabled:opacity-50"
-            disabled={currentStepIndex === 0}
-            on:click={prevStep}
+          class="flex-1 flex flex-col items-center gap-1.5 group focus:outline-none"
+          onclick={() => goToStep(index)}
+          aria-label="Ir al paso {step.shortTitle}"
         >
-            &larr; Anterior
+          <!-- Línea + círculo -->
+          <div class="flex items-center w-full">
+            <!-- Línea izquierda -->
+            <div class="flex-1 h-px {index === 0 ? 'opacity-0' : index <= currentStepIndex ? 'bg-primary-500/60' : 'bg-neutral-800'}"></div>
+            <!-- Círculo -->
+            <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-200 shrink-0
+              {index === currentStepIndex
+                ? 'border-primary-500 bg-primary-500/15 text-primary-400'
+                : index < currentStepIndex
+                  ? 'border-success-500 bg-success-500/15 text-success-500'
+                  : 'border-neutral-700 bg-neutral-900 text-neutral-600'}">
+              {#if index < currentStepIndex}
+                <CheckCircle2 class="w-4 h-4" />
+              {:else}
+                <span class="text-xs font-bold">{step.id}</span>
+              {/if}
+            </div>
+            <!-- Línea derecha -->
+            <div class="flex-1 h-px {index === steps.length - 1 ? 'opacity-0' : index < currentStepIndex ? 'bg-primary-500/60' : 'bg-neutral-800'}"></div>
+          </div>
+          <!-- Label -->
+          <span class="text-[10px] font-medium hidden sm:block
+            {index === currentStepIndex ? 'text-primary-400' : index < currentStepIndex ? 'text-success-400' : 'text-neutral-600'}">
+            {step.shortTitle}
+          </span>
         </button>
-        
-        {#if currentStep.skippable}
+      {/each}
+    </div>
+  </div>
+
+  <!-- Mensajes globales -->
+  {#if errorMessage}
+    <div class="flex items-start gap-3 p-3.5 rounded-lg bg-danger-900/30 border border-danger-700/40 text-danger-300 text-sm mb-6" role="alert">
+      <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
+      <span>{errorMessage}</span>
+    </div>
+  {/if}
+  {#if successMessage}
+    <div class="flex items-start gap-3 p-3.5 rounded-lg bg-success-900/30 border border-success-700/40 text-success-300 text-sm mb-6" role="alert">
+      <CheckCircle2 class="w-4 h-4 shrink-0 mt-0.5" />
+      <span>{successMessage}</span>
+    </div>
+  {/if}
+
+  <!-- Contenido del paso actual -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+    <!-- Panel izquierdo: instrucciones -->
+    <div class="col-span-1 space-y-4">
+      <div class="p-5 rounded-xl bg-surface-elevated border border-neutral-800/70 border-l-2 border-l-primary-500">
+        <h3 class="text-sm font-semibold text-neutral-100 mb-1">{currentStep.title}</h3>
+        <p class="text-xs text-neutral-500 leading-relaxed mb-5">{currentStep.description}</p>
+
+        {#if !currentStep.customView}
+          <div class="space-y-3">
+            <!-- Descargar plantilla -->
             <button
-                class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 px-4 py-2 text-sm"
-                on:click={nextStep}
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-700
+                     text-xs font-medium text-neutral-300 bg-neutral-800/60 hover:bg-neutral-700/60
+                     hover:border-neutral-600 hover:text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isDownloading}
+              onclick={handleDownloadTemplate}
             >
-                Saltar este paso &rarr;
+              {#if isDownloading}
+                <div class="w-3.5 h-3.5 border-2 border-neutral-400/30 border-t-neutral-400 rounded-full animate-spin"></div>
+                Descargando...
+              {:else}
+                <Download class="w-3.5 h-3.5 text-primary-400" />
+                1. Descargar Plantilla CSV
+              {/if}
             </button>
+
+            <!-- Separador -->
+            <div class="flex items-center gap-2">
+              <div class="flex-1 h-px bg-neutral-800"></div>
+              <span class="text-[10px] text-neutral-600 font-mono">LUEGO</span>
+              <div class="flex-1 h-px bg-neutral-800"></div>
+            </div>
+
+            <!-- Zona de carga -->
+            <ImportZone on:fileSelected={handleFileSelected} />
+
+            {#if isUploading}
+              <div class="flex items-center justify-center gap-2 text-xs text-primary-400 py-2">
+                <div class="w-3.5 h-3.5 border-2 border-primary-400/30 border-t-primary-400 rounded-full animate-spin"></div>
+                Analizando archivo...
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Navegación entre pasos -->
+      <div class="flex items-center justify-between">
+        <button
+          class="flex items-center gap-1.5 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          disabled={currentStepIndex === 0}
+          onclick={prevStep}
+        >
+          <ChevronLeft class="w-3.5 h-3.5" />
+          Anterior
+        </button>
+
+        {#if currentStep.skippable}
+          <button
+            class="flex items-center gap-1.5 px-3 py-2 text-xs text-neutral-500 hover:text-primary-400 transition-colors"
+            onclick={nextStep}
+          >
+            Saltar
+            <SkipForward class="w-3.5 h-3.5" />
+          </button>
         {/if}
       </div>
     </div>
 
-    <!-- Panel Derecho: Vista Previa y Confirmación -->
-    <div class="col-span-2 space-y-6">
+    <!-- Panel derecho: vista previa / asignación -->
+    <div class="col-span-2">
       {#if currentStep.customView && currentStep.id === 3}
-         <AssignPlanStep plans={availablePlans} />
+        <AssignPlanStep plans={availablePlans} />
       {:else if validationResult}
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow animate-fade-in">
+        <div class="p-5 rounded-xl bg-surface-elevated border border-neutral-800/70">
           <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Confirmar Importación</h2>
+            <h3 class="text-sm font-semibold text-neutral-100">Confirmar Importación</h3>
             {#if validationResult.valid && !isProcessing}
               <button
-                class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors shadow-lg transform hover:-translate-y-0.5"
-                on:click={handleProcessImport}
+                class="flex items-center gap-2 px-4 py-2 rounded-lg bg-success-600 hover:bg-success-500 text-white text-xs font-semibold transition-colors shadow-lg"
+                onclick={handleProcessImport}
               >
+                <CheckCircle2 class="w-3.5 h-3.5" />
                 Importar Datos
               </button>
             {/if}
           </div>
-          
-          <PreviewTable 
-            {validationResult} 
-            plans={availablePlans} 
-            showPlanSelector={currentStep.id === 3} 
+
+          <PreviewTable
+            {validationResult}
+            plans={availablePlans}
+            showPlanSelector={currentStep.id === 3}
             on:planChange={handlePlanAssignment}
           />
-          
+
           {#if isProcessing}
-            <div class="mt-6 flex flex-col items-center justify-center p-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <svg class="animate-spin h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span class="text-lg font-medium text-blue-800 dark:text-blue-300">Procesando importación...</span>
-              <span class="text-sm text-blue-600 dark:text-blue-400 mt-1">Esto puede tomar unos momentos, especialmente si sincronizamos con Mikrotik.</span>
+            <div class="mt-6 flex flex-col items-center justify-center p-8 rounded-lg bg-primary-500/5 border border-primary-500/15">
+              <div class="w-10 h-10 border-2 border-primary-400/30 border-t-primary-400 rounded-full animate-spin mb-4"></div>
+              <span class="text-sm font-medium text-primary-300">Procesando importación...</span>
+              <span class="text-xs text-primary-400/60 mt-1">Esto puede tardar si se sincroniza con Mikrotik.</span>
             </div>
           {/if}
         </div>
       {:else if !isUploading}
-        <div class="bg-gray-50 dark:bg-gray-800/50 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg h-full min-h-[300px] flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 p-8 text-center">
-            <svg class="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Esperando archivo</h3>
-            <p class="mt-1 max-w-sm">Descarga la plantilla del paso actual, complétala y súbela para ver la vista previa aquí.</p>
+        <div class="flex flex-col items-center justify-center h-full min-h-[280px] rounded-xl border-2 border-dashed border-neutral-800/70 bg-neutral-900/20 text-neutral-600 p-8 text-center">
+          <Database class="w-12 h-12 mb-3 text-neutral-800" />
+          <p class="text-sm font-medium text-neutral-500">Sin archivo cargado</p>
+          <p class="text-xs mt-1 max-w-xs">
+            Descarga la plantilla del paso actual, complétala y súbela para ver la vista previa aquí.
+          </p>
         </div>
       {/if}
     </div>
   </div>
 
-  <!-- Historial -->
-  <div class="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8">
+  <!-- Historial de importaciones -->
+  <div class="pt-6 border-t border-neutral-800/60">
     <HistoryTable {history} on:rollback={handleRollback} />
   </div>
 </div>
-</main>
