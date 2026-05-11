@@ -241,14 +241,9 @@
 
     // ── WebSocket ─────────────────────────────────────────────────────────────
 
-    async function initEmployeeWebSocket(ticketId: number, clientId: number | null = null) {
-        if (echoInstance) {
-            if (activeTicketId) echoInstance.leave(`ticket.${activeTicketId}`);
-            if (activeClientIdForWs) echoInstance.leave(`client.${activeClientIdForWs}`);
-        }
-
+    async function initEcho() {
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
-        if (!token) return;
+        if (!token || echoInstance) return;
 
         try {
             const [{ default: Echo }, { default: Pusher }] = await Promise.all([
@@ -257,42 +252,43 @@
             ]);
             (window as any).Pusher = Pusher;
 
-            if (!echoInstance) {
-                echoInstance = new Echo({
-                    broadcaster:       'reverb',
-                    key:               import.meta.env.VITE_REVERB_APP_KEY ?? 'isp-chat-key',
-                    wsHost:            import.meta.env.VITE_REVERB_HOST ?? 'localhost',
-                    wsPort:            Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-                    wssPort:           Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-                    forceTLS:          (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
-                    enabledTransports: ['ws', 'wss'],
-                    authEndpoint:      `${API_BASE}/broadcasting/auth`,
-                    auth: { headers: { Authorization: `Bearer ${token}` } },
-                });
-            }
-
-            echoInstance
-                .private(`ticket.${ticketId}`)
-                .listen('.message.sent', (payload: any) => {
-                    if (payload.sender !== 'user' && payload.sender !== 'system') return;
-                    if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
-                    selectedClientMessages = mergeSorted(selectedClientMessages, [mapApiMessage(payload)]);
-                });
-
-            if (clientId) {
-                echoInstance
-                    .private(`client.${clientId}`)
-                    .listen('.client.event', (payload: any) => {
-                        if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
-                        selectedClientMessages = mergeSorted(selectedClientMessages, [mapClientEvent(payload)]);
-                    });
-                activeClientIdForWs = clientId;
-            }
-
-            activeTicketId = ticketId;
+            echoInstance = new Echo({
+                broadcaster:       'reverb',
+                key:               import.meta.env.VITE_REVERB_APP_KEY ?? 'isp-chat-key',
+                wsHost:            import.meta.env.VITE_REVERB_HOST ?? 'localhost',
+                wsPort:            Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+                wssPort:           Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+                forceTLS:          (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
+                enabledTransports: ['ws', 'wss'],
+                authEndpoint:      `${API_BASE}/broadcasting/auth`,
+                auth: { headers: { Authorization: `Bearer ${token}` } },
+            });
         } catch (e) {
-            console.warn('WebSocket no disponible en modo admin', e);
+            console.warn('WebSocket no disponible', e);
         }
+    }
+
+    function subscribeToClient(clientId: number) {
+        if (!echoInstance) return;
+        echoInstance
+            .private(`client.${clientId}`)
+            .listen('.client.event', (payload: any) => {
+                if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
+                selectedClientMessages = mergeSorted(selectedClientMessages, [mapClientEvent(payload)]);
+            });
+        activeClientIdForWs = clientId;
+    }
+
+    function subscribeToTicket(ticketId: number) {
+        if (!echoInstance) return;
+        echoInstance
+            .private(`ticket.${ticketId}`)
+            .listen('.message.sent', (payload: any) => {
+                if (payload.sender !== 'user' && payload.sender !== 'system') return;
+                if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
+                selectedClientMessages = mergeSorted(selectedClientMessages, [mapApiMessage(payload)]);
+            });
+        activeTicketId = ticketId;
     }
 
     function mapApiMessage(m: any) {
@@ -340,6 +336,13 @@
 
     async function handleSelectClient(event: CustomEvent<number>) {
         const id = event.detail;
+
+        // Dejar canales del cliente anterior antes de cambiar
+        if (echoInstance) {
+            if (activeTicketId) echoInstance.leave(`ticket.${activeTicketId}`);
+            if (activeClientIdForWs) echoInstance.leave(`client.${activeClientIdForWs}`);
+        }
+
         selectedClientId = id;
         loadingMessages = true;
         isDetailOpen = false;
@@ -358,6 +361,10 @@
             if (!clientRes.ok) throw new Error('Error cargando detalles del cliente');
             const clientData = await clientRes.json();
             selectedClient = { ...clientData, status: normalizeStatus(clientData.status || clientData.service_status) };
+
+            // Suscribirse al canal del cliente siempre (wallet_funded y otros eventos)
+            await initEcho();
+            subscribeToClient(id);
 
             // 2. Buscar el ticket activo del cliente en el nuevo endpoint de chat
             //    Cargamos las conversaciones y buscamos el ticket de este cliente
@@ -380,8 +387,8 @@
                         selectedClientMessages = mergeSorted(msgs, evts);
                         activeTicketStatus = msgData.ticket?.status ?? activeTicketStatus;
 
-                        // 4. Suscribir al WebSocket de ese ticket y canal del cliente
-                        initEmployeeWebSocket(ticket.ticket_id, clientId);
+                        // 4. Suscribir al canal del ticket para mensajes de chat
+                        subscribeToTicket(ticket.ticket_id);
                     }
                 }
             }
@@ -513,6 +520,7 @@
         }
 
         loadClients();
+        initEcho();
         const interval = setInterval(loadClients, 60000);
 
         return () => {
