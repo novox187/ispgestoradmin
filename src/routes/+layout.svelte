@@ -1,6 +1,6 @@
 <script>
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/faviconfondo.ico';
     import Menu from '$lib/components/Menu.svelte';
     import { Toaster } from 'svelte-sonner';
     import { goto } from '$app/navigation';
