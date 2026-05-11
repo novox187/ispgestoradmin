@@ -4,6 +4,7 @@
   import { BRAND } from "$lib/brand";
   import dashboardDesktop from "$lib/assets/login/vistaescritorio.png";
   import dashboardMobile from "$lib/assets/login/vistamobile.png";
+  import logoSrc from "$lib/assets/logos/logopng.png";
   import {
     Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle2, Loader2,
     Wifi, FileText, Shield, Activity, Users, Bell, Zap, Globe,
@@ -97,7 +98,7 @@
       <!-- Brand -->
       <div class="brand-block">
         <div class="logo-wrap">
-          <img src={BRAND.logos.default} alt={BRAND.logoAlt} class="logo-img" />
+          <img src={logoSrc} alt={BRAND.logoAlt} class="logo-img" />
         </div>
         <div>
           <h1 class="brand-name">{BRAND.nameUpper}</h1>
