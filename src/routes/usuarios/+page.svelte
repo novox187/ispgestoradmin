@@ -1,414 +1,448 @@
 <script lang="ts">
-    import ModalCrearUsuario from "$lib/components/usuarios/ModalCrearUsuario.svelte";
-    import ModalEditarUsuario from "$lib/components/usuarios/ModalEditarUsuario.svelte";
-    import ModalVerUsuario from "$lib/components/usuarios/ModalVerUsuario.svelte";
-    import TablaUsuarios from "$lib/components/usuarios/TablaUsuarios.svelte";
-    import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
+    import { onMount } from 'svelte';
     import { toast } from 'svelte-sonner';
-    import { onMount, setContext } from 'svelte';
     import { fade, scale } from 'svelte/transition';
-    import { API_BASE } from '$lib/config';
     import { Pagination } from '@skeletonlabs/skeleton-svelte';
-    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon, PlusIcon } from '@lucide/svelte';
     import {
-        DASHBOARD_LOAD_CONTEXT,
-        fetchJsonWithRetry,
-        readStorageCache,
-        writeStorageCache,
-        type DashboardLoadBus,
-        type DashboardLoadStatus,
-        type FetchErrorDetails
-    } from '$lib/utils/hybrid-cache';
-    import Encabezado from "$lib/components/Encabezado.svelte";
+        ArrowLeftIcon, ArrowRightIcon, PlusIcon, RotateCcw,
+        Search, Filter, Users, Shield, X, SlidersHorizontal
+    } from '@lucide/svelte';
+
+    import Encabezado from '$lib/components/Encabezado.svelte';
+    import TablaUsuarios from '$lib/components/usuarios/TablaUsuarios.svelte';
+    import ModalCrearUsuario from '$lib/components/usuarios/ModalCrearUsuario.svelte';
+    import ModalEditarUsuario from '$lib/components/usuarios/ModalEditarUsuario.svelte';
+    import ModalVerUsuario from '$lib/components/usuarios/ModalVerUsuario.svelte';
+    import ModalConfirmacion from '$lib/components/common/ModalConfirmacion.svelte';
     import { appState } from '$lib/stores/app.svelte';
+    import { usuariosStore } from '$lib/stores/usuarios.svelte';
+    import { auth } from '$lib/stores/auth.svelte';
 
-    let isSidebarOpen = $state(false);
-    let isNotificationsOpen = $state(false);
-    function toggleSidebar() { appState.toggleSidebar() }
-    function toggleNotifications() { appState.toggleNotifications() }
+    function toggleSidebar() { appState.toggleSidebar(); }
+    function toggleNotifications() { appState.toggleNotifications(); }
 
-    interface Employee {
-        id: number;
-        name: string;
-        email: string;
-        phone: string;
-        role: string;
-        status: string;
+    // Modals state
+    let showCreate = $state(false);
+    let showEdit   = $state(false);
+    let showView   = $state(false);
+    let selectedId = $state<number | null>(null);
+
+    // Delete confirm
+    let confirmOpen    = $state(false);
+    let confirmLoading = $state(false);
+    let confirmError   = $state<string | null>(null);
+    let confirmData    = $state({ title: '', message: '', action: 'delete' as 'delete' | 'restore', userId: 0 });
+
+    // Restore confirm
+    let restoreOpen    = $state(false);
+    let restoreLoading = $state(false);
+    let restoreError   = $state<string | null>(null);
+    let restoreUserId  = $state(0);
+    let restoreUserName = $state('');
+
+    // Filters panel
+    let filtersOpen = $state(false);
+
+    // Search debounce
+    let searchInput = $state('');
+    let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function handleSearchInput() {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            usuariosStore.setFilter('search', searchInput);
+            usuariosStore.fetchEmployees();
+        }, 350);
     }
-
-    let searchTerm = $state('');
-    let showAddUser = $state(false);
-    
-    let employees = $state<Employee[]>([]);
-    let filteredEmployees = $state<Employee[]>([]);
-    
-    let loading = $state(false);
-
-    // --- Data Fetching & Cache ---
-    const EMPLOYEES_CACHE_STORAGE = 'ispga_employees_summary_v1';
-    let inFlight = false;
-    let abortController: AbortController | null = null;
-
-    let requestStates = $state<Record<string, { status: DashboardLoadStatus; endpoint: string; message?: string; updatedAt: number }>>({});
-    let indicatorVisible = $state(false);
-    let indicatorHideTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const overallStatus = $derived.by((): DashboardLoadStatus => {
-        const items = Object.values(requestStates);
-        if (items.some(i => i.status === 'loading')) return 'loading';
-        if (items.some(i => i.status === 'error')) return 'error';
-        if (items.some(i => i.status === 'success')) return 'success';
-        return 'idle';
-    });
-
-    const overallMessage = $derived.by((): string => {
-        const errors = Object.entries(requestStates)
-            .filter(([, v]) => v.status === 'error')
-            .sort((a, b) => (b[1].updatedAt ?? 0) - (a[1].updatedAt ?? 0));
-        const first = errors[0]?.[1];
-        if (!first) return '';
-        return first.message || 'Error de actualización';
-    });
-
-    function setRequestState(key: string, next: { status: DashboardLoadStatus; endpoint: string; message?: string }) {
-        requestStates[key] = { ...next, updatedAt: Date.now() };
-        requestStates = { ...requestStates };
-    }
-
-    const loadBus: DashboardLoadBus = {
-        start: (key, endpoint) => setRequestState(key, { status: 'loading', endpoint }),
-        success: (key) => {
-            const prev = requestStates[key];
-            setRequestState(key, { status: 'success', endpoint: prev?.endpoint || '' });
-        },
-        error: (key, details) => setRequestState(key, { status: 'error', endpoint: details.endpoint, message: details.message })
-    };
-
-    setContext(DASHBOARD_LOAD_CONTEXT, loadBus);
 
     $effect(() => {
-        if (indicatorHideTimer) {
-            clearTimeout(indicatorHideTimer);
-            indicatorHideTimer = null;
-        }
-
-        if (overallStatus === 'idle') {
-            indicatorVisible = false;
-            return;
-        }
-
-        indicatorVisible = true;
-
-        if (overallStatus === 'success') {
-            indicatorHideTimer = setTimeout(() => {
-                if (overallStatus === 'success') indicatorVisible = false;
-            }, 2500);
-        }
-
-        if (overallStatus === 'error') {
-            indicatorHideTimer = setTimeout(() => {
-                if (overallStatus === 'error') indicatorVisible = false;
-            }, 9000);
-        }
-
-        return () => {
-            if (indicatorHideTimer) {
-                clearTimeout(indicatorHideTimer);
-                indicatorHideTimer = null;
-            }
-        };
+        handleSearchInput();
+        return () => { if (searchTimer) clearTimeout(searchTimer); };
     });
 
-    async function loadEmployees() {
-        if (inFlight) return;
-        inFlight = true;
-        if (employees.length === 0) loading = true;
-        try {
-            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
-            const endpoint = `${API_BASE}/admin/employees`;
-            const headers: Record<string, string> = { Accept: 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-
-            loadBus.start('employees-list', endpoint);
-
-            if (abortController) abortController.abort();
-            abortController = new AbortController();
-
-            const data = await fetchJsonWithRetry<Employee[]>(
-                endpoint,
-                { headers, signal: abortController.signal },
-                { attempts: 3, baseDelayMs: 700 }
-            );
-
-            employees = data || [];
-            writeStorageCache(EMPLOYEES_CACHE_STORAGE, { employees });
-            filterEmployees();
-            
-            loadBus.success('employees-list');
-        } catch (e: any) {
-            if (e?.name === 'AbortError') return;
-            console.error('Error cargando usuarios:', e);
-            const err = e as FetchErrorDetails;
-            const message = typeof err?.message === 'string' && err.message ? err.message : 'Error cargando usuarios';
-            loadBus.error('employees-list', { endpoint: `${API_BASE}/admin/employees`, status: err?.status, message });
-            toast.error(message);
-        } finally {
-            loading = false;
-            inFlight = false;
-        }
-    }
-
-    function filterEmployees() {
-        const term = searchTerm.toLowerCase();
-        filteredEmployees = employees.filter(e => 
-            e.name.toLowerCase().includes(term) || 
-            e.email.toLowerCase().includes(term) ||
-            e.role.toLowerCase().includes(term)
-        );
-    }
-
-    onMount(() => {
-        const cached = readStorageCache<{employees: Employee[]}>(EMPLOYEES_CACHE_STORAGE);
-        if (cached?.data?.employees && Array.isArray(cached.data.employees) && cached.data.employees.length > 0) {
-            employees = cached.data.employees;
-            filterEmployees();
-            loading = false;
-        }
-
-        loadEmployees();
-        const interval = setInterval(loadEmployees, 60000);
-        
-        return () => {
-            clearInterval(interval);
-            if (abortController) abortController.abort();
-        };
-    });
-
-    // Pagination (Client-side for now)
-    let page = $state(1);
-    let pageSize = $state(10);
-    
-    let paginatedEmployees = $derived(
-        filteredEmployees.slice((page - 1) * pageSize, page * pageSize)
+    // Active filter count (excluding search, sort, per_page, page)
+    const activeFilterCount = $derived(
+        [
+            usuariosStore.filters.status,
+            usuariosStore.filters.role_id,
+            usuariosStore.filters.date_from,
+            usuariosStore.filters.date_to,
+            usuariosStore.filters.trashed,
+        ].filter(Boolean).length
     );
 
-    function handleSearch() {
-        page = 1;
-        filterEmployees();
+    function applyFilter<K extends keyof typeof usuariosStore.filters>(key: K, val: (typeof usuariosStore.filters)[K]) {
+        usuariosStore.setFilter(key, val);
+        usuariosStore.fetchEmployees();
+    }
+
+    function resetAllFilters() {
+        searchInput = '';
+        usuariosStore.resetFilters();
+        usuariosStore.fetchEmployees();
+    }
+
+    function handleSort(col: typeof usuariosStore.filters.sort_by) {
+        usuariosStore.setSort(col);
+        usuariosStore.fetchEmployees();
+    }
+
+    function handlePageChange(event: { page: number }) {
+        usuariosStore.setFilter('page', event.page);
+        usuariosStore.fetchEmployees();
     }
 
     // View
-    let showViewUser = $state(false);
-
-    function handleViewEmployee(id: number) {
-        selectedUserId = id;
-        showViewUser = true;
-    }
+    function openView(id: number) { selectedId = id; showView = true; }
 
     // Edit
-    let showEditUser = $state(false);
-    let selectedUserId = $state<number | null>(null);
-
-    function handleEditEmployee(id: number) {
-        selectedUserId = id;
-        showEditUser = true;
-    }
-
-    function handleUpdated() {
-        loadEmployees();
-    }
-
-    function handleCreated() {
-        loadEmployees();
-    }
+    function openEdit(id: number) { selectedId = id; showEdit = true; }
 
     // Delete
-    let confirmModalOpen = $state(false);
-    let confirmModalLoading = $state(false);
-    let confirmModalError = $state<string | null>(null);
-    let confirmModalData = $state({
-        title: '',
-        message: '',
-        confirmText: '',
-        cancelText: '',
-        type: 'danger' as 'danger' | 'success' | 'warning' | 'info',
-        action: 'delete',
-        userId: 0
-    });
-
-    function handleDeleteEmployee(id: number) {
-        const user = employees.find(e => e.id === id);
-        if (!user) return;
-
-        confirmModalData = {
+    function openDelete(id: number) {
+        const emp = usuariosStore.employees.find(e => e.id === id);
+        confirmData = {
             title: 'Eliminar Usuario',
-            message: `¿Estás seguro de eliminar el usuario ${user.name}? Esta acción no se puede deshacer.`,
-            confirmText: 'Sí, Eliminar',
-            cancelText: 'Cancelar',
-            type: 'danger',
+            message: `¿Estás seguro de eliminar a ${emp?.name ?? 'este usuario'}? Se moverá a la papelera.`,
             action: 'delete',
-            userId: id
+            userId: id,
         };
-        confirmModalError = null;
-        confirmModalOpen = true;
+        confirmError = null;
+        confirmOpen = true;
     }
 
-    async function handleConfirmAction() {
-        confirmModalLoading = true;
-        confirmModalError = null;
-        const id = confirmModalData.userId;
-        
+    async function handleConfirmDelete() {
+        confirmLoading = true;
+        confirmError = null;
         try {
-            const token = localStorage.getItem('employee_token');
-            const res = await fetch(`${API_BASE}/admin/employees/${id}`, {
-                method: 'DELETE',
-                headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
-            });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.message || 'Error al eliminar');
-            }
-            
+            await usuariosStore.deleteEmployee(confirmData.userId);
             toast.success('Usuario eliminado correctamente');
-            confirmModalOpen = false;
-            loadEmployees();
+            confirmOpen = false;
         } catch (e: any) {
-            console.error(e);
-            confirmModalError = e.message || 'Error de conexión';
-            toast.error(confirmModalError || 'Error desconocido');
+            confirmError = e.message ?? 'Error al eliminar';
+            toast.error(confirmError!);
         } finally {
-            confirmModalLoading = false;
+            confirmLoading = false;
         }
     }
 
+    // Restore
+    function openRestore(id: number) {
+        const emp = usuariosStore.employees.find(e => e.id === id);
+        restoreUserId   = id;
+        restoreUserName = emp?.name ?? 'este usuario';
+        restoreError    = null;
+        restoreOpen     = true;
+    }
+
+    async function handleConfirmRestore() {
+        restoreLoading = true;
+        restoreError   = null;
+        try {
+            await usuariosStore.restoreEmployee(restoreUserId);
+            toast.success('Usuario restaurado correctamente');
+            restoreOpen = false;
+        } catch (e: any) {
+            restoreError = e.message ?? 'Error al restaurar';
+            toast.error(restoreError!);
+        } finally {
+            restoreLoading = false;
+        }
+    }
+
+    // Toggle status
+    async function handleToggleStatus(id: number) {
+        try {
+            await usuariosStore.toggleStatus(id);
+            const emp = usuariosStore.employees.find(e => e.id === id);
+            toast.success(`Usuario ${emp?.status === 'active' ? 'activado' : 'desactivado'}`);
+        } catch (e: any) {
+            toast.error(e.message ?? 'Error al cambiar estado');
+        }
+    }
+
+    onMount(() => {
+        usuariosStore.fetchEmployees();
+        usuariosStore.fetchRoles();
+    });
 </script>
 
 <main class="flex-1 overflow-y-auto bg-[#09090f] text-gray-100 h-screen">
-    
-     <Encabezado {toggleSidebar} {toggleNotifications} />
-     <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
-    <div class="flex items-center justify-between mb-8">
-        <div>
-            <h1 class="text-xl md:text-4xl font-bold text-foreground mb-2">Gestión de Usuarios</h1>
-            <p class="sm:text-sm text-xs text-gray-400 leading-relaxed">Administra el personal y sus roles</p>
-        </div>
-        <div class="flex items-end justify-center">
-            <button onclick={()=> (showAddUser = true)}
-                    class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl bg-gray-200 text-gray-900 text-xs sm:text-sm font-semibold shadow-lg transition-colors hover:bg-gray-300">
-                    <PlusIcon size={20} strokeWidth={3} fill="currentColor" />
-                    Nuevo
-            </button>
-        </div>
-    </div>
+    <Encabezado {toggleSidebar} {toggleNotifications} />
 
-    <!-- Filters and Search -->
-    <div class="bg-card border border-neutral-800 rounded-lg p-6 mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="md:col-span-3">
-                <label class="block text-sm font-medium text-foreground mb-2" for="searchTerm">Buscar Usuario</label>
-                <input id="searchTerm" type="text" placeholder="Nombre, email o rol..." bind:value={searchTerm} oninput={handleSearch}
-                    class="w-full px-4 py-2 border border-neutral-800 rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0 bg-neutral-900" />
+    <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-5">
+
+        <!-- Page header -->
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="flex items-center gap-3">
+                    <Users class="size-6 text-blue-400" />
+                    <h1 class="text-2xl md:text-3xl font-bold">Gestión de Usuarios</h1>
+                </div>
+                <p class="text-sm text-gray-400 mt-1">Administra el personal, sus roles y permisos</p>
+            </div>
+            <div class="flex items-center gap-2">
+                {#if auth.isSuperAdmin}
+                    <a href="/usuarios/roles"
+                        class="flex items-center gap-2 px-3 py-2 rounded-xl border border-neutral-700 hover:border-purple-500/50 text-purple-400 hover:bg-purple-500/5 text-sm font-medium transition-colors">
+                        <Shield class="size-4" /> Roles
+                    </a>
+                {/if}
+                {#if auth.can('usuarios', 'crear')}
+                    <button
+                        onclick={() => showCreate = true}
+                        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-200 text-gray-900 text-sm font-semibold shadow-lg transition-colors hover:bg-gray-300">
+                        <PlusIcon class="size-4" strokeWidth={2.5} /> Nuevo
+                    </button>
+                {/if}
             </div>
         </div>
-    </div>
 
-    <!-- Users Table -->
-    <TablaUsuarios 
-        filteredEmployees={paginatedEmployees} 
-        handleDeleteEmployee={handleDeleteEmployee}
-        handleEditEmployee={handleEditEmployee}
-        handleViewEmployee={handleViewEmployee}
-        loading={loading}
-    />
-
-    <!-- Pagination Controls -->
-    {#if filteredEmployees.length > pageSize}
-    <div class="flex justify-center items-center gap-4 w-full mt-4">
-        <Pagination count={filteredEmployees.length} {pageSize} {page} onPageChange={(event)=> { page = event.page; }}>
-            <Pagination.PrevTrigger>
-                <ArrowLeftIcon class="size-4" />
-            </Pagination.PrevTrigger>
-            <Pagination.Context>
-                {#snippet children(pagination)}
-                    {#each pagination().pages as page, index (page)}
-                        {#if page.type === 'page'}
-                            <Pagination.Item {...page}>
-                                {page.value}
-                            </Pagination.Item>
-                        {:else}
-                            <Pagination.Ellipsis {index}>&#8230;</Pagination.Ellipsis>
-                        {/if}
-                    {/each}
-                {/snippet}
-            </Pagination.Context>
-            <Pagination.NextTrigger>
-                <ArrowRightIcon class="size-4" />
-            </Pagination.NextTrigger>
-        </Pagination>
-    </div>
-    {/if}
-
-    <!-- Add User Modal -->
-    {#if showAddUser}
-    <ModalCrearUsuario
-        {showAddUser}
-        on:close={() => showAddUser = false}
-        on:created={handleCreated}
-    />
-    {/if}
-
-    <!-- Edit User Modal -->
-    {#if showEditUser}
-    <ModalEditarUsuario
-        open={showEditUser}
-        userId={selectedUserId}
-        on:close={() => { showEditUser = false; selectedUserId = null; }}
-        on:updated={handleUpdated}
-    />
-    {/if}
-
-    <!-- View User Modal -->
-    {#if showViewUser}
-    <ModalVerUsuario
-        open={showViewUser}
-        userId={selectedUserId}
-        on:close={() => { showViewUser = false; selectedUserId = null; }}
-    />
-    {/if}
-
-    <!-- Confirmation Modal -->
-    <ModalConfirmacion
-        bind:open={confirmModalOpen}
-        title={confirmModalData.title}
-        message={confirmModalData.message}
-        confirmText={confirmModalData.confirmText}
-        cancelText={confirmModalData.cancelText}
-        type={confirmModalData.type}
-        loading={confirmModalLoading}
-        error={confirmModalError}
-        on:confirm={handleConfirmAction}
-        on:cancel={() => confirmModalOpen = false}
-    />
-
-    <!-- Indicador de carga -->
-    {#if indicatorVisible}
-        <div class="fixed bottom-4 right-4 z-[60]" in:scale={{ duration: 140, start: 0.9 }} out:fade={{ duration: 140 }}>
-            <button
-                class="flex items-center gap-2 bg-[#141414] border border-gray-800 text-gray-200 px-3 py-2 rounded-lg shadow-lg max-w-[320px]"
-                onclick={() => overallStatus === 'error' && loadEmployees()}
-            >
-                {#if overallStatus === 'loading'}
-                    <Loader2 class="w-4 h-4 animate-spin text-blue-400 flex-shrink-0" />
-                {:else if overallStatus === 'success'}
-                    <CheckCircleIcon class="w-4 h-4 text-green-500 flex-shrink-0" />
-                {:else if overallStatus === 'error'}
-                    <XCircleIcon class="w-4 h-4 text-red-500 flex-shrink-0" />
-                    <span class="text-xs truncate">{overallMessage}</span>
-                {/if}
-            </button>
+        <!-- Stats bar -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-card border border-neutral-800 rounded-xl px-4 py-3">
+                <p class="text-2xl font-bold">{usuariosStore.meta.total}</p>
+                <p class="text-xs text-neutral-400">Total empleados</p>
+            </div>
+            <div class="bg-card border border-neutral-800 rounded-xl px-4 py-3">
+                <p class="text-2xl font-bold text-green-400">{usuariosStore.employees.filter(e => e.status === 'active' && !e.deleted_at).length}</p>
+                <p class="text-xs text-neutral-400">Activos (pág.)</p>
+            </div>
+            <div class="bg-card border border-neutral-800 rounded-xl px-4 py-3">
+                <p class="text-2xl font-bold text-yellow-400">{usuariosStore.employees.filter(e => e.status === 'inactive').length}</p>
+                <p class="text-xs text-neutral-400">Inactivos (pág.)</p>
+            </div>
+            <div class="bg-card border border-neutral-800 rounded-xl px-4 py-3">
+                <p class="text-2xl font-bold text-neutral-400">{usuariosStore.roles.length}</p>
+                <p class="text-xs text-neutral-400">Roles definidos</p>
+            </div>
         </div>
-    {/if}
+
+        <!-- Search + Filters bar -->
+        <div class="bg-card border border-neutral-800 rounded-xl p-4 space-y-3">
+            <div class="flex gap-2">
+                <!-- Search -->
+                <div class="relative flex-1">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-500" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre, email o teléfono..."
+                        bind:value={searchInput}
+                        class="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder-neutral-600"
+                    />
+                    {#if searchInput}
+                        <button onclick={() => { searchInput = ''; usuariosStore.setFilter('search', ''); usuariosStore.fetchEmployees(); }}
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                            <X class="size-3.5" />
+                        </button>
+                    {/if}
+                </div>
+
+                <!-- Filters toggle -->
+                <button
+                    onclick={() => filtersOpen = !filtersOpen}
+                    class="flex items-center gap-2 px-3 py-2.5 rounded-lg border {filtersOpen || activeFilterCount > 0 ? 'border-blue-500 bg-blue-500/5 text-blue-400' : 'border-neutral-700 text-neutral-400 hover:border-neutral-600'} text-sm transition-colors"
+                >
+                    <SlidersHorizontal class="size-4" />
+                    Filtros
+                    {#if activeFilterCount > 0}
+                        <span class="size-5 flex items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold">{activeFilterCount}</span>
+                    {/if}
+                </button>
+
+                {#if activeFilterCount > 0 || searchInput}
+                    <button onclick={resetAllFilters}
+                        class="flex items-center gap-1 px-3 py-2.5 rounded-lg text-sm text-neutral-400 hover:text-white border border-neutral-700 hover:border-neutral-600 transition-colors">
+                        <RotateCcw class="size-3.5" /> Limpiar
+                    </button>
+                {/if}
+            </div>
+
+            <!-- Advanced filters panel -->
+            {#if filtersOpen}
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-neutral-800" transition:fade={{ duration: 120 }}>
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">Estado</label>
+                        <select
+                            value={usuariosStore.filters.status}
+                            onchange={(e) => applyFilter('status', (e.target as HTMLSelectElement).value as any)}
+                            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-white"
+                        >
+                            <option value="">Todos</option>
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
+                        </select>
+                    </div>
+
+                    <!-- Role -->
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">Rol</label>
+                        <select
+                            value={usuariosStore.filters.role_id}
+                            onchange={(e) => applyFilter('role_id', (e.target as HTMLSelectElement).value)}
+                            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-white"
+                        >
+                            <option value="">Todos los roles</option>
+                            {#each usuariosStore.roles as role}
+                                <option value={String(role.id)}>{role.nombre}</option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <!-- Date from -->
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">Desde</label>
+                        <input type="date"
+                            value={usuariosStore.filters.date_from}
+                            onchange={(e) => applyFilter('date_from', (e.target as HTMLInputElement).value)}
+                            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-white" />
+                    </div>
+
+                    <!-- Date to -->
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">Hasta</label>
+                        <input type="date"
+                            value={usuariosStore.filters.date_to}
+                            onchange={(e) => applyFilter('date_to', (e.target as HTMLInputElement).value)}
+                            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-white" />
+                    </div>
+
+                    <!-- Trashed -->
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">Eliminados</label>
+                        <select
+                            value={usuariosStore.filters.trashed}
+                            onchange={(e) => applyFilter('trashed', (e.target as HTMLSelectElement).value as any)}
+                            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-white"
+                        >
+                            <option value="">Solo activos</option>
+                            <option value="with">Incluir eliminados</option>
+                            <option value="only">Solo eliminados</option>
+                        </select>
+                    </div>
+
+                    <!-- Per page -->
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">Por página</label>
+                        <select
+                            value={usuariosStore.filters.per_page}
+                            onchange={(e) => applyFilter('per_page', Number((e.target as HTMLSelectElement).value) as any)}
+                            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-white"
+                        >
+                            <option value={10}>10</option>
+                            <option value={15}>15</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                        </select>
+                    </div>
+                </div>
+            {/if}
+        </div>
+
+        <!-- Table -->
+        <TablaUsuarios
+            employees={usuariosStore.employees}
+            loading={usuariosStore.loading}
+            sortBy={usuariosStore.filters.sort_by}
+            sortDir={usuariosStore.filters.sort_dir}
+            showTrashed={usuariosStore.filters.trashed !== ''}
+            canEdit={auth.can('usuarios', 'editar')}
+            canDelete={auth.can('usuarios', 'eliminar')}
+            onSort={handleSort}
+            onView={openView}
+            onEdit={openEdit}
+            onDelete={openDelete}
+            onRestore={openRestore}
+            onToggleStatus={handleToggleStatus}
+        />
+
+        <!-- Pagination -->
+        {#if usuariosStore.meta.last_page > 1}
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mt-2">
+                <p class="text-xs text-neutral-500">
+                    Mostrando {usuariosStore.meta.from ?? 0}–{usuariosStore.meta.to ?? 0} de {usuariosStore.meta.total} empleados
+                </p>
+                <Pagination
+                    count={usuariosStore.meta.total}
+                    pageSize={usuariosStore.meta.per_page}
+                    page={usuariosStore.meta.current_page}
+                    onPageChange={handlePageChange}
+                >
+                    <Pagination.PrevTrigger><ArrowLeftIcon class="size-4" /></Pagination.PrevTrigger>
+                    <Pagination.Context>
+                        {#snippet children(pagination)}
+                            {#each pagination().pages as p, index (p)}
+                                {#if p.type === 'page'}
+                                    <Pagination.Item {...p}>{p.value}</Pagination.Item>
+                                {:else}
+                                    <Pagination.Ellipsis {index}>&#8230;</Pagination.Ellipsis>
+                                {/if}
+                            {/each}
+                        {/snippet}
+                    </Pagination.Context>
+                    <Pagination.NextTrigger><ArrowRightIcon class="size-4" /></Pagination.NextTrigger>
+                </Pagination>
+            </div>
+        {:else if !usuariosStore.loading && usuariosStore.meta.total > 0}
+            <p class="text-xs text-neutral-500 text-center mt-2">
+                {usuariosStore.meta.total} empleado(s) encontrado(s)
+            </p>
+        {/if}
 
     </div>
 </main>
+
+<!-- Modals -->
+{#if showCreate}
+    <ModalCrearUsuario
+        open={showCreate}
+        on:close={() => showCreate = false}
+        on:created={() => { showCreate = false; usuariosStore.fetchEmployees(); }}
+    />
+{/if}
+
+{#if showEdit}
+    <ModalEditarUsuario
+        open={showEdit}
+        userId={selectedId}
+        on:close={() => { showEdit = false; selectedId = null; }}
+        on:updated={() => { showEdit = false; selectedId = null; usuariosStore.fetchEmployees(); }}
+    />
+{/if}
+
+{#if showView}
+    <ModalVerUsuario
+        open={showView}
+        userId={selectedId}
+        on:close={() => { showView = false; selectedId = null; }}
+    />
+{/if}
+
+<!-- Delete confirmation -->
+<ModalConfirmacion
+    bind:open={confirmOpen}
+    title={confirmData.title}
+    message={confirmData.message}
+    confirmText="Sí, eliminar"
+    cancelText="Cancelar"
+    type="danger"
+    loading={confirmLoading}
+    error={confirmError}
+    on:confirm={handleConfirmDelete}
+    on:cancel={() => confirmOpen = false}
+/>
+
+<!-- Restore confirmation -->
+<ModalConfirmacion
+    bind:open={restoreOpen}
+    title="Restaurar Usuario"
+    message="¿Restaurar al usuario {restoreUserName}? Volverá a estar disponible en el sistema."
+    confirmText="Sí, restaurar"
+    cancelText="Cancelar"
+    type="success"
+    loading={restoreLoading}
+    error={restoreError}
+    on:confirm={handleConfirmRestore}
+    on:cancel={() => restoreOpen = false}
+/>

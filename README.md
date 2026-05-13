@@ -475,11 +475,32 @@ Todas las peticiones se dirigen a `{PUBLIC_API_BASE}` con header `Authorization:
 
 El sistema usa autenticación por **token Bearer** (Laravel Sanctum en el backend):
 
-1. El login retorna un token de acceso personal
-2. El token se persiste en `localStorage` con la clave `employee_token`
+1. El login retorna un token de acceso personal y la lista de permisos del rol del empleado
+2. El token y los permisos se persisten en `localStorage` (claves `employee_token`, `employee_permissions`, etc.)
 3. Cada petición incluye el header: `Authorization: Bearer <token>`
 4. Respuestas `401 Unauthorized` redirigen al usuario a la pantalla de login
 5. Los canales WebSocket privados se validan vía `POST /broadcasting/auth`
+
+### Control de acceso en el frontend
+
+El store `auth` expone la función `can(module, action)` para proteger elementos de la UI:
+
+```svelte
+<!-- Mostrar botón solo si tiene permiso -->
+{#if auth.can('usuarios', 'crear')}
+    <button>Nuevo usuario</button>
+{/if}
+
+<!-- Pasar props condicionalmente al componente tabla -->
+<TablaUsuarios
+    canEdit={auth.can('usuarios', 'editar')}
+    canDelete={auth.can('usuarios', 'eliminar')}
+/>
+```
+
+Los permisos disponibles siguen el formato `módulo.acción`. El rol `super_admin` y el permiso `acceso_total` omiten todos los checks (siempre retornan `true`).
+
+Los módulos y acciones están definidos en `src/lib/config/permissions.ts`. Para agregar un nuevo módulo, ver la guía en `ispgestorserver/PERMISOS.md`.
 
 ```typescript
 // Ejemplo de petición autenticada

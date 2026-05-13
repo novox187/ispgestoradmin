@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { API_BASE } from "$lib/config";
   import { BRAND } from "$lib/brand";
+  import { auth } from "$lib/stores/auth.svelte";
   import dashboardDesktop from "$lib/assets/login/vistaescritorio.png";
   import dashboardMobile from "$lib/assets/login/vistamobile.png";
   import logoSrc from "$lib/assets/logos/logopng.png";
@@ -64,10 +65,14 @@
       if (!token) throw new Error("No se recibió el token de autenticación");
       if (String(role).toLowerCase() !== "employee") throw new Error("No autorizado");
 
-      localStorage.setItem("employee_token", token);
-      localStorage.setItem("employee_role", String(data?.employee?.role || data?.employee?.rol || role));
-      if (nombre)     localStorage.setItem("employee_nombre", nombre);
-      if (employeeId) localStorage.setItem("employee_id", String(employeeId));
+      auth.save({
+        token,
+        nombre:      nombre,
+        roleSlug:    data?.employee?.role_slug ?? '',
+        roleName:    String(data?.employee?.role || data?.employee?.rol || role),
+        permissions: data?.employee?.permissions ?? [],
+        employeeId:  employeeId,
+      });
 
       goto("/", { replaceState: true });
     } catch (err) {
