@@ -34,7 +34,7 @@ export const BRAND = {
   contact: {
     email: 'contacto@ironlink.com',
     address: 'Av. Principal 123',
-    nit: '123456789-0',
+    ruc: '1790000000001',
     website: 'ironlink.com',
     phone: '+1 800 000 0000',
   },

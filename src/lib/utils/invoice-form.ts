@@ -52,7 +52,7 @@ export interface InvoicePayload {
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 export const VALID_STATUSES: InvoiceStatus[] = ['draft', 'pending', 'paid', 'failed', 'cancelled'];
-export const TAX_RATES = [0, 5, 10, 15, 19, 21] as const;
+export const TAX_RATES = [0, 15] as const; // Ecuador: 0% (exento) y 15% IVA (Decreto 470/2024)
 export const DEFAULT_TAX_RATE = 15;
 export const MAX_DESCRIPTION_LENGTH = 500;
 export const MAX_AMOUNT = 9_999_999.99;
@@ -277,6 +277,6 @@ export function isPossibleDuplicate(
 export function defaultDescription(planName: string, issueDate: string): string {
     if (!issueDate || !isValidDate(issueDate)) return `Servicio de Internet — ${planName}`;
     const d = new Date(issueDate + 'T00:00:00');
-    const mes = d.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+    const mes = d.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
     return `Servicio de Internet (${planName}) — ${mes.charAt(0).toUpperCase() + mes.slice(1)}`;
 }

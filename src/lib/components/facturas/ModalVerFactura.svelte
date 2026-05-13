@@ -26,7 +26,7 @@
     const issuer = $derived({
         name:    snapVal('issuer_name')    || BRAND.nameUpper,
         address: snapVal('issuer_address') || BRAND.contact.address,
-        nit:     snapVal('issuer_nit')     || BRAND.contact.nit,
+        ruc:     snapVal('issuer_ruc')     || BRAND.contact.ruc,
         email:   snapVal('issuer_email')   || BRAND.contact.email,
         phone:   snapVal('issuer_phone')   || BRAND.contact.phone,
         website: BRAND.contact.website,
@@ -73,7 +73,7 @@
     function fmtDate(d: string | undefined): string {
         if (!d) return '—';
         const date = new Date(d);
-        return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+        return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
     function fmtDateShort(d: string | undefined): string {
@@ -116,7 +116,7 @@
         doc.setTextColor(180, 180, 190);
         doc.text(BRAND.slogan, margin, 24);
         doc.text(snap.address, margin, 29);
-        doc.text(`NIT: ${snap.nit}  |  ${snap.email}  |  ${snap.phone}`, margin, 34);
+        doc.text(`RUC: ${snap.ruc}  |  ${snap.email}  |  ${snap.phone}`, margin, 34);
 
         // Nº factura (derecha)
         doc.setFont('helvetica', 'bold');
@@ -186,13 +186,13 @@
         doc.setTextColor(70, 70, 80);
         const companyLines = [
             snap.address,
-            `NIT: ${snap.nit}`,
+            `RUC: ${snap.ruc}`,
             snap.email,
             snap.website,
         ];
         const clientLines = [
             invoice.client?.address || 'Dirección no registrada',
-            `DNI/NIT: ${invoice.client?.dni || '—'}`,
+            `RUC/Cédula: ${invoice.client?.dni || '—'}`,
             invoice.client?.email || '—',
             invoice.client?.phone || '',
         ];
@@ -390,7 +390,7 @@
                 <div class="text-base font-bold text-white">{issuer.name}</div>
                 <div class="space-y-0.5 text-sm text-neutral-400">
                   <p>{issuer.address}</p>
-                  <p>NIT: {issuer.nit}</p>
+                  <p>RUC: {issuer.ruc}</p>
                   <p>{issuer.email}</p>
                   <p>{issuer.website}</p>
                 </div>
@@ -405,7 +405,7 @@
                 <div class="space-y-0.5 text-sm text-neutral-400">
                   <p>{invoice.client?.address || 'Dirección no registrada'}</p>
                   {#if invoice.client?.dni}
-                    <p>DNI/NIT: {invoice.client.dni}</p>
+                    <p>RUC/Cédula: {invoice.client.dni}</p>
                   {/if}
                   {#if invoice.client?.email}
                     <p>{invoice.client.email}</p>

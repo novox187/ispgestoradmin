@@ -370,6 +370,33 @@ ispgestoradmin/
 
 ---
 
+### Configuración de facturación (Ecuador — SRI)
+
+El sistema está adaptado para la normativa tributaria de Ecuador. Toda la configuración se centraliza en `/configuraciones/facturacion`.
+
+**Campos del formulario:**
+
+| Campo | Descripción | Validación en tiempo real |
+|---|---|---|
+| **RUC** | Registro Único de Contribuyentes del emisor | 13 dígitos, provincia 01-24, sin `000` al final |
+| **Código de establecimiento SRI** | 3 dígitos registrados en el SRI | Auto-rellena ceros al perder foco (ej. `1` → `001`) |
+| **Punto de emisión SRI** | 3 dígitos del punto de emisión | Auto-rellena ceros al perder foco |
+| **IVA** | Tasa en decimal (ej. `0.15` = 15%) | Ecuaciones en tiempo real con previsualización |
+| **Moneda** | Código ISO (Ecuador: `USD`) | Automayúsculas, máx. 3 letras |
+| **Teléfono** | Formato `+593 9X XXX XXXX` | Sugerencia de formato Ecuador |
+
+**Preview del número de factura:**  
+Mientras configuras los códigos SRI, el formulario muestra el formato resultante en tiempo real:  
+`001-001-000000001`
+
+**Flujo recomendado al configurar por primera vez:**
+1. Ingresa el **RUC** de la empresa (el formulario valida estructura y provincia automáticamente)
+2. Configura **código de establecimiento** y **punto de emisión** (normalmente `001` y `001`)
+3. Verifica que **IVA = 0.15** y **moneda = USD** para Ecuador
+4. Guarda — los cambios aplican en la siguiente factura generada (las anteriores conservan su snapshot)
+
+---
+
 ### Generación de PDFs
 
 - Desde `/facturas`, abre una factura y clic en "Descargar PDF"
@@ -416,8 +443,21 @@ Todas las peticiones se dirigen a `{PUBLIC_API_BASE}` con header `Authorization:
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/admin/invoices` | Listar facturas con filtros |
-| `POST` | `/admin/invoices/generate-auto` | Generar facturas automáticas |
+| `GET` | `/admin/invoices` | Listar facturas con filtros (estado, cliente, fecha) |
+| `POST` | `/admin/invoices` | Crear factura manual |
+| `GET` | `/admin/invoices/{id}` | Detalle de factura con snapshot |
+| `PUT` | `/admin/invoices/{id}` | Actualizar factura |
+| `DELETE` | `/admin/invoices/{id}` | Eliminar (soft delete) |
+| `POST` | `/admin/invoices/generate-auto` | Generar facturas mensuales automáticas |
+| `POST` | `/admin/invoices/{id}/charge` | Cobrar factura manualmente |
+| `GET` | `/admin/invoices/config-check` | Verificar configuración SRI antes de generar |
+
+### Configuración de facturación (SRI Ecuador)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/admin/settings?module=facturacion` | Leer todos los parámetros de facturación |
+| `PUT` | `/admin/settings` | Guardar parámetros (array de objetos) |
 
 ### Empleados
 
