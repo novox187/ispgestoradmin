@@ -51,7 +51,7 @@
 	<title>{BRAND.pageTitle(pageSection)}</title>
 </svelte:head>
 
-<div class="flex h-screen min-w-dvw bg-[#0f0f0f] text-gray-100 ">
+<div class="flex h-full overflow-hidden bg-[#0f0f0f] text-gray-100">
   {#if !isLogin}
     <Menu bind:isOpen={appState.isSidebarOpen} />
   {/if}
