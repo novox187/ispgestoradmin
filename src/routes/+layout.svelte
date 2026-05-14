@@ -13,13 +13,34 @@
 
     const isLogin = $derived($page.url.pathname === '/login');
 
-    // Título dinámico basado en la ruta actual
+    // Sección actual a partir de la URL (capitalizada para el <title>)
     const pageSection = $derived.by(() => {
         const path = $page.url.pathname;
         if (path === '/') return 'Dashboard';
         const segment = path.replace(/^\/+/, '').split('/')[0];
         return segment.charAt(0).toUpperCase() + segment.slice(1);
     });
+
+    // Slug en minúsculas — clave para la descripción contextual del brand
+    const pageSlug = $derived.by(() => {
+        const path = $page.url.pathname;
+        if (path === '/') return 'dashboard';
+        return path.replace(/^\/+/, '').split('/')[0].toLowerCase();
+    });
+
+    // Descripción adaptada a la sección activa
+    const pageDescription = $derived(BRAND.pageDescription(pageSlug));
+
+    // URL canónica absoluta de la vista actual
+    const canonicalUrl = $derived(`${BRAND.canonicalUrl}${$page.url.pathname}`);
+
+    // Rutas públicas indexables; el resto del panel se marca como noindex
+    const isPublicRoute = $derived(
+        $page.url.pathname === '/' || $page.url.pathname === '/login'
+    );
+    const robotsDirective = $derived(
+        isPublicRoute ? 'index, follow, max-image-preview:large' : 'noindex, nofollow, noarchive, nosnippet'
+    );
 
     function guard() {
         if (typeof window === 'undefined') return;
@@ -49,6 +70,14 @@
 <svelte:head>
 	<link rel="icon" href={favicon} />
 	<title>{BRAND.pageTitle(pageSection)}</title>
+	<meta name="description" content={pageDescription} />
+	<meta name="robots" content={robotsDirective} />
+	<link rel="canonical" href={canonicalUrl} />
+	<meta property="og:title" content={BRAND.pageTitle(pageSection)} />
+	<meta property="og:description" content={pageDescription} />
+	<meta property="og:url" content={canonicalUrl} />
+	<meta name="twitter:title" content={BRAND.pageTitle(pageSection)} />
+	<meta name="twitter:description" content={pageDescription} />
 </svelte:head>
 
 <div class="flex h-full overflow-hidden bg-[#0f0f0f] text-gray-100">

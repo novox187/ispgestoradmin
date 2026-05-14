@@ -1,14 +1,181 @@
 <!doctype html>
 <html lang="es" class="dark" data-theme="cerberus">
 	<head>
+		<!-- ──────────────────────────────────────────────────────────
+		     Codificación, viewport y configuración base
+		────────────────────────────────────────────────────────── -->
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="description" content="Iron Link — Plataforma de gestión integral para proveedores de internet." />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+		<!-- ──────────────────────────────────────────────────────────
+		     SEO primario — título, descripción y autoría
+		     Estos valores son los que aparecen en los resultados de
+		     búsqueda (Google, Bing) y en la pestaña del navegador.
+		────────────────────────────────────────────────────────── -->
+		<title>Iron Link — Plataforma de gestión ISP</title>
+		<meta
+			name="description"
+			content="Iron Link es la plataforma profesional para proveedores de internet (ISP): gestión de clientes, facturación SRI, control MikroTik, soporte y monitoreo en tiempo real."
+		/>
+		<meta
+			name="keywords"
+			content="gestión ISP, software para proveedores de internet, plataforma ISP, administración ISP, facturación SRI, MikroTik administración, control de routers MikroTik, monitoreo de red en tiempo real, gestión de clientes ISP, CRM ISP, cobranza ISP, soporte técnico ISP, WISP software, Iron Link"
+		/>
+		<meta name="author" content="Harrison Ochoa" />
 		<meta name="application-name" content="Iron Link" />
-		<meta property="og:title" content="Iron Link" />
-		<meta property="og:description" content="Plataforma de gestión integral para proveedores de internet." />
+		<meta name="generator" content="SvelteKit" />
+		<meta name="rating" content="general" />
+		<meta name="referrer" content="strict-origin-when-cross-origin" />
+		<meta name="format-detection" content="telephone=no" />
+
+		<!-- ──────────────────────────────────────────────────────────
+		     Control de indexación
+		     `index, follow` permite que la home/login aparezca en
+		     buscadores; cada layout/ruta puede sobrescribir esta
+		     directiva con `noindex` para módulos internos.
+		────────────────────────────────────────────────────────── -->
+		<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+		<meta name="googlebot" content="index, follow" />
+		<meta name="bingbot" content="index, follow" />
+
+		<!-- URL canónica — evita contenido duplicado y consolida señales -->
+		<link rel="canonical" href="https://admin.ironlink.com/" />
+
+		<!-- Idioma y región objetivo (hreflang) -->
+		<link rel="alternate" hreflang="es" href="https://admin.ironlink.com/" />
+		<link rel="alternate" hreflang="es-EC" href="https://admin.ironlink.com/" />
+		<link rel="alternate" hreflang="x-default" href="https://admin.ironlink.com/" />
+
+		<!-- ──────────────────────────────────────────────────────────
+		     Open Graph — vista al compartir en Facebook, LinkedIn,
+		     WhatsApp, Slack, Discord, Telegram, etc.
+		────────────────────────────────────────────────────────── -->
+		<meta property="og:site_name" content="Iron Link" />
 		<meta property="og:type" content="website" />
-		<title>Iron Link</title>
+		<meta property="og:locale" content="es_EC" />
+		<meta property="og:locale:alternate" content="es_ES" />
+		<meta property="og:title" content="Iron Link — Plataforma de gestión ISP" />
+		<meta
+			property="og:description"
+			content="Plataforma todo-en-uno para ISPs: clientes, facturación SRI, MikroTik, soporte en tiempo real y monitoreo de red."
+		/>
+		<meta property="og:url" content="https://admin.ironlink.com/" />
+		<meta property="og:image" content="https://admin.ironlink.com/og-image.png" />
+		<meta property="og:image:secure_url" content="https://admin.ironlink.com/og-image.png" />
+		<meta property="og:image:type" content="image/png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="Iron Link — Plataforma profesional de gestión para proveedores de internet" />
+
+		<!-- ──────────────────────────────────────────────────────────
+		     Twitter / X Card — preview enriquecido al compartir
+		────────────────────────────────────────────────────────── -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@ironlink" />
+		<meta name="twitter:creator" content="@ironlink" />
+		<meta name="twitter:title" content="Iron Link — Plataforma de gestión ISP" />
+		<meta
+			name="twitter:description"
+			content="Plataforma todo-en-uno para ISPs: clientes, facturación SRI, MikroTik, soporte en tiempo real y monitoreo de red."
+		/>
+		<meta name="twitter:image" content="https://admin.ironlink.com/og-image.png" />
+		<meta name="twitter:image:alt" content="Iron Link — Plataforma profesional de gestión para proveedores de internet" />
+
+		<!-- ──────────────────────────────────────────────────────────
+		     Mobile / PWA — apariencia en sistemas operativos modernos
+		     Define el color del tab del navegador, el comportamiento
+		     en iOS al “agregar a pantalla de inicio” y los íconos.
+		────────────────────────────────────────────────────────── -->
+		<meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+		<meta name="color-scheme" content="dark light" />
+		<meta name="msapplication-TileColor" content="#0f0f0f" />
+		<meta name="msapplication-config" content="/browserconfig.xml" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-title" content="Iron Link" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<!-- Manifest e íconos: el manifest describe la app como PWA;
+		     los rel=icon proveen variantes para cada plataforma. -->
+		<link rel="manifest" href="/site.webmanifest" />
+		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#0f0f0f" />
+
+		<!-- ──────────────────────────────────────────────────────────
+		     Performance hints — mejoran Core Web Vitals (LCP/INP),
+		     que Google usa como señal de ranking desde 2021.
+		     Conectar de forma anticipada al backend acelera la
+		     primera petición autenticada del dashboard.
+		────────────────────────────────────────────────────────── -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="dns-prefetch" href="https://admin.ironlink.com" />
+
+		<!-- ──────────────────────────────────────────────────────────
+		     Datos estructurados (Schema.org / JSON-LD)
+		     Permite a Google generar rich snippets, knowledge panels
+		     y mostrar la marca como una organización reconocida.
+		────────────────────────────────────────────────────────── -->
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@graph": [
+					{
+						"@type": "Organization",
+						"@id": "https://admin.ironlink.com/#organization",
+						"name": "Iron Link",
+						"legalName": "Iron Link — Plataforma de gestión ISP",
+						"url": "https://admin.ironlink.com/",
+						"logo": {
+							"@type": "ImageObject",
+							"url": "https://admin.ironlink.com/og-image.png",
+							"width": 1200,
+							"height": 630
+						},
+						"slogan": "Conectando el futuro",
+						"description": "Plataforma profesional para proveedores de servicios de internet (ISP): gestión de clientes, facturación, control MikroTik, soporte y monitoreo en tiempo real.",
+						"sameAs": []
+					},
+					{
+						"@type": "SoftwareApplication",
+						"@id": "https://admin.ironlink.com/#software",
+						"name": "Iron Link",
+						"applicationCategory": "BusinessApplication",
+						"applicationSubCategory": "ISP Management Platform",
+						"operatingSystem": "Web (Cross-platform)",
+						"url": "https://admin.ironlink.com/",
+						"description": "Plataforma todo-en-uno para ISPs y WISPs: gestión de clientes, facturación adaptada al SRI Ecuador, integración nativa con MikroTik RouterOS, chat de soporte en tiempo real y monitoreo de red.",
+						"inLanguage": "es",
+						"isAccessibleForFree": false,
+						"featureList": [
+							"Gestión integral de clientes ISP",
+							"facturación SRI (Ecuador)",
+							"Control nativo de routers MikroTik",
+							"Monitoreo de red en tiempo real",
+							"Soporte y chat con WebSocket",
+							"Importación masiva de clientes",
+							"Roles y permisos granulares",
+							"Generación de reportes PDF"
+						],
+						"publisher": { "@id": "https://admin.ironlink.com/#organization" }
+					},
+					{
+						"@type": "WebSite",
+						"@id": "https://admin.ironlink.com/#website",
+						"url": "https://admin.ironlink.com/",
+						"name": "Iron Link",
+						"description": "Iron Link — Plataforma de gestión integral para proveedores de internet.",
+						"publisher": { "@id": "https://admin.ironlink.com/#organization" },
+						"inLanguage": "es"
+					}
+				]
+			}
+		</script>
+
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

@@ -88,6 +88,23 @@
 
 <svelte:head>
   <title>{BRAND.pageTitle('Iniciar sesión')}</title>
+  <meta name="description" content={BRAND.pageDescription('login')} />
+  <meta property="og:title" content={BRAND.pageTitle('Iniciar sesión')} />
+  <meta property="og:description" content={BRAND.pageDescription('login')} />
+  <meta property="og:url" content={`${BRAND.canonicalUrl}/login`} />
+  <meta name="twitter:title" content={BRAND.pageTitle('Iniciar sesión')} />
+  <meta name="twitter:description" content={BRAND.pageDescription('login')} />
+  <link rel="canonical" href={`${BRAND.canonicalUrl}/login`} />
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: `Iniciar sesión | ${BRAND.name}`,
+    description: BRAND.pageDescription('login'),
+    url: `${BRAND.canonicalUrl}/login`,
+    isPartOf: { '@type': 'WebSite', name: BRAND.name, url: BRAND.canonicalUrl },
+    inLanguage: BRAND.lang,
+    primaryImageOfPage: { '@type': 'ImageObject', url: BRAND.ogImage }
+  })}<\/script>`}
 </svelte:head>
 
 <main class="root">
