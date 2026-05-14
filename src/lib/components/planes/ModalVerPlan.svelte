@@ -278,6 +278,12 @@
                     <span class="text-sm font-medium">{props.plan.ratio}</span>
                   </div>
                 {/if}
+                {#if guaranteedPerClient > 0}
+                  <div class="flex justify-between items-center col-span-2 sm:col-span-1">
+                    <span class="text-xs text-muted-foreground flex items-center gap-1"><ArrowDown class="w-3 h-3 text-emerald-400" /> Garantizados por cliente</span>
+                    <span class="text-sm font-medium text-emerald-300">{formatMbps(guaranteedPerClient)}</span>
+                  </div>
+                {/if}
                 <div class="flex justify-between items-center col-span-2 sm:col-span-1">
                   <span class="text-xs text-muted-foreground">Simétrico</span>
                   <span class="text-sm font-medium">{props.plan.symmetric ? 'Sí' : 'No'}</span>
@@ -429,7 +435,7 @@
                   <span class="text-sm font-medium">{props.plan.priority ?? '—'} <span class="text-xs text-muted-foreground">(1 = mayor prioridad)</span></span>
                 </div>
                 <div class="flex justify-between items-center border-t border-neutral-800 pt-2 mt-1">
-                  <span class="text-xs text-muted-foreground">Ingresos mensuales totales</span>
+                  <span class="text-xs text-muted-foreground">Ingresos mensuales totales sin IVA</span>
                   <span class="text-sm font-semibold font-mono">
                     ${props.plan.revenue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
