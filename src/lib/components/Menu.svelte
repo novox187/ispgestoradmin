@@ -9,6 +9,7 @@
   import { BRAND } from '$lib/brand';
   import { fly } from 'svelte/transition';
   import LogoComponent from '$lib/assets/logos/LogoComponent.svelte';
+  import { auth } from '$lib/stores/auth.svelte';
 
   let { isOpen = $bindable(false) } = $props();
 
@@ -71,15 +72,8 @@
 
   let userMenuOpen = $state(false);
   let loggingOut = $state(false);
-  let userName = $state('Usuario');
-  let userRole = $state('Sin Rol');
-
-  $effect(() => {
-    const storedName = localStorage.getItem('employee_nombre');
-    const storedRole = localStorage.getItem('employee_role');
-    if (storedName) userName = storedName;
-    if (storedRole) userRole = storedRole.toUpperCase();
-  });
+  let userName = $derived(auth.nombre || 'Usuario');
+  let userRole = $derived((auth.roleName || 'Sin Rol').toUpperCase());
 
   async function handleLogout() {
     if (loggingOut) return;
