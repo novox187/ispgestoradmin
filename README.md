@@ -14,7 +14,7 @@ Panel de administración web para la gestión integral de proveedores de servici
 
 | Vista escritorio | Vista móvil |
 |:---:|:---:|
-| ![Vista escritorio](src/lib/assets/login/vistaescritorio.png) | ![Vista móvil](src/lib/assets/login/vistamobile.png) |
+| ![Vista escritorio](src/lib/assets/login/vistaescritorio1.2.png) | ![Vista móvil](src/lib/assets/login/vistamobile1.2.png) |  
 
 ---
 

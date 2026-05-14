@@ -3,8 +3,8 @@
   import { API_BASE } from "$lib/config";
   import { BRAND } from "$lib/brand";
   import { auth } from "$lib/stores/auth.svelte";
-  import dashboardDesktop from "$lib/assets/login/vistaescritorio.png";
-  import dashboardMobile from "$lib/assets/login/vistamobile.png";
+  import dashboardDesktop from "$lib/assets/login/vistaescritorio1.2.png";
+  import dashboardMobile from "$lib/assets/login/vistamobile1.2.png";
   import logoSrc from "$lib/assets/logos/logopng.png";
   import {
     Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle2, Loader2,
