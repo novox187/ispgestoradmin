@@ -158,6 +158,13 @@
     return () => { if (pollInterval) { clearInterval(pollInterval); pollInterval = null; } };
   });
 
+  // ── Features ordenadas y agrupadas ───────────────────────────────────────
+  const sortedFeatures = $derived(
+    [...(props.plan?.features ?? [])].sort((a, b) => a.order - b.order)
+  );
+  const highlightedFeatures = $derived(sortedFeatures.filter(f => f.highlighted));
+  const regularFeatures = $derived(sortedFeatures.filter(f => !f.highlighted));
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   function billingLabel(c?: string): string {
     return ({ monthly: 'Mensual', quarterly: 'Trimestral', yearly: 'Anual' } as Record<string, string>)[c ?? ''] ?? (c ?? '—');
@@ -429,14 +436,11 @@
                   <Package class="w-4 h-4 text-muted-foreground" />
                   <span class="text-sm font-semibold">Características del plan</span>
                 </div>
-                {@const sorted = [...props.plan.features].sort((a, b) => a.order - b.order)}
-                {@const highlighted = sorted.filter(f => f.highlighted)}
-                {@const regular = sorted.filter(f => !f.highlighted)}
-                {#if highlighted.length}
+                {#if highlightedFeatures.length}
                   <div class="mb-3">
                     <div class="text-[10px] text-emerald-500 font-medium uppercase tracking-wider mb-1.5">Destacadas</div>
                     <ul class="space-y-1.5">
-                      {#each highlighted as f}
+                      {#each highlightedFeatures as f}
                         <li class="flex items-start gap-2 text-sm text-emerald-300">
                           <CheckCircle2 class="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />
                           <span>{f.feature}</span>
@@ -445,13 +449,13 @@
                     </ul>
                   </div>
                 {/if}
-                {#if regular.length}
+                {#if regularFeatures.length}
                   <div>
-                    {#if highlighted.length}
+                    {#if highlightedFeatures.length}
                       <div class="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1.5">Incluidas</div>
                     {/if}
                     <ul class="space-y-1.5">
-                      {#each regular as f}
+                      {#each regularFeatures as f}
                         <li class="flex items-start gap-2 text-sm text-neutral-300">
                           <Circle class="w-3 h-3 mt-1 shrink-0 text-neutral-600 fill-neutral-600" />
                           <span>{f.feature}</span>
