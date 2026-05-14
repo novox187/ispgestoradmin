@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
   import { XIcon } from '@lucide/svelte';
+  import { onMount } from 'svelte';
+  import { API_BASE } from '$lib/config';
   import type { CapacitySnapshot } from '$lib/types/capacity';
   import { formatMbps, pct, limitStringFromMbps, ratioDivisorFromMaxAndGuaranteed, ratioStringFromDivisor } from '$lib/utils/plan-calculations';
   type FeatureItem = { feature: string; order: number; highlighted: boolean };
@@ -62,6 +64,27 @@
   function removeFeature(i: number) {
     if (i >= 0 && i < featuresList.length) featuresList.splice(i, 1);
   }
+  let taxRate = $state(0.15);
+  let priceIncludesIva = $state(false);
+
+  onMount(async () => {
+    try {
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
+      const res = await fetch(`${API_BASE}/admin/settings?module=facturacion`, {
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const rows: any[] = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+        const row = rows.find((r: any) => r.key === 'tax_rate');
+        if (row) {
+          const parsed = parseFloat(row.value);
+          if (Number.isFinite(parsed) && parsed > 0) taxRate = parsed;
+        }
+      }
+    } catch { /* fallback al 15% por defecto */ }
+  });
+
   let isCreating = $state(false);
   let createOk = $state(false);
   let createErr = $state<string | null>(null);
@@ -102,6 +125,19 @@
     if (!Number.isFinite(u) || u <= 0) return 0;
     return Math.max(0, u / ratioDivisor);
   });
+
+  const ivaPreviewValid = $derived(priceValid && Number(working.price) > 0);
+  const computedNetPrice = $derived(
+    ivaPreviewValid
+      ? (priceIncludesIva ? Number(working.price) / (1 + taxRate) : Number(working.price))
+      : 0
+  );
+  const computedIvaAmount = $derived(
+    ivaPreviewValid ? Math.round(computedNetPrice * taxRate * 100) / 100 : 0
+  );
+  const computedTotalWithIva = $derived(
+    ivaPreviewValid ? Math.round((computedNetPrice + computedIvaAmount) * 100) / 100 : 0
+  );
 
   const canCreate = $derived.by(() => {
     return nameTrim.length > 0 && downloadValid && uploadValid && guaranteedTargetDownValid && priceValid;
@@ -144,7 +180,10 @@
       working.ratio = computedRatio;
       working.download_limit = computedDownloadLimit;
       working.upload_limit = computedUploadLimit;
-      if (props.onCreate) await props.onCreate(working);
+      const priceToSend = (priceIncludesIva && ivaPreviewValid)
+        ? Math.round(computedNetPrice * 100) / 100
+        : working.price;
+      if (props.onCreate) await props.onCreate({ ...working, price: priceToSend });
       createOk = true;
     } catch (e) {
       const msg = String((e as any)?.message ?? '');
@@ -340,13 +379,41 @@
                   <span class="text-rose-400 text-[10px]">Requerido</span>
                 </div>
                 <input id="planPrice" type="number" step="0.01" class={inputClass(!priceValid)} bind:value={working.price} min="0" />
-                <div class="text-[11px] text-muted-foreground mt-1">Precio base del plan.</div>
+                <label class="flex items-center gap-2 mt-2 cursor-pointer w-fit">
+                  <input type="checkbox" bind:checked={priceIncludesIva} />
+                  <span class="text-xs text-muted-foreground">Con IVA{taxRate > 0 ? ` (${(taxRate * 100).toFixed(0)}%)` : ''}</span>
+                </label>
+                <div class="text-[11px] text-muted-foreground mt-1">
+                  {priceIncludesIva ? 'El precio ingresado ya incluye IVA.' : 'Precio base del plan sin IVA.'}
+                </div>
               </div>
               <div>
                 <label for="setupPrice" class="text-xs text-muted-foreground">Precio instalación</label>
                 <input id="setupPrice" type="number" step="0.01" class={inputClass(false)} bind:value={working.setup_price} min="0" />
                 <div class="text-[11px] text-muted-foreground mt-1">Opcional, se cobra una sola vez.</div>
               </div>
+              {#if ivaPreviewValid}
+                <div class="md:col-span-2 bg-neutral-900/50 border border-neutral-800 rounded-xl p-3">
+                  <div class="text-xs text-muted-foreground mb-2">Desglose de IVA ({(taxRate * 100).toFixed(0)}%)</div>
+                  <div class="space-y-1 text-sm">
+                    <div class="flex justify-between">
+                      <span class="text-foreground">Precio neto (sin IVA)</span>
+                      <span class="text-foreground font-semibold">{computedNetPrice.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-foreground">IVA ({(taxRate * 100).toFixed(0)}%)</span>
+                      <span class="text-amber-400 font-semibold">+ {computedIvaAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between border-t border-neutral-700 pt-1 mt-1">
+                      <span class="text-foreground font-semibold">Total con IVA</span>
+                      <span class="text-emerald-300 font-semibold">{computedTotalWithIva.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  {#if priceIncludesIva}
+                    <div class="mt-2 text-[11px] text-blue-400">Se guardará el precio neto sin IVA: {computedNetPrice.toFixed(2)}</div>
+                  {/if}
+                </div>
+              {/if}
               <div>
                 <label for="billingCycle" class="text-xs text-muted-foreground">Ciclo de facturación</label>
                 <select id="billingCycle" class={inputClass(false)} bind:value={working.billing_cycle}>
