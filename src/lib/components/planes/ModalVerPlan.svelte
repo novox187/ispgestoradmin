@@ -8,7 +8,7 @@
   import { onMount } from 'svelte';
   import { API_BASE } from '$lib/config';
   import type { CapacitySnapshot } from '$lib/types/capacity';
-  import { formatMbps } from '$lib/utils/plan-calculations';
+  import { formatMbps, parsePlanRatioDivisor } from '$lib/utils/plan-calculations';
 
   type FeatureItem = { feature: string; order: number; highlighted: boolean };
   type Plan = {
@@ -62,21 +62,26 @@
   const ivaAmount = $derived(Math.round(priceBase * taxRate * 100) / 100);
   const totalWithIva = $derived(Math.round((priceBase + ivaAmount) * 100) / 100);
 
-  // ── Disponibilidad de clientes ────────────────────────────────────────────
-  const estimatedSlots = $derived.by(() => {
-    if (!props.capacity || !props.plan || Number(props.plan.download) <= 0) return null;
-    const remaining = Number(props.capacity.plans_remaining_down_mbps ?? props.capacity.remaining_down_mbps ?? 0);
-    return Math.max(0, Math.floor(remaining / Number(props.plan.download)));
+  // ── Disponibilidad de clientes (basado en ratio del plan) ────────────────
+  // ratio 1:N → cada cliente recibe download/N Mbps garantizados
+  // → caben N clientes máx. manteniendo garantía (download / (download/N) = N)
+  const planRatioDivisor = $derived(parsePlanRatioDivisor(props.plan?.ratio));
+
+  const guaranteedPerClient = $derived.by(() => {
+    if (!props.plan || planRatioDivisor <= 0) return 0;
+    return Math.round((Number(props.plan.download) / planRatioDivisor) * 100) / 100;
   });
 
-  const totalEstimated = $derived.by(() => {
-    if (estimatedSlots === null || !props.plan) return null;
-    return Number(props.plan.clients) + estimatedSlots;
+  const maxClientsForPlan = $derived(planRatioDivisor > 1 ? planRatioDivisor : null);
+
+  const estimatedSlots = $derived.by(() => {
+    if (maxClientsForPlan === null || !props.plan) return null;
+    return Math.max(0, maxClientsForPlan - Number(props.plan.clients));
   });
 
   const clientOccupancyPct = $derived.by(() => {
-    if (totalEstimated === null || totalEstimated <= 0 || !props.plan) return 0;
-    return Math.min(100, Math.round((Number(props.plan.clients) / totalEstimated) * 100));
+    if (!maxClientsForPlan || maxClientsForPlan <= 0 || !props.plan) return 0;
+    return Math.min(100, Math.round((Number(props.plan.clients) / maxClientsForPlan) * 100));
   });
 
   // ── Consumo en tiempo real (MikroTik) ────────────────────────────────────
@@ -314,23 +319,26 @@
                 <div class="bg-neutral-900 border border-neutral-800 rounded-lg p-3 text-center">
                   <div class="text-2xl font-bold">{props.plan.clients}</div>
                   <div class="text-xs text-muted-foreground mt-0.5">Clientes activos</div>
+                  {#if maxClientsForPlan !== null}
+                    <div class="text-[10px] text-muted-foreground mt-1">de {maxClientsForPlan} máx.</div>
+                  {/if}
                 </div>
                 <div class="bg-neutral-900 border border-neutral-800 rounded-lg p-3 text-center">
                   {#if estimatedSlots !== null}
-                    <div class="text-2xl font-bold {estimatedSlots === 0 ? 'text-rose-400' : estimatedSlots < 5 ? 'text-amber-400' : 'text-emerald-400'}">
+                    <div class="text-2xl font-bold {estimatedSlots === 0 ? 'text-rose-400' : estimatedSlots <= 5 ? 'text-amber-400' : 'text-emerald-400'}">
                       {estimatedSlots}
                     </div>
                     <div class="text-xs text-muted-foreground mt-0.5">Espacios disponibles</div>
                   {:else}
                     <div class="text-xl font-bold text-neutral-500">—</div>
-                    <div class="text-xs text-muted-foreground mt-0.5">Sin datos de capacidad</div>
+                    <div class="text-xs text-muted-foreground mt-0.5">Sin ratio definido</div>
                   {/if}
                 </div>
               </div>
-              {#if totalEstimated !== null && totalEstimated > 0}
+              {#if maxClientsForPlan !== null}
                 <div>
                   <div class="flex justify-between text-[11px] text-muted-foreground mb-1">
-                    <span>Ocupación estimada</span>
+                    <span>Ocupación del plan ({props.plan.clients}/{maxClientsForPlan} clientes)</span>
                     <span>{clientOccupancyPct}%</span>
                   </div>
                   <div class="h-2 w-full bg-neutral-900 rounded-full overflow-hidden">
@@ -340,7 +348,7 @@
                     ></div>
                   </div>
                   <p class="text-[10px] text-muted-foreground mt-1">
-                    Calculado sobre la capacidad ISP restante disponible para este plan.
+                    Ratio {props.plan.ratio ?? '—'} · {guaranteedPerClient} Mbps garantizados por cliente · Capacidad total: {formatMbps(Number(props.plan.download))}
                   </p>
                 </div>
               {/if}
