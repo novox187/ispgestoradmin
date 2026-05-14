@@ -150,7 +150,7 @@
               <input
                 id="email" type="email" bind:value={email}
                 on:blur={blurEmail} on:input={revalidateEmail}
-                placeholder="ejemplo@ironlink.com" autocomplete="email"
+                placeholder="ejemplo@ironlink.uk" autocomplete="email"
                 class="ifield"
                 class:err={emailError && touched.email}
                 class:ok={isEmailValid}
@@ -284,7 +284,7 @@
             </div>
             <div class="url-bar">
               <span class="url-dot"></span>
-              <span class="url-text">admin.ironlink.com/dashboard</span>
+              <span class="url-text">admin.ironlink.uk/dashboard</span>
             </div>
           </div>
           <div class="desktop-screen">

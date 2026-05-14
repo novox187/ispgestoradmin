@@ -61,4 +61,4 @@ User-agent: DotBot
 Disallow: /
 
 # Sitemap oficial — facilita el descubrimiento de URLs públicas.
-Sitemap: https://admin.ironlink.com/sitemap.xml
+Sitemap: https://admin.ironlink.uk/sitemap.xml

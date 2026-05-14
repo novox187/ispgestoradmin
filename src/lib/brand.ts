@@ -71,10 +71,10 @@ export const BRAND = {
   ],
 
   /** Dominio canónico oficial (sin protocolo) — usado en og:url, canonical y JSON-LD. */
-  domain: 'admin.ironlink.com',
+  domain: 'admin.ironlink.uk',
 
   /** URL canónica completa con protocolo — fuente única para enlaces absolutos. */
-  canonicalUrl: 'https://admin.ironlink.com',
+  canonicalUrl: 'https://admin.ironlink.uk',
 
   /** Locale principal en formato BCP 47 — para og:locale y lang. */
   locale: 'es_EC',
@@ -96,7 +96,7 @@ export const BRAND = {
     email: 'novoxdeveloper@gmail.com',
     address: 'Av. Principal 123',
     ruc: '1790000000001',
-    website: 'ironlink.com',
+    website: 'ironlink.uk',
     phone: '+7 995 241 46 35',
   },
 
@@ -135,7 +135,7 @@ export const BRAND = {
    * redes sociales. Debe ser PNG/JPG de 1200×630 alojado en `static/` con ruta
    * pública estable. Si el archivo cambia, actualizar aquí.
    */
-  ogImage: 'https://admin.ironlink.com/og-image.png',
+  ogImage: 'https://admin.ironlink.uk/og-image.png',
 
   /**
    * Handle de Twitter/X de la marca (incluyendo `@`). Si la empresa aún no
