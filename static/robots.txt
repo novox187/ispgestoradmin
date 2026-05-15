@@ -11,8 +11,8 @@
 User-agent: *
 Allow: /$
 Allow: /login
-Allow: /og-image.png
-Allow: /favicon.ico
+Allow: /og-image.PNG
+Allow: /faviconv2.ico
 Allow: /apple-touch-icon.png
 Allow: /site.webmanifest
 

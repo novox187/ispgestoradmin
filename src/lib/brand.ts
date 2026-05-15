@@ -117,7 +117,7 @@ export const BRAND = {
    *   withBackground → logofondopng.png (logo con fondo integrado)
    *   metallic     → metalico.png      (variante metálica/premium)
    *   svg          → logosvg.svg       (vector escalable, ideal para navbar)
-   *   favicon      → favicon.ico       (favicon estándar 32×32)
+   *   favicon      → faviconv2.ico       (favicon estándar 32×32)
    *   faviconFondo → faviconfondo.ico  (favicon con fondo, usado en <link rel="icon">)
    */
   logos: {
@@ -126,7 +126,7 @@ export const BRAND = {
     withBackground: '/src/lib/assets/logos/logofondopng.png',
     metallic:       '/src/lib/assets/logos/metalico.png',
     svg:            '/src/lib/assets/logos/logosvg.svg',
-    favicon:        '/src/lib/assets/favicon.ico',
+    favicon:        '/src/lib/assets/faviconv2.ico',
     faviconFondo:   '/src/lib/assets/faviconfondo.ico',
   },
 
@@ -135,7 +135,7 @@ export const BRAND = {
    * redes sociales. Debe ser PNG/JPG de 1200×630 alojado en `static/` con ruta
    * pública estable. Si el archivo cambia, actualizar aquí.
    */
-  ogImage: 'https://admin.ironlink.uk/og-image.png',
+  ogImage: 'https://admin.ironlink.uk/og-image.PNG',
 
   /**
    * Handle de Twitter/X de la marca (incluyendo `@`). Si la empresa aún no
