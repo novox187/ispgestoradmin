@@ -104,7 +104,6 @@
           description: 'Tareas programadas y bots',
           icon: Bot,
           path: '/configuraciones/workers',
-          locked: true,
         },
       ],
     },

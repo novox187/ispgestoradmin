@@ -75,13 +75,13 @@
     {
       id: 'workers',
       label: 'Workers Automáticos',
-      description: 'Gestiona las tareas programadas como cortes automáticos, recordatorios y sincronizaciones.',
+      description: 'Gestiona las tareas programadas como cortes automáticos, generación de facturas y sincronización con MikroTik.',
       icon: Bot,
       path: '/configuraciones/workers',
-      badge: 'Próximamente',
-      badgeColor: 'neutral',
-      status: 'coming_soon',
-      features: ['Corte automático', 'Recordatorios de pago', 'Sync Mikrotik', 'Limpieza de datos'],
+      badge: 'Automatización',
+      badgeColor: 'blue',
+      status: 'available',
+      features: ['Suspensión automática', 'Facturación mensual', 'Sync MikroTik', 'Historial de auditoría'],
     },
   ];
 
