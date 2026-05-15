@@ -3,7 +3,7 @@
     import { fade, scale } from 'svelte/transition';
     import { API_BASE } from '$lib/config';
     import { Pagination } from '@skeletonlabs/skeleton-svelte';
-    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon, SparkleIcon, PlusIcon } from '@lucide/svelte';
+    import { ArrowLeftIcon, ArrowRightIcon, Loader2, CheckCircleIcon, XCircleIcon, SparkleIcon, PlusIcon, ChevronDownIcon, CalendarIcon, CalendarRangeIcon } from '@lucide/svelte';
     import Encabezado from "$lib/components/Encabezado.svelte";
     import TablaFacturas from "$lib/components/facturas/TablaFacturas.svelte";
     import ModalCrearFactura from "$lib/components/facturas/ModalCrearFactura.svelte";
@@ -210,9 +210,38 @@
     let configGuardOpen   = $state(false);
     let configGuardResult = $state<ConfigCheckResult | null>(null);
     // After guard is dismissed without fixing config, what action was intended?
-    let pendingAction = $state<'create' | 'generate' | null>(null);
+    let pendingAction = $state<'create' | 'generate' | 'generate-contract' | null>(null);
 
     let generatingAuto = $state(false);
+    let generatingByContract = $state(false);
+    let generateMenuOpen = $state(false);
+    let generateMenuEl: HTMLDivElement | null = $state(null);
+
+    function toggleGenerateMenu() {
+        generateMenuOpen = !generateMenuOpen;
+    }
+
+    function closeGenerateMenu() {
+        generateMenuOpen = false;
+    }
+
+    $effect(() => {
+        if (!generateMenuOpen) return;
+        const onDocClick = (e: MouseEvent) => {
+            if (generateMenuEl && !generateMenuEl.contains(e.target as Node)) {
+                closeGenerateMenu();
+            }
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeGenerateMenu();
+        };
+        document.addEventListener('click', onDocClick);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('click', onDocClick);
+            document.removeEventListener('keydown', onKey);
+        };
+    });
 
     function getToken() {
         return typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
@@ -227,7 +256,8 @@
     }
 
     async function handleGenerateAuto() {
-        if (generatingAuto) return;
+        closeGenerateMenu();
+        if (generatingAuto || generatingByContract) return;
 
         // Preflight config check
         const check = await checkConfig();
@@ -276,6 +306,88 @@
         }
     }
 
+    async function handleGenerateByContract() {
+        closeGenerateMenu();
+        if (generatingAuto || generatingByContract) return;
+
+        const check = await checkConfig();
+        if (!check.valid) {
+            configGuardResult = check;
+            pendingAction     = 'generate-contract';
+            configGuardOpen   = true;
+            return;
+        }
+
+        const confirmed = typeof window === 'undefined'
+            ? true
+            : window.confirm(
+                'Se generarán facturas por cliente ancladas a la fecha de contrato.\n\n' +
+                '• No se duplicarán facturas existentes.\n' +
+                '• El proceso se detendrá si ocurre un error.\n\n' +
+                '¿Deseas continuar?'
+            );
+        if (!confirmed) return;
+
+        generatingByContract = true;
+        try {
+            const token    = getToken();
+            const endpoint = `${API_BASE}/admin/invoices/generate-by-contract`;
+            const headers: Record<string, string> = { Accept: 'application/json' };
+            if (token) headers.Authorization = `Bearer ${token}`;
+
+            loadBus.start('generate-by-contract', endpoint);
+
+            const res  = await fetch(endpoint, { method: 'POST', headers });
+            const data = await res.json().catch(() => ({ message: 'Respuesta inválida del servidor' }));
+
+            if (res.status === 422 && data.valid === false) {
+                configGuardResult = data;
+                pendingAction     = 'generate-contract';
+                configGuardOpen   = true;
+                loadBus.error('generate-by-contract', { endpoint, message: 'Configuración incompleta' });
+                return;
+            }
+
+            if (!res.ok && res.status !== 207) {
+                throw new Error(data.error || data.message || 'Error generando facturas por contrato');
+            }
+
+            const report = data.report ?? {};
+            const generated = report.generated_count ?? data.count ?? 0;
+            const skipped   = report.skipped_count ?? 0;
+            const errors    = report.errors_count ?? 0;
+            const aborted   = !!report.aborted;
+
+            if (aborted) {
+                loadBus.error('generate-by-contract', { endpoint, message: report.abort_reason || 'Proceso abortado' });
+                alert(
+                    `⚠️ El proceso se detuvo por un error.\n\n` +
+                    `• Generadas: ${generated}\n` +
+                    `• Omitidas (ya existían): ${skipped}\n` +
+                    `• Errores: ${errors}\n\n` +
+                    `Motivo: ${report.abort_reason || 'desconocido'}`
+                );
+            } else {
+                loadBus.success('generate-by-contract');
+                alert(
+                    `✅ ${data.message || 'Facturas por contrato generadas'}.\n\n` +
+                    `• Generadas: ${generated}\n` +
+                    `• Omitidas (ya existían): ${skipped}\n` +
+                    `• Clientes procesados: ${report.clients_total ?? 0}`
+                );
+            }
+
+            loadInvoices();
+        } catch (e: any) {
+            console.error('Error generando facturas por contrato:', e);
+            const message = e.message || 'Error desconocido';
+            loadBus.error('generate-by-contract', { endpoint: `${API_BASE}/admin/invoices/generate-by-contract`, message });
+            alert(`❌ Error: ${message}`);
+        } finally {
+            generatingByContract = false;
+        }
+    }
+
     async function handleCreate() {
         // Preflight config check before opening the form
         const check = await checkConfig();
@@ -314,22 +426,64 @@
                 <p class="sm:text-sm text-xs text-gray-400 leading-relaxed">Administra las facturas de tus clientes</p>
             </div>
             <div class="flex items-center gap-3 ">
-                <button onclick={handleGenerateAuto} disabled={generatingAuto || loading}
-                    class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-lg transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={generatingAuto ? 'Procesando facturación...' : (loading ? 'Esperando datos del sistema...' : 'Generar facturas mensuales para planes activos')}
-                >
-                    {#if generatingAuto}
-                        <Loader2 class="w-4 h-4 animate-spin" />
-                        Generando...
-                    {:else}
-                        <SparkleIcon class="w-4 h-4" fill="currentColor" />
-                        Generar
+                <div class="relative" bind:this={generateMenuEl}>
+                    <button onclick={toggleGenerateMenu}
+                        disabled={generatingAuto || generatingByContract || loading}
+                        aria-haspopup="menu"
+                        aria-expanded={generateMenuOpen}
+                        class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-lg transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={(generatingAuto || generatingByContract) ? 'Procesando facturación...' : (loading ? 'Esperando datos del sistema...' : 'Generar facturas')}
+                    >
+                        {#if generatingAuto || generatingByContract}
+                            <Loader2 class="w-4 h-4 animate-spin" />
+                            Generando...
+                        {:else}
+                            <SparkleIcon class="w-4 h-4" fill="currentColor" />
+                            Generar
+                            <ChevronDownIcon class="w-4 h-4" />
+                        {/if}
+                    </button>
+
+                    {#if generateMenuOpen}
+                        <div
+                            role="menu"
+                            class="absolute right-0 mt-2 w-72 sm:w-80 rounded-xl bg-[#141414] border border-neutral-800 shadow-2xl z-50 overflow-hidden"
+                            in:scale={{ duration: 120, start: 0.95 }}
+                            out:fade={{ duration: 100 }}
+                        >
+                            <button
+                                role="menuitem"
+                                onclick={handleGenerateAuto}
+                                class="w-full text-left px-4 py-3 hover:bg-neutral-800 transition-colors flex items-start gap-3 border-b border-neutral-800"
+                            >
+                                <CalendarIcon class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                                <div class="min-w-0">
+                                    <div class="text-sm font-semibold text-gray-100">Facturas del mes actual</div>
+                                    <div class="text-xs text-gray-400 leading-snug mt-0.5">
+                                        Genera facturas mensuales para todos los planes activos.
+                                    </div>
+                                </div>
+                            </button>
+                            <button
+                                role="menuitem"
+                                onclick={handleGenerateByContract}
+                                class="w-full text-left px-4 py-3 hover:bg-neutral-800 transition-colors flex items-start gap-3"
+                            >
+                                <CalendarRangeIcon class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                <div class="min-w-0">
+                                    <div class="text-sm font-semibold text-gray-100">Por fecha de contrato</div>
+                                    <div class="text-xs text-gray-400 leading-snug mt-0.5">
+                                        Genera factura por cliente según el aniversario de su contrato. No duplica registros existentes.
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
                     {/if}
-                </button>
+                </div>
                 <button onclick={handleCreate}
                     class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl bg-gray-200 text-gray-900 text-xs sm:text-sm font-semibold shadow-lg transition-colors hover:bg-gray-300">
                     <PlusIcon size={20} strokeWidth={3} fill="currentColor" />
-                   
+
                     Nueva
                 </button>
             </div>
