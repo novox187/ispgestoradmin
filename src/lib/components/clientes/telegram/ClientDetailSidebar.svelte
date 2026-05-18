@@ -8,6 +8,12 @@
   import { API_BASE } from '$lib/config';
   import { toast } from 'svelte-sonner';
   import { processIpInput, validateIp, parseGpsCoordinates, validateGps } from '$lib/utils/input-formatters';
+  import {
+    toDateInputValue,
+    todayDateInputValue,
+    formatDate as formatDatePure,
+    relativeFromDate
+  } from '$lib/utils/date-format';
 
   interface Client {
     id: number;
@@ -97,48 +103,23 @@
   });
 
   // Hoy en YYYY-MM-DD (zona local) para tope del date picker
-  const todayIso = (() => {
-    const d = new Date();
-    const tz = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tz).toISOString().slice(0, 10);
-  })();
-
-  function toDateInputValue(raw: string | undefined | null): string {
-    if (!raw) return '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return '';
-    const tz = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tz).toISOString().slice(0, 10);
-  }
+  const todayIso = todayDateInputValue();
 
   let contractDateValidation = $derived.by(() => {
     const v = form.contract_date;
     if (!v) return { state: 'empty' as const, message: 'Indica la fecha en que se firmó el contrato.' };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return { state: 'invalid' as const, message: 'Formato inválido (YYYY-MM-DD).' };
-    const d = new Date(v + 'T00:00:00');
-    if (Number.isNaN(d.getTime())) return { state: 'invalid' as const, message: 'Fecha inválida.' };
     if (v > todayIso) return { state: 'invalid' as const, message: 'La fecha no puede ser futura.' };
     return { state: 'valid' as const, message: '' };
   });
 
   let contractAge = $derived.by(() => {
     if (contractDateValidation.state !== 'valid') return '';
-    const start = new Date(form.contract_date + 'T00:00:00').getTime();
-    const days = Math.max(0, Math.floor((Date.now() - start) / 86400000));
-    if (days < 1) return 'desde hoy';
-    if (days < 30) return `hace ${days} día${days === 1 ? '' : 's'}`;
-    const months = Math.floor(days / 30);
-    if (months < 12) return `hace ${months} mes${months === 1 ? '' : 'es'}`;
-    const years = Math.floor(days / 365);
-    return `hace ${years} año${years === 1 ? '' : 's'}`;
+    return relativeFromDate(form.contract_date);
   });
 
   function formatDateShort(raw: string): string {
-    const v = toDateInputValue(raw);
-    if (!v) return '—';
-    const d = new Date(v + 'T00:00:00');
-    return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+    return formatDatePure(raw);
   }
 
   let currentClientId = $state<number | null>(null);

@@ -2,6 +2,7 @@
     import { EllipsisVertical, CreditCard, Ban, Trash2, Eye, Loader2, CheckCircle2, XCircle } from '@lucide/svelte';
     import { API_BASE } from '$lib/config';
     import { Menu, Portal } from '@skeletonlabs/skeleton-svelte';
+    import { formatDate as formatDatePure } from '$lib/utils/date-format';
 
     let { invoices, loading, onView, onDelete } = $props();
 
@@ -339,8 +340,8 @@
                                 <div class="text-xs text-muted-foreground">{invoice.client?.dni || ''}</div>
                             </td>
                             <td class="px-6 py-3 text-gray-300">{invoice.client_plan?.plan?.name || 'N/A'}</td>
-                            <td class="px-6 py-3 text-gray-300">{new Date(invoice.issue_date).toLocaleDateString()}</td>
-                            <td class="px-6 py-3 text-gray-300">{new Date(invoice.due_date).toLocaleDateString()}</td>
+                            <td class="px-6 py-3 text-gray-300">{formatDatePure(invoice.issue_date)}</td>
+                            <td class="px-6 py-3 text-gray-300">{formatDatePure(invoice.due_date)}</td>
                             <td class="px-6 py-3 font-medium text-white">${Number(invoice.total_amount).toFixed(2)}</td>
                             <td class="px-6 py-3">
                                 <span class={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusClass(invoice.status)}`}>

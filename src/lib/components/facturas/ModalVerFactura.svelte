@@ -8,6 +8,7 @@
     import jsPDF from 'jspdf';
     import autoTable from 'jspdf-autotable';
     import { BRAND } from '$lib/brand';
+    import { formatDate as formatDatePure } from '$lib/utils/date-format';
 
     let { open, invoice, onClose } = $props();
 
@@ -71,15 +72,11 @@
     }
 
     function fmtDate(d: string | undefined): string {
-        if (!d) return '—';
-        const date = new Date(d);
-        return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' });
+        return formatDatePure(d, { year: 'numeric', month: 'long', day: 'numeric' }, 'es-EC');
     }
 
     function fmtDateShort(d: string | undefined): string {
-        if (!d) return '—';
-        const date = new Date(d);
-        return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+        return formatDatePure(d, { year: 'numeric', month: '2-digit', day: '2-digit' }, 'es-EC');
     }
 
     // ── Animación ──────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
 	import { API_BASE } from '$lib/config';
+	import { formatDate as formatDatePure } from '$lib/utils/date-format';
 	import {
 		X, User, Wifi, WifiOff, Clock, CreditCard, FileText,
 		MapPin, Phone, Mail, Cpu, ShieldAlert, CheckCircle2,
@@ -41,9 +42,7 @@
 	}
 
 	function fmtDate(d?: string) {
-		if (!d) return '—';
-		const dt = new Date(d + (d.includes('T') ? '' : 'T00:00:00'));
-		return dt.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+		return formatDatePure(d);
 	}
 
 	// ── Carga de datos ───────────────────────────────────────────────────────
