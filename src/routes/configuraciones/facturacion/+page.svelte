@@ -39,8 +39,6 @@
     sri_emission_point:     string;
     // Facturación interna
     invoice_due_days:        string;
-    grace_period_days:       string;
-    auto_payment_retry_days: string;
   }
 
   // ── Estado ─────────────────────────────────────────────────────────────────
@@ -57,7 +55,7 @@
     tax_rate: '0.15', tax_name: 'IVA', tax_id_label: 'RUC',
     currency_code: 'USD', currency_symbol: '$',
     sri_establishment_code: '001', sri_emission_point: '001',
-    invoice_due_days: '', grace_period_days: '', auto_payment_retry_days: '',
+    invoice_due_days: '',
   });
 
   // ── Errores de validación en tiempo real ───────────────────────────────────
@@ -185,8 +183,7 @@
         issuer_phone: 'string', tax_rate: 'float', tax_name: 'string',
         tax_id_label: 'string', currency_code: 'string', currency_symbol: 'string',
         sri_establishment_code: 'string', sri_emission_point: 'string',
-        invoice_due_days: 'integer', grace_period_days: 'integer',
-        auto_payment_retry_days: 'integer',
+        invoice_due_days: 'integer',
       };
 
       const groupMap: Record<keyof FormData, string> = {
@@ -195,8 +192,7 @@
         issuer_phone: 'issuer', tax_rate: 'tax', tax_name: 'tax',
         tax_id_label: 'tax', currency_code: 'currency', currency_symbol: 'currency',
         sri_establishment_code: 'legal', sri_emission_point: 'legal',
-        invoice_due_days: 'billing', grace_period_days: 'billing',
-        auto_payment_retry_days: 'billing',
+        invoice_due_days: 'billing',
       };
 
       const payload = (Object.keys(form) as (keyof FormData)[]).map(key => ({
@@ -587,52 +583,51 @@
       </div>
     </fieldset>
 
-    <!-- ── Sección 5: Parámetros internos de facturación ────────────────── -->
+    <!-- ── Sección 5: Plazo de vencimiento de facturas ──────────────────── -->
     <fieldset class="rounded-xl border border-neutral-800 bg-surface-elevated overflow-hidden">
-      <legend class="sr-only">Parámetros internos</legend>
+      <legend class="sr-only">Plazo de vencimiento</legend>
       <div class="flex items-center gap-2.5 px-5 py-3.5 border-b border-neutral-800">
         <Receipt class="w-4 h-4 text-neutral-500" />
-        <span class="text-sm font-semibold text-neutral-400">Parámetros Internos de Cobro</span>
+        <span class="text-sm font-semibold text-neutral-400">Plazo de Vencimiento de Facturas</span>
         <span class="ml-auto flex items-center gap-1 text-[10px] font-mono text-neutral-500 bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded-full">
           <EyeOff class="w-2.5 h-2.5" /> Privado
         </span>
       </div>
-      <div class="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+      <div class="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:items-start">
 
         <div class="space-y-1.5">
           <label for="due_days" class="block text-xs font-medium text-neutral-400">
             Días de Vencimiento
           </label>
-          <input id="due_days" type="number" min="1" max="90"
+          <input id="due_days" type="number" min="0" max="90"
             bind:value={form.invoice_due_days} placeholder="15" class={inputBase} />
-          <p class="text-[11px] text-neutral-500">Desde la fecha de emisión</p>
+          <p class="text-[11px] text-neutral-500">Días desde la emisión</p>
         </div>
 
-        <div class="space-y-1.5">
-          <label for="grace_days" class="block text-xs font-medium text-neutral-400">
-            Días de Gracia
-          </label>
-          <input id="grace_days" type="number" min="0" max="30"
-            bind:value={form.grace_period_days} placeholder="3" class={inputBase} />
-          <p class="text-[11px] text-neutral-500">Antes de suspensión</p>
-        </div>
-
-        <div class="space-y-1.5">
-          <label for="retry_days" class="block text-xs font-medium text-neutral-400">
-            Días de Reintento Autopago
-          </label>
-          <input id="retry_days" type="number" min="1" max="30"
-            bind:value={form.auto_payment_retry_days} placeholder="5" class={inputBase} />
-          <p class="text-[11px] text-neutral-500">Intentos tras vencimiento</p>
+        <div class="sm:col-span-2 text-xs text-neutral-400 leading-relaxed space-y-1.5">
+          <p>
+            Determina automáticamente la <strong class="text-neutral-200">fecha de vencimiento</strong> de cada nueva factura.
+          </p>
+          <p class="text-neutral-500">
+            Ejemplo: si emites una factura el <span class="font-mono text-neutral-300">01/06</span> con un plazo de
+            <span class="font-mono text-neutral-300">5 días</span>, vencerá el <span class="font-mono text-neutral-300">06/06</span>.
+          </p>
+          <p class="text-neutral-500">
+            A partir de esa fecha de vencimiento, el módulo de <strong class="text-neutral-300">Workers Automáticos</strong>
+            aplica los días de gracia configurados antes de suspender el servicio.
+          </p>
         </div>
 
       </div>
 
       <div class="mx-5 mb-5 flex items-start gap-2 p-3 rounded-lg bg-neutral-800/40 border border-neutral-700/40">
-        <EyeOff class="w-3.5 h-3.5 text-neutral-500 shrink-0 mt-0.5" />
+        <Info class="w-3.5 h-3.5 text-neutral-500 shrink-0 mt-0.5" />
         <p class="text-xs text-neutral-500">
-          Estos valores son de uso interno y <strong class="text-neutral-400">nunca se exponen al frontend del cliente</strong>,
-          aunque sí quedan registrados en el snapshot de cada factura para auditoría.
+          Los <strong class="text-neutral-400">días de gracia</strong> antes del corte y los
+          <strong class="text-neutral-400">reintentos de cobro automático</strong> ahora se gestionan desde
+          <a href="/configuraciones/workers" class="text-primary-400 hover:text-primary-300 underline underline-offset-2">Workers Automáticos</a>,
+          donde puedes activarlos, desactivarlos y ajustarlos en cualquier momento.
         </p>
       </div>
     </fieldset>

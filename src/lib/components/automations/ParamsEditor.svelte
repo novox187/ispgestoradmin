@@ -27,6 +27,16 @@
     update(field, isNaN(n) ? raw : n);
   }
 
+  function onDecimalInput(field: string, e: Event) {
+    const raw = (e.target as HTMLInputElement).value;
+    if (raw === '') {
+      update(field, null);
+      return;
+    }
+    const n = parseFloat(raw);
+    update(field, isNaN(n) ? raw : n);
+  }
+
   function liveValidate(field: string, value: any, rules: any): string {
     if (value === null || value === '') {
       if (rules.required) return 'Campo requerido';
@@ -35,6 +45,12 @@
     if (rules.type === 'integer') {
       const n = Number(value);
       if (!Number.isInteger(n)) return 'Debe ser un entero';
+      if (rules.min !== undefined && n < rules.min) return `Debe ser >= ${rules.min}`;
+      if (rules.max !== undefined && n > rules.max) return `Debe ser <= ${rules.max}`;
+    }
+    if (rules.type === 'decimal') {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 'Debe ser un número';
       if (rules.min !== undefined && n < rules.min) return `Debe ser >= ${rules.min}`;
       if (rules.max !== undefined && n > rules.max) return `Debe ser <= ${rules.max}`;
     }
@@ -64,7 +80,7 @@
               <span class="text-red-400">*</span>
             {/if}
           </span>
-          {#if rules.type === 'integer' && rules.min !== undefined && rules.max !== undefined}
+          {#if (rules.type === 'integer' || rules.type === 'decimal') && rules.min !== undefined && rules.max !== undefined}
             <span class="text-[10px] font-mono text-neutral-600">{rules.min}–{rules.max}</span>
           {/if}
         </label>
@@ -77,6 +93,16 @@
             class={errorMsg ? inputError : inputBase}
             value={value}
             oninput={(e) => onIntInput(field, e)}
+          />
+        {:else if rules.type === 'decimal'}
+          <input
+            type="number"
+            step="0.01"
+            min={rules.min}
+            max={rules.max}
+            class={errorMsg ? inputError : inputBase}
+            value={value}
+            oninput={(e) => onDecimalInput(field, e)}
           />
         {:else if rules.type === 'boolean'}
           <label class="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">

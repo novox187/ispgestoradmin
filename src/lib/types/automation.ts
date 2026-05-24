@@ -15,7 +15,7 @@ export interface ScheduleConfig {
 }
 
 export interface ParamSchemaField {
-  type: 'integer' | 'string' | 'boolean';
+  type: 'integer' | 'decimal' | 'string' | 'boolean';
   label: string;
   description?: string;
   min?: number;
