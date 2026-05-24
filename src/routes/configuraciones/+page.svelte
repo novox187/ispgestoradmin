@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     Database, Shield, Bell, Building2, Bot, Users,
-    ChevronRight, Sliders, Lock, Sparkles, CheckCircle2, Receipt
+    ChevronRight, Sliders, Lock, Sparkles, CheckCircle2, Receipt, ShieldCheck
   } from '@lucide/svelte';
 
   type ConfigCard = {
@@ -71,6 +71,17 @@
       badgeColor: 'neutral',
       status: 'coming_soon',
       features: ['Plantillas de email', 'Alertas de vencimiento', 'Notificaciones push', 'Integraciones'],
+    },
+    {
+      id: 'whitelist',
+      label: 'Lista Blanca de Clientes',
+      description: 'Clientes protegidos contra la suspensión automática por impago. Acceso restringido a super admin.',
+      icon: ShieldCheck,
+      path: '/configuraciones/whitelist',
+      badge: 'Super Admin',
+      badgeColor: 'blue',
+      status: 'available',
+      features: ['Inclusión y baja', 'Vencimiento programado', 'Historial de auditoría', 'Exportar CSV'],
     },
     {
       id: 'workers',

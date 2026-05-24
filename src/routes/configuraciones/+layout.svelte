@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import {
     Settings, Database, Shield, Bell, ChevronRight,
-    Users, Bot, Sliders, Building2, Lock, Receipt
+    Users, Bot, Sliders, Building2, Lock, Receipt, ShieldCheck
   } from '@lucide/svelte';
   import Encabezado from '$lib/components/Encabezado.svelte';
   import { appState } from '$lib/stores/app.svelte';
@@ -56,6 +56,14 @@
     {
       label: 'Acceso y Seguridad',
       items: [
+        {
+          id: 'whitelist',
+          label: 'Lista Blanca',
+          description: 'Clientes protegidos de la suspensión automática',
+          icon: ShieldCheck,
+          path: '/configuraciones/whitelist',
+          badge: 'Super',
+        },
         {
           id: 'seguridad',
           label: 'Seguridad y Permisos',
