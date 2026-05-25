@@ -64,13 +64,13 @@
     {
       id: 'notificaciones',
       label: 'Notificaciones',
-      description: 'Personaliza las plantillas de correo electrónico y configura alertas automáticas del sistema.',
+      description: 'Configura los canales de envío (Telegram y más) y selecciona qué eventos del sistema deben generar alertas.',
       icon: Bell,
       path: '/configuraciones/notificaciones',
-      badge: 'Próximamente',
-      badgeColor: 'neutral',
-      status: 'coming_soon',
-      features: ['Plantillas de email', 'Alertas de vencimiento', 'Notificaciones push', 'Integraciones'],
+      badge: 'Sistema',
+      badgeColor: 'blue',
+      status: 'available',
+      features: ['Canales y credenciales', 'Suscripciones por categoría', 'Envío de prueba', 'Historial de auditoría'],
     },
     {
       id: 'whitelist',

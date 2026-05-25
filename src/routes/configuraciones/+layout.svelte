@@ -88,10 +88,9 @@
         {
           id: 'notificaciones',
           label: 'Notificaciones',
-          description: 'Plantillas de correo y alertas',
+          description: 'Canales, alertas y suscripciones por categoría',
           icon: Bell,
           path: '/configuraciones/notificaciones',
-          locked: true,
         },
         {
           id: 'empresa',
