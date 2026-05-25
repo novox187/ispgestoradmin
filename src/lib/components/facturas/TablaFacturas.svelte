@@ -138,7 +138,7 @@
         const map: Record<string, string> = {
             paid: 'Pagada',
             pending: 'Pendiente',
-            failed: 'Pago fallido — saldo insuficiente',
+            failed: 'Pago fallido',
             cancelled: 'Cancelada',
             draft: 'Borrador',
         };
