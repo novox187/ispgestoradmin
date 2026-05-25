@@ -175,6 +175,21 @@
         }
     }
 
+    async function openInvoiceById(invoiceId: number) {
+        try {
+            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
+            const headers: Record<string, string> = { Accept: 'application/json' };
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const res = await fetch(`${API_BASE}/admin/invoices/${invoiceId}`, { headers });
+            if (!res.ok) return;
+            const data = await res.json();
+            selectedInvoice = data?.data ?? data;
+            showViewModal = true;
+        } catch (e) {
+            console.error('No se pudo abrir la factura', e);
+        }
+    }
+
     onMount(() => {
         const cached = readStorageCache<{invoices: Invoice[], totalInvoices: number}>(INVOICES_CACHE_STORAGE);
         if (cached?.data?.invoices && Array.isArray(cached.data.invoices) && cached.data.invoices.length > 0) {
@@ -185,7 +200,16 @@
 
         loadInvoices();
         const interval = setInterval(loadInvoices, 60000); // 60s
-        
+
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const idStr = params.get('invoice');
+            if (idStr) {
+                const id = Number(idStr);
+                if (Number.isFinite(id) && id > 0) openInvoiceById(id);
+            }
+        }
+
         return () => {
             clearInterval(interval);
             if (abortController) abortController.abort();

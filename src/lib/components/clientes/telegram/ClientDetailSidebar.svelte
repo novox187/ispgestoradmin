@@ -2,7 +2,8 @@
   import {
     X, Loader2, Crosshair, Search, CheckCircle, XCircle, AlertTriangle,
     Save, Phone, Mail, MapPin, CreditCard, Edit3, User, FileText, Wallet,
-    Calendar, Shield, Clock, ArrowDown, ArrowUp, Sparkles, ChevronRight
+    Calendar, Shield, Clock, ArrowDown, ArrowUp, Sparkles, ChevronRight,
+    AlertOctagon, CheckCircle2, Receipt, ExternalLink
   } from '@lucide/svelte';
   import { createEventDispatcher, onMount, untrack } from 'svelte';
   import { API_BASE } from '$lib/config';
@@ -14,6 +15,18 @@
     formatDate as formatDatePure,
     relativeFromDate
   } from '$lib/utils/date-format';
+
+  interface InvoiceLite {
+    id: number;
+    invoice_number?: string;
+    issue_date?: string;
+    due_date?: string;
+    amount?: number | string;
+    tax_amount?: number | string;
+    total_amount?: number | string;
+    status?: string;
+    description?: string;
+  }
 
   interface Client {
     id: number;
@@ -40,6 +53,7 @@
     wallet_balance?: number | string;
     balance?: number | string;
     wallet?: { balance?: number | string };
+    invoices?: InvoiceLite[];
     [key: string]: any;
   }
 
@@ -101,6 +115,53 @@
     const n = Number(raw);
     return Number.isFinite(n) ? n : 0;
   });
+
+  // ── Deudas / Estado de cuenta ───────────────────────────────────────────────
+  const todayMidnight = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+
+  function toNumber(v: number | string | undefined | null): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function isInvoiceOverdue(inv: InvoiceLite): boolean {
+    if (!inv?.due_date) return false;
+    const t = new Date(inv.due_date).getTime();
+    return Number.isFinite(t) && t < todayMidnight;
+  }
+
+  let pendingInvoices = $derived.by<InvoiceLite[]>(() => {
+    const list = (client?.invoices ?? []) as InvoiceLite[];
+    return list
+      .filter((i) => i && (i.status === 'pending' || i.status === 'failed'))
+      .sort((a, b) => {
+        const da = a.due_date ? new Date(a.due_date).getTime() : 0;
+        const db = b.due_date ? new Date(b.due_date).getTime() : 0;
+        return da - db;
+      });
+  });
+
+  let debtTotals = $derived.by(() => {
+    let conIva = 0;
+    let sinIva = 0;
+    let iva = 0;
+    for (const inv of pendingInvoices) {
+      conIva += toNumber(inv.total_amount);
+      sinIva += toNumber(inv.amount);
+      iva += toNumber(inv.tax_amount);
+    }
+    return { conIva, sinIva, iva };
+  });
+
+  let overdueCount = $derived(pendingInvoices.filter(isInvoiceOverdue).length);
+  let hasDebt = $derived(pendingInvoices.length > 0);
+
+  function summarizeDescription(raw?: string): string {
+    if (!raw) return 'Sin descripción del concepto';
+    const cleaned = String(raw).replace(/\s+/g, ' ').trim();
+    if (cleaned.length <= 120) return cleaned;
+    return cleaned.slice(0, 117) + '…';
+  }
 
   // Hoy en YYYY-MM-DD (zona local) para tope del date picker
   const todayIso = todayDateInputValue();
@@ -563,6 +624,159 @@
                     <span>{errorMsg}</span>
                 </div>
             {/if}
+
+            <!-- ── Estado de cuenta · Deudas (prominente) ── -->
+            <section aria-labelledby="sec-debt" class="-mt-1">
+                {#if hasDebt}
+                    <div class="relative overflow-hidden rounded-2xl border border-rose-500/30 bg-gradient-to-br from-rose-500/[0.09] via-rose-500/[0.04] to-transparent shadow-lg shadow-rose-950/20">
+                        <div class="pointer-events-none absolute inset-x-0 -top-24 h-48 opacity-50"
+                             style="background: radial-gradient(60% 100% at 50% 0%, rgba(244,63,94,0.22) 0%, rgba(244,63,94,0) 70%);"></div>
+
+                        <div class="relative p-5">
+                            <!-- Encabezado -->
+                            <div class="flex items-start justify-between gap-3 mb-4">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="size-10 rounded-xl bg-rose-500/20 ring-1 ring-rose-400/30 flex items-center justify-center shrink-0">
+                                        <AlertOctagon class="size-5 text-rose-300" aria-hidden="true" />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h3 id="sec-debt" class="text-sm font-bold text-rose-100 leading-tight">
+                                            Deudas pendientes
+                                        </h3>
+                                        <p class="text-[11px] text-rose-300/80 mt-0.5">
+                                            {pendingInvoices.length} {pendingInvoices.length === 1 ? 'factura sin pagar' : 'facturas sin pagar'}
+                                            {#if overdueCount > 0}
+                                                · <span class="text-rose-200 font-medium">{overdueCount} vencida{overdueCount === 1 ? '' : 's'}</span>
+                                            {/if}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase text-rose-200 bg-rose-500/15 border border-rose-400/30 px-2 py-1 rounded-md shrink-0">
+                                    <AlertTriangle class="size-3" aria-hidden="true" />
+                                    Atención
+                                </span>
+                            </div>
+
+                            <!-- Totales -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+                                <div class="rounded-xl bg-black/40 border border-rose-500/25 p-3.5">
+                                    <div class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-rose-300/80">
+                                        <Receipt class="size-3" aria-hidden="true" />
+                                        Total adeudado (c/IVA)
+                                    </div>
+                                    <div class="mt-1.5 text-xl font-bold text-rose-200 tabular-nums leading-none">
+                                        {formatCurrency(debtTotals.conIva)}
+                                    </div>
+                                </div>
+                                <div class="rounded-xl bg-black/30 border border-white/[0.06] p-3.5">
+                                    <div class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+                                        <Wallet class="size-3" aria-hidden="true" />
+                                        Subtotal (sin IVA)
+                                    </div>
+                                    <div class="mt-1.5 flex items-baseline justify-between gap-2">
+                                        <span class="text-base font-semibold text-zinc-100 tabular-nums">
+                                            {formatCurrency(debtTotals.sinIva)}
+                                        </span>
+                                        <span class="text-[10px] text-zinc-500 tabular-nums">
+                                            IVA: {formatCurrency(debtTotals.iva)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lista de facturas -->
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="text-[11px] font-medium uppercase tracking-wider text-rose-300/70">
+                                        Facturas pendientes
+                                    </span>
+                                    <a href="/facturas?status=pending"
+                                       class="text-[11px] text-rose-200/80 hover:text-rose-100 inline-flex items-center gap-1 transition-colors">
+                                        Ver todas
+                                        <ChevronRight class="size-3" aria-hidden="true" />
+                                    </a>
+                                </div>
+
+                                {#each pendingInvoices as inv (inv.id)}
+                                    {@const overdue = isInvoiceOverdue(inv)}
+                                    <a
+                                        href="/facturas?invoice={inv.id}"
+                                        class="group block rounded-lg bg-black/30 border border-white/[0.05] hover:border-rose-400/40 hover:bg-black/40 transition-all p-3"
+                                        title="Abrir factura {inv.invoice_number ?? `#${inv.id}`}"
+                                    >
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <span class="text-xs font-mono text-zinc-200 truncate">
+                                                        {inv.invoice_number ?? `#${inv.id}`}
+                                                    </span>
+                                                    {#if overdue}
+                                                        <span class="text-[9px] font-bold tracking-wider uppercase text-rose-200 bg-rose-500/20 border border-rose-400/30 px-1.5 py-0.5 rounded">
+                                                            Vencida
+                                                        </span>
+                                                    {:else if inv.status === 'failed'}
+                                                        <span class="text-[9px] font-bold tracking-wider uppercase text-orange-200 bg-orange-500/15 border border-orange-400/30 px-1.5 py-0.5 rounded">
+                                                            Fallida
+                                                        </span>
+                                                    {:else}
+                                                        <span class="text-[9px] font-bold tracking-wider uppercase text-amber-200 bg-amber-500/15 border border-amber-400/30 px-1.5 py-0.5 rounded">
+                                                            Pendiente
+                                                        </span>
+                                                    {/if}
+                                                </div>
+
+                                                <p class="mt-1 text-[11.5px] text-zinc-400 leading-snug line-clamp-2">
+                                                    {summarizeDescription(inv.description)}
+                                                </p>
+
+                                                <div class="mt-1.5 flex items-center gap-3 flex-wrap text-[10px] text-zinc-500">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <Calendar class="size-3" aria-hidden="true" />
+                                                        Emitida: <span class="text-zinc-400 tabular-nums">{formatDateShort(inv.issue_date ?? '')}</span>
+                                                    </span>
+                                                    {#if inv.due_date}
+                                                        <span class="inline-flex items-center gap-1">
+                                                            <Clock class="size-3 {overdue ? 'text-rose-400' : ''}" aria-hidden="true" />
+                                                            Vence:
+                                                            <span class="{overdue ? 'text-rose-300 font-medium' : 'text-zinc-400'} tabular-nums">
+                                                                {formatDateShort(inv.due_date)}
+                                                            </span>
+                                                        </span>
+                                                    {/if}
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-col items-end gap-1 shrink-0">
+                                                <span class="text-sm font-bold text-rose-200 tabular-nums leading-none">
+                                                    {formatCurrency(toNumber(inv.total_amount))}
+                                                </span>
+                                                <span class="text-[10px] text-zinc-500 tabular-nums">
+                                                    s/IVA: {formatCurrency(toNumber(inv.amount))}
+                                                </span>
+                                                <ExternalLink class="size-3.5 text-zinc-600 group-hover:text-rose-300 transition-colors mt-0.5" aria-hidden="true" />
+                                            </div>
+                                        </div>
+                                    </a>
+                                {/each}
+                            </div>
+                        </div>
+                    </div>
+                {:else}
+                    <div class="rounded-xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.03] to-transparent p-4 flex items-center gap-3">
+                        <div class="size-10 rounded-xl bg-emerald-500/20 ring-1 ring-emerald-400/30 flex items-center justify-center shrink-0">
+                            <CheckCircle2 class="size-5 text-emerald-300" aria-hidden="true" />
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold text-emerald-100 leading-tight">
+                                Cliente al día
+                            </h3>
+                            <p class="text-[11px] text-emerald-300/80 mt-0.5 leading-snug">
+                                No registra deudas pendientes. Todas sus facturas se encuentran pagadas.
+                            </p>
+                        </div>
+                    </div>
+                {/if}
+            </section>
 
             <!-- ── Identidad ── -->
             <section aria-labelledby="sec-identity">
