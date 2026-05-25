@@ -293,8 +293,11 @@
         'data-[state=open]:opacity-100 data-[state=open]:translate-y-0 duration-200';
 
     const STATUS_LABELS: Record<string, string> = {
-        draft: 'Borrador', pending: 'Pendiente', paid: 'Pagada',
-        failed: 'Fallida', cancelled: 'Cancelada',
+        draft: 'Borrador',
+        pending: 'Pendiente',
+        paid: 'Pagada',
+        failed: 'Pago fallido — saldo insuficiente',
+        cancelled: 'Cancelada',
     };
 </script>
 

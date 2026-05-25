@@ -50,7 +50,7 @@
     const STATUS_CONFIG: Record<StatusKey, { label: string; icon: any; badge: string; iconClass: string }> = {
         paid:      { label: 'Pagada',    icon: CheckCircle2, badge: 'bg-green-500/15 text-green-400 ring-1 ring-green-500/30',    iconClass: 'text-green-400' },
         pending:   { label: 'Pendiente', icon: Clock,        badge: 'bg-yellow-500/15 text-yellow-400 ring-1 ring-yellow-500/30', iconClass: 'text-yellow-400' },
-        failed:    { label: 'Fallida',   icon: XCircle,      badge: 'bg-red-500/15 text-red-400 ring-1 ring-red-500/30',          iconClass: 'text-red-400' },
+        failed:    { label: 'Pago fallido — saldo insuficiente', icon: XCircle, badge: 'bg-red-500/15 text-red-400 ring-1 ring-red-500/30', iconClass: 'text-red-400' },
         cancelled: { label: 'Cancelada', icon: Ban,          badge: 'bg-neutral-700/60 text-neutral-400 ring-1 ring-neutral-600/40', iconClass: 'text-neutral-400' },
         draft:     { label: 'Borrador',  icon: AlertCircle,  badge: 'bg-neutral-700/60 text-neutral-400 ring-1 ring-neutral-600/40', iconClass: 'text-neutral-400' },
     };

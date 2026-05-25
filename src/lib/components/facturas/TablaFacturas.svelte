@@ -136,10 +136,22 @@
 
     function getStatusLabel(status: string) {
         const map: Record<string, string> = {
-            paid: 'Pagada', pending: 'Pendiente', failed: 'Fallida',
-            cancelled: 'Cancelada', draft: 'Borrador',
+            paid: 'Pagada',
+            pending: 'Pendiente',
+            failed: 'Pago fallido — saldo insuficiente',
+            cancelled: 'Cancelada',
+            draft: 'Borrador',
         };
         return map[status] ?? status;
+    }
+
+    function getStatusTooltip(status: string) {
+        const map: Record<string, string> = {
+            failed:
+                'El cobro automático no se procesó porque el cliente no tenía saldo suficiente. '
+                + 'La factura sigue pendiente y debe gestionarse su cobro manualmente.',
+        };
+        return map[status] ?? '';
     }
 
     // Retorna true si la factura puede ser cobrada manualmente
@@ -344,7 +356,10 @@
                             <td class="px-6 py-3 text-gray-300">{formatDatePure(invoice.due_date)}</td>
                             <td class="px-6 py-3 font-medium text-white">${Number(invoice.total_amount).toFixed(2)}</td>
                             <td class="px-6 py-3">
-                                <span class={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusClass(invoice.status)}`}>
+                                <span
+                                    class={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusClass(invoice.status)}`}
+                                    title={getStatusTooltip(invoice.status)}
+                                >
                                     {getStatusLabel(invoice.status)}
                                 </span>
                             </td>

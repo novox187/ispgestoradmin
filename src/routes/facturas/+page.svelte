@@ -529,7 +529,7 @@
                         <option value="draft">Borrador</option>
                         <option value="pending">Pendiente</option>
                         <option value="paid">Pagada</option>
-                        <option value="failed">Fallida</option>
+                        <option value="failed">Pago fallido (saldo insuficiente)</option>
                         <option value="cancelled">Cancelada</option>
                     </select>
                 </div>
