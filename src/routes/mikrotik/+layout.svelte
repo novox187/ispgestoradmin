@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Encabezado from '$lib/components/Encabezado.svelte';
 	import { appState } from '$lib/stores/app.svelte';
+	import { bootstrap } from '$lib/stores/bootstrap.svelte';
 	import { page } from '$app/stores';
-	import { MIKROTIK_MODULES } from '$lib/mikrotik/modules';
+	import { MIKROTIK_MODULES, type MikrotikModule } from '$lib/mikrotik/modules';
 	import { ChevronRight, Router, Lock } from '@lucide/svelte';
 
 	let { children } = $props();
@@ -76,6 +77,8 @@
 				</div>
 				<ul class="space-y-0.5">
 					{#each MIKROTIK_MODULES as m (m.id)}
+						{@const blockedByBootstrap =
+							m.requiresPrimaryRouter && bootstrap.primaryRouterConfigured === false}
 						<li>
 							{#if m.status === 'coming_soon'}
 								<span
@@ -85,6 +88,15 @@
 									<m.icon class="w-3.5 h-3.5 shrink-0" />
 									<span class="flex-1 truncate">{m.label}</span>
 									<Lock class="w-3 h-3 shrink-0" />
+								</span>
+							{:else if blockedByBootstrap}
+								<span
+									class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-neutral-600 cursor-not-allowed select-none"
+									title="Configure el router principal en Dispositivos para habilitar este módulo"
+								>
+									<m.icon class="w-3.5 h-3.5 shrink-0" />
+									<span class="flex-1 truncate">{m.label}</span>
+									<Lock class="w-3 h-3 shrink-0 text-amber-500/70" />
 								</span>
 							{:else}
 								<a

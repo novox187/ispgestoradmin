@@ -8,6 +8,14 @@ export interface MikrotikRouter {
 	username: string;
 	description: string | null;
 	is_active: boolean;
+	is_primary: boolean;
+	network_cidr: string | null;
+	gateway: string | null;
+	connectivity_status: string | null;
+	last_health_check_at: number | null;
+	last_connected_at: number | null;
+	last_disconnected_at: number | null;
+	consecutive_failures: number;
 	last_loaded_at: number | null;
 	last_applied_at: number | null;
 	created_at: number | null;
@@ -18,6 +26,7 @@ export interface MikrotikRouterSummary {
 	name: string;
 	host: string;
 	is_active: boolean;
+	is_primary?: boolean;
 }
 
 export interface CreateRouterPayload {
@@ -28,6 +37,9 @@ export interface CreateRouterPayload {
 	password: string;
 	description?: string | null;
 	is_active?: boolean;
+	is_primary?: boolean;
+	network_cidr?: string | null;
+	gateway?: string | null;
 }
 
 export interface UpdateRouterPayload {
@@ -38,6 +50,9 @@ export interface UpdateRouterPayload {
 	password?: string;
 	description?: string | null;
 	is_active?: boolean;
+	is_primary?: boolean;
+	network_cidr?: string | null;
+	gateway?: string | null;
 }
 
 function authHeaders(): Record<string, string> {

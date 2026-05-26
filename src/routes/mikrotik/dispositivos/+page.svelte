@@ -11,6 +11,7 @@
 		type CreateRouterPayload,
 		type UpdateRouterPayload
 	} from '$lib/api/mikrotik-routers';
+	import { bootstrap } from '$lib/stores/bootstrap.svelte';
 
 	let routers = $state<MikrotikRouter[]>([]);
 	let loading = $state(false);
@@ -29,7 +30,10 @@
 		username: '',
 		password: '',
 		description: '',
-		is_active: true
+		is_active: true,
+		is_primary: false,
+		network_cidr: '',
+		gateway: ''
 	});
 
 	async function loadRouters() {
@@ -45,7 +49,20 @@
 
 	function openCreate() {
 		editingRouter = null;
-		form = { name: '', host: '', port: 8728, username: 'admin', password: '', description: '', is_active: true };
+		// El primer router se marcará automáticamente como primary en el backend.
+		// Si ya existen otros, el admin puede elegir promoverlo desde el toggle.
+		form = {
+			name: '',
+			host: '',
+			port: 8728,
+			username: 'admin',
+			password: '',
+			description: '',
+			is_active: true,
+			is_primary: routers.length === 0,
+			network_cidr: '',
+			gateway: ''
+		};
 		showPassword = false;
 		showModal = true;
 	}
@@ -59,7 +76,10 @@
 			username: router.username,
 			password: '',
 			description: router.description ?? '',
-			is_active: router.is_active
+			is_active: router.is_active,
+			is_primary: router.is_primary,
+			network_cidr: router.network_cidr ?? '',
+			gateway: router.gateway ?? ''
 		};
 		showPassword = false;
 		showModal = true;
@@ -71,6 +91,12 @@
 		try {
 			const portNum = form.port !== '' ? Number(form.port) : null;
 
+			const networkFields = {
+				is_primary: form.is_primary,
+				network_cidr: form.network_cidr.trim() || null,
+				gateway: form.gateway.trim() || null
+			};
+
 			if (editingRouter) {
 				const payload: UpdateRouterPayload = {
 					name: form.name,
@@ -78,12 +104,18 @@
 					port: portNum,
 					username: form.username,
 					description: form.description || null,
-					is_active: form.is_active
+					is_active: form.is_active,
+					...networkFields
 				};
 				if (form.password) payload.password = form.password;
 
 				const updated = await updateMikrotikRouter(editingRouter.id, payload);
-				routers = routers.map((r) => (r.id === editingRouter!.id ? updated : r));
+				// Si el editado pasó a primary, los demás dejan de serlo (refresca todo).
+				if (updated.is_primary) {
+					await loadRouters();
+				} else {
+					routers = routers.map((r) => (r.id === editingRouter!.id ? updated : r));
+				}
 				toast.success('Router actualizado');
 			} else {
 				const payload: CreateRouterPayload = {
@@ -93,10 +125,13 @@
 					username: form.username,
 					password: form.password,
 					description: form.description || null,
-					is_active: form.is_active
+					is_active: form.is_active,
+					...networkFields
 				};
-				const created = await createMikrotikRouter(payload);
-				routers = [...routers, created];
+				await createMikrotikRouter(payload);
+				await loadRouters();
+				// Refrescar el estado de bootstrap para ocultar el banner si era el primero.
+				bootstrap.refresh();
 				toast.success('Router creado');
 			}
 			showModal = false;
@@ -194,6 +229,14 @@
 								<div class="flex items-center gap-2">
 									<Server class="w-3.5 h-3.5 text-gray-500 shrink-0" />
 									<span class="font-medium text-gray-100">{router.name}</span>
+									{#if router.is_primary}
+										<span
+											class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30"
+											title="Router principal — usado por defecto en todas las funcionalidades del sistema"
+										>
+											Principal
+										</span>
+									{/if}
 								</div>
 								{#if router.description}
 									<p class="text-xs text-gray-500 ml-5.5 mt-0.5 truncate max-w-[200px]">{router.description}</p>
@@ -378,6 +421,36 @@
 						></textarea>
 					</div>
 
+					<!-- Red CIDR -->
+					<div>
+						<label class="block text-xs font-mono text-gray-400 mb-1.5">
+							Red de clientes (CIDR)
+						</label>
+						<input
+							bind:value={form.network_cidr}
+							type="text"
+							placeholder="192.168.20.0/24"
+							class="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm font-mono text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+						/>
+						<p class="mt-1 text-[10px] text-gray-500">
+							Bloque de IPs asignadas a clientes detrás de este router.
+						</p>
+					</div>
+
+					<!-- Gateway -->
+					<div>
+						<label class="block text-xs font-mono text-gray-400 mb-1.5">Gateway</label>
+						<input
+							bind:value={form.gateway}
+							type="text"
+							placeholder="192.168.20.1"
+							class="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm font-mono text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+						/>
+						<p class="mt-1 text-[10px] text-gray-500">
+							IP del router en la subred de clientes.
+						</p>
+					</div>
+
 					<!-- Is Active toggle -->
 					<div class="col-span-2">
 						<label class="flex items-center gap-3 cursor-pointer group select-none">
@@ -397,6 +470,34 @@
 							<span class="text-sm text-gray-300 group-hover:text-white transition-colors">
 								Router activo
 							</span>
+						</label>
+					</div>
+
+					<!-- Is Primary toggle -->
+					<div class="col-span-2">
+						<label class="flex items-center gap-3 cursor-pointer group select-none">
+							<div class="relative shrink-0">
+								<input type="checkbox" bind:checked={form.is_primary} class="sr-only" />
+								<div
+									class="w-9 h-5 rounded-full transition-colors {form.is_primary
+										? 'bg-amber-500'
+										: 'bg-neutral-700'}"
+								></div>
+								<div
+									class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform {form.is_primary
+										? 'translate-x-4'
+										: ''}"
+								></div>
+							</div>
+							<div class="flex flex-col">
+								<span class="text-sm text-gray-300 group-hover:text-white transition-colors">
+									Router principal del sistema
+								</span>
+								<span class="text-[10px] text-gray-500">
+									Usado por defecto en todas las funcionalidades (firewall, sync, monitoreo, suspensiones).
+									Solo uno puede ser principal a la vez.
+								</span>
+							</div>
 						</label>
 					</div>
 				</div>

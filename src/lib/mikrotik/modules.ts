@@ -10,6 +10,10 @@ export type MikrotikModule = {
 	href: string;
 	icon: Component<any>;
 	status?: 'ready' | 'prototype' | 'coming_soon';
+	// Si true, el módulo se deshabilita mientras no haya un router primary
+	// configurado. Dispositivos NO lleva esta marca: es la pantalla donde
+	// justamente se crea el primer router.
+	requiresPrimaryRouter?: boolean;
 };
 
 export const MIKROTIK_MODULES: MikrotikModule[] = [
@@ -27,7 +31,8 @@ export const MIKROTIK_MODULES: MikrotikModule[] = [
 		description: 'Gestión de filtros (input/output/forward) y reglas NAT.',
 		href: '/mikrotik/firewall',
 		icon: Shield,
-		status: 'ready'
+		status: 'ready',
+		requiresPrimaryRouter: true
 	},
 	{
 		id: 'sync',
@@ -35,7 +40,8 @@ export const MIKROTIK_MODULES: MikrotikModule[] = [
 		description: 'Sincroniza colas y reglas de firewall entre la BD y el router MikroTik.',
 		href: '/mikrotik/sincronizacion',
 		icon: ArrowLeftRight,
-		status: 'ready'
+		status: 'ready',
+		requiresPrimaryRouter: true
 	},
 	{
 		id: 'monitoring',
@@ -43,7 +49,8 @@ export const MIKROTIK_MODULES: MikrotikModule[] = [
 		description: 'Indicadores y estado operativo del router y del servicio.',
 		href: '/mikrotik/monitoreo',
 		icon: Bell,
-		status: 'coming_soon'
+		status: 'coming_soon',
+		requiresPrimaryRouter: true
 	},
 	{
 		id: 'devices',
