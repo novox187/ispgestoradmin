@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     LayoutDashboard, Users, Wifi, Zap, CreditCard,
-    Router, UserCog, Lock, User, MoreVertical, Settings, LogOut, SlidersHorizontal
+    Router, Lock, User, MoreVertical, Settings, LogOut, SlidersHorizontal
   } from '@lucide/svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
@@ -55,7 +55,6 @@
     {
       label: 'Sistema',
       items: [
-        { label: 'Usuarios', icon: UserCog, path: '/usuarios' },
         { label: 'Configuraciones', icon: SlidersHorizontal, path: '/configuraciones' },
       ]
     },

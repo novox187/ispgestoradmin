@@ -70,7 +70,6 @@
           description: 'Roles y políticas de acceso',
           icon: Shield,
           path: '/configuraciones/seguridad',
-          locked: true,
         },
         {
           id: 'usuarios',
@@ -78,7 +77,6 @@
           description: 'Gestión de cuentas de empleados',
           icon: Users,
           path: '/configuraciones/usuarios',
-          locked: true,
         },
       ],
     },
