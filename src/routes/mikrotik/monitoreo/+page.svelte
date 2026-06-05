@@ -1,4 +1,4 @@
-<div class="bg-[#111111] border border-neutral-800 rounded-xl p-5 space-y-3">
+<div class="bg-[#121214] border border-neutral-800 rounded-xl p-5 space-y-3">
 	<div class="space-y-1">
 		<h3 class="text-base md:text-lg font-semibold text-gray-100">Monitoreo</h3>
 		<p class="text-xs md:text-sm text-gray-400 leading-relaxed">

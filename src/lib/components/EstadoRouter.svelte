@@ -36,9 +36,9 @@
     const clientsPct = $derived(totalClients > 0 ? Math.round((activeClients / totalClients) * 100) : 0);
 
     function barColor(pct: number): string {
-        if (pct >= 90) return '#ef4444';
-        if (pct >= 70) return '#f97316';
-        return '#3b82f6';
+        if (pct >= 90) return '#f53b3b';
+        if (pct >= 70) return '#f59e0b';
+        return '#2570ff';
     }
 </script>
 
@@ -128,7 +128,7 @@
 
 <style>
     .router-card {
-        background: #111118;
+        background: #121214;
         border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 14px;
         padding: 1.25rem;
@@ -157,12 +157,12 @@
     }
     .status-online {
         background: rgba(16, 185, 129, 0.12);
-        color: #34d399;
+        color: #32c686;
         border: 1px solid rgba(16, 185, 129, 0.25);
     }
     .status-offline {
         background: rgba(239, 68, 68, 0.12);
-        color: #f87171;
+        color: #ff6464;
         border: 1px solid rgba(239, 68, 68, 0.25);
     }
 
@@ -181,14 +181,14 @@
     .metric-label {
         font-size: 10px;
         font-weight: 500;
-        color: #64748b;
+        color: #6a6a70;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
     .metric-value {
         font-size: 1.1rem;
         font-weight: 700;
-        color: #e2e8f0;
+        color: #b6b6ba;
         line-height: 1.1;
         white-space: nowrap;
         overflow: hidden;
@@ -200,7 +200,7 @@
     .metric-sub {
         font-size: 0.65rem;
         font-weight: 400;
-        color: #475569;
+        color: #45454b;
     }
 
     .bar-track {

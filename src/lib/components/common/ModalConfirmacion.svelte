@@ -40,7 +40,7 @@
   />
   <Dialog.Positioner class="fixed inset-0 z-[999] flex items-center justify-center p-4">
     <Dialog.Content 
-      class="w-full max-w-md bg-[#0f0f0f] border border-neutral-800 rounded-xl shadow-2xl overflow-hidden relative"
+      class="w-full max-w-md bg-[#0b0b0d] border border-neutral-800 rounded-xl shadow-2xl overflow-hidden relative"
     >
       <!-- Loading Overlay -->
       {#if loading}

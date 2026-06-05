@@ -105,7 +105,7 @@
 			{:else}
 				<div class="overflow-x-auto rounded-xl border border-neutral-800">
 					<table class="min-w-[700px] w-full text-xs">
-						<thead class="bg-[#101010] text-gray-400">
+						<thead class="bg-[#121214] text-gray-400">
 							<tr>
 								<th class="text-left px-4 py-2.5 font-medium">Fecha</th>
 								<th class="text-left px-4 py-2.5 font-medium">Estado</th>
@@ -115,7 +115,7 @@
 								<th class="text-right px-4 py-2.5 font-medium">Acciones</th>
 							</tr>
 						</thead>
-						<tbody class="divide-y divide-neutral-800 bg-[#0f0f0f]">
+						<tbody class="divide-y divide-neutral-800 bg-[#0b0b0d]">
 							{#each fw.logs as log (log.id)}
 								<tr class="hover:bg-neutral-900/40 transition-colors">
 									<td class="px-4 py-2.5 text-gray-300 font-mono whitespace-nowrap">
@@ -180,7 +180,7 @@
 <!-- Modal de confirmación de rollback -->
 {#if confirmOpen}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-		<div class="bg-[#111] border border-neutral-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+		<div class="bg-[#121214] border border-neutral-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
 			<div class="flex items-start gap-3">
 				<div class="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
 					<RotateCcw class="w-4 h-4 text-amber-400" />

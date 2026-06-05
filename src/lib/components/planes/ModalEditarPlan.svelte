@@ -350,7 +350,7 @@
                         <span>Descarga (garantizado / max)</span>
                         <span>{planPctDown.toFixed(1)}%</span>
                       </div>
-                      <div class="h-2 w-full bg-[#0f0f0f] rounded">
+                      <div class="h-2 w-full bg-[#0b0b0d] rounded">
                         <div class="h-2 rounded bg-blue-500" style={`width: ${planPctDown}%`}></div>
                       </div>
                     </div>
@@ -359,7 +359,7 @@
                         <span>Subida (garantizado / max)</span>
                         <span>{planPctUp.toFixed(1)}%</span>
                       </div>
-                      <div class="h-2 w-full bg-[#0f0f0f] rounded">
+                      <div class="h-2 w-full bg-[#0b0b0d] rounded">
                         <div class="h-2 rounded bg-purple-500" style={`width: ${planPctUp}%`}></div>
                       </div>
                     </div>

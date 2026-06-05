@@ -191,7 +191,7 @@
 </div>
 
 <!-- Table -->
-<div class="bg-[#111111] border border-neutral-800 rounded-xl overflow-hidden">
+<div class="bg-[#121214] border border-neutral-800 rounded-xl overflow-hidden">
 	{#if loading && routers.length === 0}
 		<div class="flex items-center justify-center py-16 gap-2 text-gray-500">
 			<RefreshCw class="w-4 h-4 animate-spin" />
@@ -297,7 +297,7 @@
 			aria-label="Cerrar modal"
 		></div>
 
-		<div class="relative bg-[#111111] border border-neutral-800 rounded-xl w-full max-w-lg shadow-2xl">
+		<div class="relative bg-[#121214] border border-neutral-800 rounded-xl w-full max-w-lg shadow-2xl">
 			<!-- Header -->
 			<div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
 				<div class="flex items-center gap-2.5">
@@ -541,7 +541,7 @@
 			aria-label="Cancelar"
 		></div>
 		<div
-			class="relative bg-[#111111] border border-red-900/30 rounded-xl w-full max-w-sm shadow-2xl p-5 space-y-4"
+			class="relative bg-[#121214] border border-red-900/30 rounded-xl w-full max-w-sm shadow-2xl p-5 space-y-4"
 		>
 			<div class="flex items-start gap-3">
 				<div class="p-2 rounded-lg bg-red-900/20 shrink-0">

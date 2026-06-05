@@ -132,7 +132,7 @@
 <div class="space-y-5">
 
 	<!-- ── Encabezado ──────────────────────────────────────────────────────── -->
-	<div class="rounded-xl border border-neutral-800 bg-[#111111] p-5">
+	<div class="rounded-xl border border-neutral-800 bg-[#121214] p-5">
 		<div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 			<div class="flex items-start gap-3">
 				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10">
@@ -180,7 +180,7 @@
 	</div>
 
 	<!-- ── Router activo ───────────────────────────────────────────────────── -->
-	<div class="rounded-xl border border-neutral-800 bg-[#111111] p-4">
+	<div class="rounded-xl border border-neutral-800 bg-[#121214] p-4">
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 			<div class="flex flex-1 items-center gap-3">
 				<div class="flex items-center gap-2 text-xs font-mono uppercase tracking-wide text-gray-400">

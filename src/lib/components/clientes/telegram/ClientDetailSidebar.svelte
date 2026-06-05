@@ -515,7 +515,7 @@
   let theme = $derived(statusTheme(form.service_status));
 </script>
 
-<div class="h-full flex flex-col bg-[#070710] text-zinc-100 relative overflow-hidden">
+<div class="h-full flex flex-col bg-[#0b0b0d] text-zinc-100 relative overflow-hidden">
 
     <!-- Glow decorativo de fondo -->
     <div class="pointer-events-none absolute inset-x-0 top-0 h-72 opacity-60"
@@ -558,7 +558,7 @@
                      aria-hidden="true">
                     {getInitials(form.full_name)}
                 </div>
-                <span class="absolute -bottom-1 -right-1 size-4 rounded-full {theme.dot} ring-[3px] ring-[#070710]" aria-hidden="true"></span>
+                <span class="absolute -bottom-1 -right-1 size-4 rounded-full {theme.dot} ring-[3px] ring-[#0b0b0d]" aria-hidden="true"></span>
             </div>
             <div class="min-w-0 flex-1">
                 <h2 class="text-lg font-bold text-zinc-50 leading-tight truncate" title={form.full_name || 'Sin nombre'}>
@@ -1252,7 +1252,7 @@
 
     <!-- ═══ FOOTER ═══ -->
     {#if isEditing}
-        <div class="shrink-0 px-6 py-4 border-t border-white/[0.06] bg-[#0a0a14]/95 backdrop-blur">
+        <div class="shrink-0 px-6 py-4 border-t border-white/[0.06] bg-[#0b0b0d]/95 backdrop-blur">
             <div class="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
                 <span class="text-[11px] text-zinc-500">
                     {hasChanges ? `${changedFields.length} cambio${changedFields.length === 1 ? '' : 's'} pendiente${changedFields.length === 1 ? '' : 's'}` : 'Sin cambios'}
@@ -1276,7 +1276,7 @@
                         title={!hasChanges ? 'No hay cambios por guardar' : 'Guardar cambios'}
                         class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-indigo-500 text-white text-sm font-semibold
                                hover:bg-indigo-400 active:bg-indigo-600 shadow-lg shadow-indigo-900/40
-                               focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]
+                               focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0d]
                                disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                         {#if loading}

@@ -47,7 +47,7 @@
           <span>Descarga</span>
           <span>{pct(assignedDown, totalDown).toFixed(1)}%</span>
         </div>
-        <div class="h-2 w-full bg-[#0f0f0f] rounded">
+        <div class="h-2 w-full bg-[#0b0b0d] rounded">
           <div
             class={`h-2 rounded ${warn80 ? 'bg-orange-500' : 'bg-emerald-500'}`}
             style={`width: ${pct(assignedDown, totalDown)}%`}
@@ -59,7 +59,7 @@
           <span>Subida</span>
           <span>{pct(assignedUp, totalUp).toFixed(1)}%</span>
         </div>
-        <div class="h-2 w-full bg-[#0f0f0f] rounded">
+        <div class="h-2 w-full bg-[#0b0b0d] rounded">
           <div
             class={`h-2 rounded ${warn80 ? 'bg-orange-500' : 'bg-emerald-500'}`}
             style={`width: ${pct(assignedUp, totalUp)}%`}

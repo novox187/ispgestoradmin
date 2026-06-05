@@ -56,7 +56,7 @@
   ></div>
 
   <aside
-    class="fixed top-0 right-0 z-50 h-full w-full sm:w-[480px] bg-[#0f0f0f] border-l border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
+    class="fixed top-0 right-0 z-50 h-full w-full sm:w-[480px] bg-[#0b0b0d] border-l border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
     aria-label="Historial de auditoría"
   >
     <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-800">

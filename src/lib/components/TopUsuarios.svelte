@@ -177,7 +177,7 @@
 
 <style>
     .debtors-card {
-        background: #111118;
+        background: #121214;
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 14px;
         padding: 1.25rem;
@@ -189,7 +189,7 @@
         font-size: 9px;
         font-weight: 700;
         letter-spacing: 0.1em;
-        color: #f87171;
+        color: #ff6464;
         background: rgba(239,68,68,0.10);
         border: 1px solid rgba(239,68,68,0.20);
         padding: 3px 8px;
@@ -213,7 +213,7 @@
         height: 22px;
         border-radius: 6px;
         background: rgba(255,255,255,0.05);
-        color: #64748b;
+        color: #6a6a70;
         font-size: 11px;
         font-weight: 700;
         display: flex;
@@ -223,7 +223,7 @@
     }
     .rank-badge.rank-first {
         background: rgba(239,68,68,0.15);
-        color: #f87171;
+        color: #ff6464;
     }
     .avatar {
         width: 34px;
@@ -231,7 +231,7 @@
         border-radius: 8px;
         background: rgba(255,255,255,0.06);
         border: 1px solid rgba(255,255,255,0.08);
-        color: #94a3b8;
+        color: #8a8a90;
         font-size: 14px;
         font-weight: 700;
         display: flex;

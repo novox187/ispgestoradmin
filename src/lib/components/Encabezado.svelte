@@ -41,7 +41,7 @@
   const headerTitle = getHeaderTitle(currentPath);
 </script>
 
-<header class="bg-[#0d0d0d] border-b border-gray-800 px-4 md:px-6 py-4">
+<header class="bg-[#0b0b0d] border-b border-gray-800 px-4 md:px-6 py-4">
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
       <button

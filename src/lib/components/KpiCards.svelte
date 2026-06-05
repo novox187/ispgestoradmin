@@ -183,12 +183,12 @@
                 <svg viewBox="0 0 80 28" class="w-full h-7" preserveAspectRatio="none">
                     <defs>
                         <linearGradient id="gInv" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
-                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+                            <stop offset="0%" stop-color="#2570ff" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#2570ff" stop-opacity="0"/>
                         </linearGradient>
                     </defs>
                     <path d={invoicedSpark.area} fill="url(#gInv)"/>
-                    <path d={invoicedSpark.line} fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d={invoicedSpark.line} fill="none" stroke="#2570ff" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
             </div>
         {:else}
@@ -216,12 +216,12 @@
                 <svg viewBox="0 0 80 28" class="w-full h-7" preserveAspectRatio="none">
                     <defs>
                         <linearGradient id="gCol" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
-                            <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+                            <stop offset="0%" stop-color="#14a869" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#14a869" stop-opacity="0"/>
                         </linearGradient>
                     </defs>
                     <path d={collectedSpark.area} fill="url(#gCol)"/>
-                    <path d={collectedSpark.line} fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d={collectedSpark.line} fill="none" stroke="#14a869" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
             </div>
         {:else}
@@ -251,12 +251,12 @@
                 <svg viewBox="0 0 80 28" class="w-full h-7" preserveAspectRatio="none">
                     <defs>
                         <linearGradient id="gPen" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#f97316" stop-opacity="0.35"/>
-                            <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+                            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
                         </linearGradient>
                     </defs>
                     <path d={pendingSpark.area} fill="url(#gPen)"/>
-                    <path d={pendingSpark.line} fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d={pendingSpark.line} fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
             </div>
         {:else}
@@ -268,7 +268,7 @@
 
 <style>
     .kpi-card {
-        background: #111118;
+        background: #121214;
         border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 14px;
         padding: 1.1rem 1.25rem;

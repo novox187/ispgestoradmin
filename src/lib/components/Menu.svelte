@@ -110,7 +110,7 @@
 {/if}
 
 <aside class="
-  w-60 bg-[#0a0a0a] border-r border-neutral-800/60 flex flex-col
+  w-60 bg-[#0b0b0d] border-r border-neutral-800/60 flex flex-col
   fixed lg:static inset-y-0 left-0 z-50
   transform transition-transform duration-300 ease-in-out
   {isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -180,7 +180,7 @@
           <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
             {userName.charAt(0).toUpperCase()}
           </div>
-          <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-[#0a0a0a] rounded-full"></div>
+          <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-[#0b0b0d] rounded-full"></div>
         </div>
         <div class="flex-1 min-w-0 text-left">
           <div class="text-white text-xs font-semibold truncate leading-tight">{userName}</div>

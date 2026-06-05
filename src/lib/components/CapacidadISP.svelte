@@ -17,10 +17,10 @@
     }
 
     function barColor(p: number): string {
-        if (p >= 90) return '#ef4444';
-        if (p >= 80) return '#f97316';
-        if (p >= 60) return '#eab308';
-        return '#3b82f6';
+        if (p >= 90) return '#f53b3b';
+        if (p >= 80) return '#f59e0b';
+        if (p >= 60) return '#f59e0b';
+        return '#2570ff';
     }
 
     const downPct = $derived(pct(capacity.used_down_mbps, capacity.total_down_mbps));
@@ -97,7 +97,7 @@
 
 <style>
     .cap-card {
-        background: #111118;
+        background: #121214;
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 14px;
         padding: 1.1rem 1.25rem;
@@ -112,7 +112,7 @@
         gap: 4px;
         font-size: 10px;
         font-weight: 600;
-        color: #fb923c;
+        color: #ffbb1f;
         background: rgba(249,115,22,0.10);
         border: 1px solid rgba(249,115,22,0.20);
         padding: 2px 8px;

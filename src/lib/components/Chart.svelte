@@ -31,9 +31,9 @@
     }
 
     const config: Record<string, SeriesConfig> = {
-        invoiced:  { label: 'Facturado',  color: '#3b82f6', gradId: 'gFill0' },
-        collected: { label: 'Cobrado',    color: '#10b981', gradId: 'gFill1' },
-        pending:   { label: 'Pendiente',  color: '#f97316', gradId: 'gFill2' },
+        invoiced:  { label: 'Facturado',  color: '#2570ff', gradId: 'gFill0' },
+        collected: { label: 'Cobrado',    color: '#14a869', gradId: 'gFill1' },
+        pending:   { label: 'Pendiente',  color: '#f59e0b', gradId: 'gFill2' },
     };
 
     //======================================================================
@@ -338,7 +338,7 @@
                             x={pad.left - 10} y={y + 4}
                             text-anchor="end"
                             font-size="11"
-                            fill="#475569"
+                            fill="#45454b"
                         >{fmtY(Math.round(val))}</text>
                     {/each}
 
@@ -349,7 +349,7 @@
                             x={x} y={H - pad.bottom + 18}
                             text-anchor="middle"
                             font-size="11"
-                            fill="#475569"
+                            fill="#45454b"
                             font-weight="500"
                         >{point.date}</text>
                     {/each}
@@ -378,7 +378,7 @@
                         />
                         {#each Object.entries(config) as [key, cfg]}
                             {@const cy = gY(hoveredPoint.data[key] as number)}
-                            <circle cx={hoveredPoint.x} cy={cy} r="5" fill={cfg.color} stroke="#0d0d18" stroke-width="2"/>
+                            <circle cx={hoveredPoint.x} cy={cy} r="5" fill={cfg.color} stroke="#0b0b0d" stroke-width="2"/>
                             <circle cx={hoveredPoint.x} cy={cy} r="9" fill="none" stroke={cfg.color} stroke-width="1" opacity="0.3"/>
                         {/each}
                     {/if}
@@ -415,7 +415,7 @@
 <style>
     /* ── Shell ─────────────────────────────────────────────────────────── */
     .chart-shell {
-        background: #0d0d16;
+        background: #121214;
         border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 16px;
         padding: 1.5rem;
@@ -477,7 +477,7 @@
     .tooltip-date {
         font-size: 11px;
         font-weight: 600;
-        color: #94a3b8;
+        color: #8a8a90;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         margin-bottom: 8px;
@@ -498,7 +498,7 @@
     }
     .tooltip-label {
         font-size: 12px;
-        color: #64748b;
+        color: #6a6a70;
         flex: 1;
     }
     .tooltip-value {

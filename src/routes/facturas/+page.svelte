@@ -441,7 +441,7 @@
 
 </script>
 
-<main class="flex-1 overflow-y-auto bg-[#09090f] text-gray-100">
+<main class="flex-1 overflow-y-auto bg-[#0b0b0d] text-gray-100">
     <Encabezado {toggleSidebar} {toggleNotifications} />
     <div class="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
         <div class="flex flex-col sm:flex-row gap-3 sm:justify-between mb-8">
@@ -471,7 +471,7 @@
                     {#if generateMenuOpen}
                         <div
                             role="menu"
-                            class="absolute right-0 mt-2 w-72 sm:w-80 rounded-xl bg-[#141414] border border-neutral-800 shadow-2xl z-50 overflow-hidden"
+                            class="absolute right-0 mt-2 w-72 sm:w-80 rounded-xl bg-[#1a1a1d] border border-neutral-800 shadow-2xl z-50 overflow-hidden"
                             in:scale={{ duration: 120, start: 0.95 }}
                             out:fade={{ duration: 100 }}
                         >
@@ -595,7 +595,7 @@
     {#if indicatorVisible}
         <div class="fixed bottom-4 right-4 z-[60]" in:scale={{ duration: 140, start: 0.9 }} out:fade={{ duration: 140 }}>
             <button
-                class="flex items-center gap-2 bg-[#141414] border border-gray-800 text-gray-200 px-3 py-2 rounded-lg shadow-lg max-w-[320px]"
+                class="flex items-center gap-2 bg-[#1a1a1d] border border-gray-800 text-gray-200 px-3 py-2 rounded-lg shadow-lg max-w-[320px]"
                 onclick={() => overallStatus === 'error' && loadInvoices()}
             >
                 {#if overallStatus === 'loading'}

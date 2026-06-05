@@ -91,7 +91,7 @@
 </script>
 
 <aside
-    class="flex flex-col h-full bg-[#09090f] border-r border-white/[0.06] w-full md:w-80 lg:w-96 flex-shrink-0"
+    class="flex flex-col h-full bg-[#0b0b0d] border-r border-white/[0.06] w-full md:w-80 lg:w-96 flex-shrink-0"
     aria-label="Panel de clientes"
 >
     <!-- Encabezado del panel -->

@@ -103,7 +103,7 @@
 
 {#if open}
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div class="bg-[#1c1c1e] rounded-xl shadow-2xl w-full max-w-md border border-neutral-800 overflow-hidden flex flex-col">
+        <div class="bg-[#232327] rounded-xl shadow-2xl w-full max-w-md border border-neutral-800 overflow-hidden flex flex-col">
             
             <div class="flex items-center justify-between p-4 border-b border-neutral-800">
                 <h3 class="text-lg font-medium text-white">Agregar Fondos a Billetera</h3>
@@ -131,7 +131,7 @@
                             bind:value={amount}
                             min="0.01"
                             step="0.01"
-                            class="w-full bg-[#0f0f0f] border border-neutral-800 rounded-lg py-2 pl-8 pr-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                            class="w-full bg-[#0b0b0d] border border-neutral-800 rounded-lg py-2 pl-8 pr-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
                             placeholder="0.00"
                             disabled={loading}
                         />
@@ -144,7 +144,7 @@
                         type="text" 
                         id="description" 
                         bind:value={description}
-                        class="w-full bg-[#0f0f0f] border border-neutral-800 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                        class="w-full bg-[#0b0b0d] border border-neutral-800 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
                         placeholder="Motivo de la recarga"
                         disabled={loading}
                     />
@@ -157,7 +157,7 @@
                         id="image" 
                         accept="image/jpeg,image/png,image/jpg,image/gif"
                         onchange={handleImageChange}
-                        class="w-full bg-[#0f0f0f] border border-neutral-800 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-blue-500 transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-500"
+                        class="w-full bg-[#0b0b0d] border border-neutral-800 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-blue-500 transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-500"
                         disabled={loading}
                     />
                     {#if imagePreviewUrl}
@@ -194,7 +194,7 @@
                 </div>
             </div>
 
-            <div class="p-4 border-t border-neutral-800 flex justify-end gap-3 bg-[#151515]">
+            <div class="p-4 border-t border-neutral-800 flex justify-end gap-3 bg-[#1a1a1d]">
                 <button 
                     onclick={closeModal}
                     class="px-4 py-2 text-sm font-medium text-neutral-300 hover:text-white transition-colors"

@@ -2,7 +2,7 @@
   let { title, value, icon: IconComponent, tipo } = $props();
 </script>
 
-<div class="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 relative overflow-hidden hover:border-gray-700 transition-colors">
+<div class="bg-[#1a1a1d] border border-gray-800 rounded-lg p-6 relative overflow-hidden hover:border-gray-700 transition-colors">
   <div class="flex items-start justify-between mb-4">
     <div class="text-sm font-medium text-gray-400">{title}</div>
     <button class="text-gray-500 hover:text-gray-300 transition-colors" aria-label="More options">

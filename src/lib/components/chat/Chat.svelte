@@ -53,7 +53,7 @@
 <!-- Container fixed to bottom similar to original behavior -->
 <div class="fixed bottom-0 inset-x-0 z-50">
   <!-- Header / Toggle -->
-  <div class="bg-[#0d0d0d] border-t border-gray-800">
+  <div class="bg-[#0b0b0d] border-t border-gray-800">
     <div class="max-w-screen-xl mx-auto px-4">
       <div class="h-12 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -71,7 +71,7 @@
   </div>
 
   <!-- Expandable Content -->
-  <div class="overflow-hidden transition-[max-height] duration-300 ease-in-out bg-[#0d0d0d] border-t border-gray-800"
+  <div class="overflow-hidden transition-[max-height] duration-300 ease-in-out bg-[#0b0b0d] border-t border-gray-800"
        style="max-height: {isExpanded ? '420px' : '0px'};">
     <div class="max-w-screen-xl mx-auto px-4 h-[420px]">
       {#if view === 'list'}
@@ -96,7 +96,7 @@
               </button>
             {/each}
           </div>
-          <div class="mt-auto flex justify-end p-4 border-t border-gray-800 bg-gradient-to-t from-[#0d0d0d] via-[#0d0d0d]/80 to-black/0">
+          <div class="mt-auto flex justify-end p-4 border-t border-gray-800 bg-gradient-to-t from-[#0b0b0d] via-[#0b0b0d]/80 to-black/0">
             <button class="bg-blue-600 hover:bg-blue-700 text-white font-mono text-sm py-2 px-4 rounded-lg flex items-center gap-2">
               <div class="w-6 h-6 bg-white text-blue-600 rounded flex items-center justify-center font-bold text-lg">+</div>
               <span class="font-bold">NEW CHAT</span>

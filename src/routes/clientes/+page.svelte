@@ -554,7 +554,7 @@
 
 </script>
 
-<div class="flex flex-col h-screen bg-[#09090f] overflow-hidden w-full">
+<div class="flex flex-col h-screen bg-[#0b0b0d] overflow-hidden w-full">
     <!-- Encabezado global -->
     <Encabezado {toggleSidebar} {toggleNotifications} />
 

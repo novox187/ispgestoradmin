@@ -217,7 +217,7 @@
             aria-hidden={detailVisible}
         >
             <!-- Barra superior -->
-            <header class="h-14 border-b border-white/[0.06] flex items-center justify-between px-4 bg-[#09090f] backdrop-blur-md sticky top-0 z-10">
+            <header class="h-14 border-b border-white/[0.06] flex items-center justify-between px-4 bg-[#0b0b0d] backdrop-blur-md sticky top-0 z-10">
                 <div class="flex items-center gap-3">
                     <button
                         onclick={goBack}
@@ -487,7 +487,7 @@
             </div>
 
             <!-- Área de entrada de mensaje -->
-            <div class="p-3 bg-[#09090f] border-t border-white/[0.06]">
+            <div class="p-3 bg-[#0b0b0d] border-t border-white/[0.06]">
                 {#if ticketStatus === 'closed'}
                     <div class="flex items-center justify-center gap-2 py-3 text-text-muted text-xs">
                         <LockKeyhole class="size-3.5 text-rose-400" />
@@ -495,7 +495,7 @@
                     </div>
                 {:else}
                     <div
-                        class="flex items-end gap-2 bg-[#09090f] rounded-xl border border-white/[0.06]
+                        class="flex items-end gap-2 bg-[#0b0b0d] rounded-xl border border-white/[0.06]
                                focus-within:border-primary-600/40 focus-within:ring-1 focus-within:ring-primary-500/30 transition-all p-2"
                     >
                         <button

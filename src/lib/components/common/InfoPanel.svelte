@@ -20,7 +20,7 @@
 	}
 </script>
 
-<section class="rounded-2xl border border-white/10 bg-gradient-to-b from-[#141414] to-[#0d0d0d] shadow-xl overflow-hidden">
+<section class="rounded-2xl border border-white/10 bg-gradient-to-b from-[#1a1a1d] to-[#0b0b0d] shadow-xl overflow-hidden">
 	<div class="p-5 sm:p-6 border-b border-white/10">
 		<div class="flex items-start gap-3">
 			<div class="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 {accentClasses(accent ?? 'blue')}">

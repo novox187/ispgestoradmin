@@ -92,7 +92,7 @@
 	<meta name="twitter:description" content={pageDescription} />
 </svelte:head>
 
-<div class="flex h-full overflow-hidden bg-[#0f0f0f] text-gray-100">
+<div class="flex h-full overflow-hidden bg-[#0b0b0d] text-gray-100">
   {#if !isLogin}
     <Menu bind:isOpen={appState.isSidebarOpen} />
   {/if}

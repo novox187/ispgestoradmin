@@ -141,7 +141,7 @@
 
 		<div class="overflow-x-auto border border-neutral-800 rounded-xl">
 			<table class="min-w-[980px] w-full text-sm">
-				<thead class="bg-[#101010] text-gray-300">
+				<thead class="bg-[#121214] text-gray-300">
 					<tr>
 						<th class="text-left px-4 py-3 font-medium"><span class="inline-flex items-center gap-2"><Hash class="w-4 h-4 text-gray-400" /> Prioridad</span></th>
 						<th class="text-left px-4 py-3 font-medium"><span class="inline-flex items-center gap-2"><Power class="w-4 h-4 text-gray-400" /> Estado</span></th>
@@ -154,7 +154,7 @@
 						<th class="text-right px-4 py-3 font-medium"><span class="inline-flex items-center gap-2 justify-end"><Pencil class="w-4 h-4 text-gray-400" /> Acciones</span></th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-neutral-800 bg-[#0f0f0f]">
+				<tbody class="divide-y divide-neutral-800 bg-[#0b0b0d]">
 					{#if visible.length === 0}
 						<tr>
 							<td colspan="9" class="px-4 py-6 text-center text-xs text-gray-500">

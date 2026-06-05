@@ -148,7 +148,7 @@
   }
 </script>
 
-<div class="flex flex-col rounded-xl border border-neutral-800 bg-[#111111] overflow-hidden">
+<div class="flex flex-col rounded-xl border border-neutral-800 bg-[#121214] overflow-hidden">
   <!-- Encabezado -->
   <div class="flex items-start gap-3 p-5 pb-4">
     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border {tone.iconWrap}">

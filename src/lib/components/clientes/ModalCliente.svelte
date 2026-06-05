@@ -22,19 +22,19 @@
 	// ── Helpers de estado ────────────────────────────────────────────────────
 	function getStatus(s?: string) {
 		const up = (s ?? '').toUpperCase();
-		if (up === 'ACTIVE'     || up === 'ACTIVO')    return { label: 'Activo',    color: '#34d399', bg: 'rgba(52,211,153,0.10)',  border: 'rgba(52,211,153,0.20)'  };
-		if (up === 'LIMITED'    || up === 'LIMITADO')  return { label: 'Limitado',  color: '#fbbf24', bg: 'rgba(251,191,36,0.10)',  border: 'rgba(251,191,36,0.20)'  };
-		if (up === 'SUSPENDED'  || up === 'SUSPENDIDO')return { label: 'Suspendido',color: '#f87171', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.20)' };
-		if (up === 'CANCELLED'  || up === 'CANCELADO') return { label: 'Cancelado', color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.20)' };
-		return { label: s || 'Desconocido', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.15)' };
+		if (up === 'ACTIVE'     || up === 'ACTIVO')    return { label: 'Activo',    color: '#32c686', bg: 'rgba(52,211,153,0.10)',  border: 'rgba(52,211,153,0.20)'  };
+		if (up === 'LIMITED'    || up === 'LIMITADO')  return { label: 'Limitado',  color: '#ffbb1f', bg: 'rgba(251,191,36,0.10)',  border: 'rgba(251,191,36,0.20)'  };
+		if (up === 'SUSPENDED'  || up === 'SUSPENDIDO')return { label: 'Suspendido',color: '#ff6464', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.20)' };
+		if (up === 'CANCELLED'  || up === 'CANCELADO') return { label: 'Cancelado', color: '#8a8a90', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.20)' };
+		return { label: s || 'Desconocido', color: '#8a8a90', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.15)' };
 	}
 
 	function getInvoiceStatus(s: string) {
-		if (s === 'paid')      return { label: 'Pagada',    color: '#34d399', bg: 'rgba(52,211,153,0.10)'  };
-		if (s === 'pending')   return { label: 'Pendiente', color: '#fbbf24', bg: 'rgba(251,191,36,0.10)'  };
-		if (s === 'failed')    return { label: 'Fallida',   color: '#f87171', bg: 'rgba(248,113,113,0.10)' };
-		if (s === 'cancelled') return { label: 'Cancelada', color: '#94a3b8', bg: 'rgba(148,163,184,0.10)' };
-		return { label: s, color: '#94a3b8', bg: 'rgba(148,163,184,0.10)' };
+		if (s === 'paid')      return { label: 'Pagada',    color: '#32c686', bg: 'rgba(52,211,153,0.10)'  };
+		if (s === 'pending')   return { label: 'Pendiente', color: '#ffbb1f', bg: 'rgba(251,191,36,0.10)'  };
+		if (s === 'failed')    return { label: 'Fallida',   color: '#ff6464', bg: 'rgba(248,113,113,0.10)' };
+		if (s === 'cancelled') return { label: 'Cancelada', color: '#8a8a90', bg: 'rgba(148,163,184,0.10)' };
+		return { label: s, color: '#8a8a90', bg: 'rgba(148,163,184,0.10)' };
 	}
 
 	function fmtCurrency(v: number | string) {
@@ -461,7 +461,7 @@
 
 /* ── Panel ───────────────────────────────────────────────────────────────── */
 .modal-panel {
-	background: #111118;
+	background: #121214;
 	border: 1px solid rgba(255, 255, 255, 0.07);
 	border-radius: 18px;
 	width: 100%;
@@ -486,12 +486,12 @@
 .modal-title {
 	font-size: 1rem;
 	font-weight: 700;
-	color: #e2e8f0;
+	color: #b6b6ba;
 	line-height: 1.2;
 }
 .modal-subtitle {
 	font-size: 11px;
-	color: #475569;
+	color: #45454b;
 	margin-top: 2px;
 	font-family: ui-monospace, monospace;
 }
@@ -501,7 +501,7 @@
 	border-radius: 12px;
 	background: rgba(255, 255, 255, 0.07);
 	border: 1px solid rgba(255, 255, 255, 0.10);
-	color: #94a3b8;
+	color: #8a8a90;
 	font-size: 18px;
 	font-weight: 700;
 	display: flex;
@@ -523,14 +523,14 @@
 	border-radius: 8px;
 	background: transparent;
 	border: 1px solid rgba(255,255,255,0.07);
-	color: #64748b;
+	color: #6a6a70;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	transition: background 0.15s, color 0.15s;
 }
-.close-btn:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+.close-btn:hover { background: rgba(255,255,255,0.05); color: #b6b6ba; }
 
 /* ── Action feedback ─────────────────────────────────────────────────────── */
 .action-msg {
@@ -541,8 +541,8 @@
 	font-size: 12px;
 	flex-shrink: 0;
 }
-.action-msg-success { background: rgba(52,211,153,0.08); color: #34d399; border-bottom: 1px solid rgba(52,211,153,0.12); }
-.action-msg-error   { background: rgba(248,113,113,0.08); color: #f87171; border-bottom: 1px solid rgba(248,113,113,0.12); }
+.action-msg-success { background: rgba(52,211,153,0.08); color: #32c686; border-bottom: 1px solid rgba(52,211,153,0.12); }
+.action-msg-error   { background: rgba(248,113,113,0.08); color: #ff6464; border-bottom: 1px solid rgba(248,113,113,0.12); }
 
 /* ── Tabs ────────────────────────────────────────────────────────────────── */
 .tabs-row {
@@ -560,7 +560,7 @@
 	border-radius: 8px 8px 0 0;
 	font-size: 12px;
 	font-weight: 500;
-	color: #64748b;
+	color: #6a6a70;
 	background: transparent;
 	border: none;
 	cursor: pointer;
@@ -568,24 +568,24 @@
 	position: relative;
 	bottom: -1px;
 }
-.tab-btn:hover { color: #94a3b8; background: rgba(255,255,255,0.03); }
+.tab-btn:hover { color: #8a8a90; background: rgba(255,255,255,0.03); }
 .tab-active {
-	color: #e2e8f0 !important;
+	color: #b6b6ba !important;
 	background: rgba(255,255,255,0.04) !important;
 	border: 1px solid rgba(255,255,255,0.07);
-	border-bottom-color: #111118;
+	border-bottom-color: #121214;
 }
 .tab-badge {
 	font-size: 9px;
 	font-weight: 700;
 	background: rgba(248,113,113,0.15);
-	color: #f87171;
+	color: #ff6464;
 	border-radius: 99px;
 	padding: 1px 5px;
 }
 .tab-badge-neutral {
 	background: rgba(148,163,184,0.12);
-	color: #94a3b8;
+	color: #8a8a90;
 }
 
 /* ── Body ────────────────────────────────────────────────────────────────── */
@@ -607,7 +607,7 @@
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	color: #475569;
+	color: #45454b;
 	margin-bottom: 0.625rem;
 }
 .info-grid {
@@ -629,14 +629,14 @@
 .info-row:last-child { border-bottom: none; }
 .info-key {
 	font-size: 11px;
-	color: #64748b;
+	color: #6a6a70;
 	min-width: 68px;
 	flex-shrink: 0;
 	padding-top: 1px;
 }
 .info-val {
 	font-size: 12px;
-	color: #cbd5e1;
+	color: #b6b6ba;
 	font-weight: 500;
 	flex: 1;
 }
@@ -651,7 +651,7 @@
 .plan-price {
 	font-size: 13px;
 	font-weight: 700;
-	color: #3b82f6;
+	color: #2570ff;
 	flex-shrink: 0;
 }
 .plan-stat {
@@ -662,7 +662,7 @@
 }
 .plan-stat-label {
 	font-size: 9px;
-	color: #475569;
+	color: #45454b;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
 	margin-bottom: 3px;
@@ -680,8 +680,8 @@
 	padding: 8px 10px;
 	border-radius: 8px;
 }
-.wallet-positive { color: #34d399; background: rgba(52,211,153,0.06); }
-.wallet-negative { color: #f87171; background: rgba(248,113,113,0.06); }
+.wallet-positive { color: #32c686; background: rgba(52,211,153,0.06); }
+.wallet-negative { color: #ff6464; background: rgba(248,113,113,0.06); }
 
 /* ── Invoices ────────────────────────────────────────────────────────────── */
 .invoice-row {
@@ -750,12 +750,12 @@
 .btn-warn {
 	background: rgba(251,191,36,0.08);
 	border-color: rgba(251,191,36,0.20);
-	color: #fbbf24;
+	color: #ffbb1f;
 }
 .btn-ok {
 	background: rgba(52,211,153,0.08);
 	border-color: rgba(52,211,153,0.20);
-	color: #34d399;
+	color: #32c686;
 }
 
 /* ── Confirm box ─────────────────────────────────────────────────────────── */
@@ -773,10 +773,10 @@
 	font-weight: 500;
 	background: transparent;
 	border: 1px solid rgba(255,255,255,0.10);
-	color: #64748b;
+	color: #6a6a70;
 	cursor: pointer;
 }
-.btn-ghost-sm:hover { color: #94a3b8; }
+.btn-ghost-sm:hover { color: #8a8a90; }
 .btn-action-sm {
 	display: flex;
 	align-items: center;
@@ -790,8 +790,8 @@
 	transition: opacity 0.15s;
 }
 .btn-action-sm:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-danger  { background: rgba(248,113,113,0.10); border-color: rgba(248,113,113,0.25); color: #f87171; }
-.btn-success { background: rgba(52,211,153,0.10);  border-color: rgba(52,211,153,0.25);  color: #34d399; }
+.btn-danger  { background: rgba(248,113,113,0.10); border-color: rgba(248,113,113,0.25); color: #ff6464; }
+.btn-success { background: rgba(52,211,153,0.10);  border-color: rgba(52,211,153,0.25);  color: #32c686; }
 
 /* ── Retry ───────────────────────────────────────────────────────────────── */
 .retry-btn {
@@ -800,7 +800,7 @@
 	font-size: 12px;
 	background: rgba(255,255,255,0.05);
 	border: 1px solid rgba(255,255,255,0.10);
-	color: #94a3b8;
+	color: #8a8a90;
 	cursor: pointer;
 }
 .retry-btn:hover { background: rgba(255,255,255,0.08); }

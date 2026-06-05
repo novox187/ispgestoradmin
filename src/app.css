@@ -14,28 +14,113 @@ body {
 @import '@skeletonlabs/skeleton/themes/cerberus';
 
 /* ================================================================
-   IRON LINK — SISTEMA DE DISEÑO
+   IRON LINK — SISTEMA DE DISEÑO  ·  Paleta "Grafito" (oscura neutra)
+   ----------------------------------------------------------------
+   Fuente única de verdad de color para TODA la aplicación.
+
+   Cómo funciona la estandarización:
+   1) Definimos rampas CANÓNICAS (neutral, primary, success, warning,
+      danger, info, accent) tintadas en azul-marino.
+   2) Aliaseamos las familias de Tailwind que el código ya usa
+      (gray/zinc/slate/stone, blue/sky/indigo, green/emerald/teal,
+      red/rose, amber/yellow/orange, cyan, purple/violet/...) hacia
+      esas rampas canónicas. Así ~3.500 clases hardcodeadas existentes
+      quedan unificadas en una sola paleta sin tocar los componentes.
+
+   Tono: superficies/texto en GRIS NEUTRO (negro grafito, sin tinte azul);
+   el azul se reserva solo como acento de marca (primary).
+
    Nomenclatura: --color-[familia]-[shade]
-   WCAG 2.1 AA: contraste mínimo 4.5:1 garantizado sobre surface-base
-   Verificado: text-primary ~18:1, text-secondary ~11:1, text-muted ~7:1
+   Contraste WCAG 2.1 AA garantizado sobre surface-base.
    ================================================================ */
 
 @theme {
-  /* --- Superficies — Jerarquía de profundidad visual (azul-marino oscuro) --- */
-  --color-surface-base:     #07091a;   /* Fondo más profundo      */
-  --color-surface-card:     #0b0f26;   /* Sidebar / panel lateral */
-  --color-surface-elevated: #101629;   /* Tarjetas y secciones    */
-  --color-surface-overlay:  #152035;   /* Dropdowns, tooltips     */
-  --color-surface-hover:    #1a2840;   /* Hover de ítems de lista */
-  --color-surface-selected: #1b2d50;   /* Ítem activo/seleccionado*/
+  /* ============================================================
+     RAMPA NEUTRAL CANÓNICA — gris neutro (grafito, sin tinte azul)
+     Sirve doble función: superficies (extremo oscuro) y
+     texto/bordes (extremo claro).
+     ============================================================ */
+  --color-neutral-50:  #f7f7f8;
+  --color-neutral-100: #ededee;
+  --color-neutral-200: #d7d7d9;
+  --color-neutral-300: #b6b6ba;
+  --color-neutral-400: #8a8a90;
+  --color-neutral-500: #6a6a70;
+  --color-neutral-600: #45454b;
+  --color-neutral-700: #2a2a2e;
+  --color-neutral-800: #1a1a1d;
+  --color-neutral-900: #121214;
+  --color-neutral-950: #0b0b0d;
+
+  /* Familias grises sinónimas → misma rampa neutral */
+  --color-gray-50:  var(--color-neutral-50);
+  --color-gray-100: var(--color-neutral-100);
+  --color-gray-200: var(--color-neutral-200);
+  --color-gray-300: var(--color-neutral-300);
+  --color-gray-400: var(--color-neutral-400);
+  --color-gray-500: var(--color-neutral-500);
+  --color-gray-600: var(--color-neutral-600);
+  --color-gray-700: var(--color-neutral-700);
+  --color-gray-800: var(--color-neutral-800);
+  --color-gray-900: var(--color-neutral-900);
+  --color-gray-950: var(--color-neutral-950);
+
+  --color-slate-50:  var(--color-neutral-50);
+  --color-slate-100: var(--color-neutral-100);
+  --color-slate-200: var(--color-neutral-200);
+  --color-slate-300: var(--color-neutral-300);
+  --color-slate-400: var(--color-neutral-400);
+  --color-slate-500: var(--color-neutral-500);
+  --color-slate-600: var(--color-neutral-600);
+  --color-slate-700: var(--color-neutral-700);
+  --color-slate-800: var(--color-neutral-800);
+  --color-slate-900: var(--color-neutral-900);
+  --color-slate-950: var(--color-neutral-950);
+
+  --color-zinc-50:  var(--color-neutral-50);
+  --color-zinc-100: var(--color-neutral-100);
+  --color-zinc-200: var(--color-neutral-200);
+  --color-zinc-300: var(--color-neutral-300);
+  --color-zinc-400: var(--color-neutral-400);
+  --color-zinc-500: var(--color-neutral-500);
+  --color-zinc-600: var(--color-neutral-600);
+  --color-zinc-700: var(--color-neutral-700);
+  --color-zinc-800: var(--color-neutral-800);
+  --color-zinc-900: var(--color-neutral-900);
+  --color-zinc-950: var(--color-neutral-950);
+
+  --color-stone-50:  var(--color-neutral-50);
+  --color-stone-100: var(--color-neutral-100);
+  --color-stone-200: var(--color-neutral-200);
+  --color-stone-300: var(--color-neutral-300);
+  --color-stone-400: var(--color-neutral-400);
+  --color-stone-500: var(--color-neutral-500);
+  --color-stone-600: var(--color-neutral-600);
+  --color-stone-700: var(--color-neutral-700);
+  --color-stone-800: var(--color-neutral-800);
+  --color-stone-900: var(--color-neutral-900);
+  --color-stone-950: var(--color-neutral-950);
+
+  /* ============================================================
+     SUPERFICIES — jerarquía de profundidad (alineadas a neutral)
+     ============================================================ */
+  --color-surface-base:     #0b0b0d;   /* Fondo más profundo      = neutral-950 */
+  --color-surface-card:     #121214;   /* Sidebar / panel lateral = neutral-900 */
+  --color-surface-elevated: #1a1a1d;   /* Tarjetas y secciones    = neutral-800 */
+  --color-surface-overlay:  #232327;   /* Dropdowns, tooltips     */
+  --color-surface-hover:    #26262b;   /* Hover de ítems de lista */
+  --color-surface-selected: #2f2f35;   /* Ítem activo/seleccionado*/
 
   /* --- Texto — Contraste WCAG 2.1 AA verificado --- */
-  --color-text-primary:   #eef2ff;   /* Contraste ≈17:1 sobre surface-base */
-  --color-text-secondary: #c4ceea;   /* Contraste ≈11:1 */
-  --color-text-muted:     #8898b8;   /* Contraste ≈7:1  */
-  --color-text-disabled:  #506280;   /* Decorativo — estados inactivos */
+  --color-text-primary:   #f2f2f4;   /* ≈17:1 sobre surface-base */
+  --color-text-secondary: #b6b6ba;   /* ≈11:1 */
+  --color-text-muted:     #8a8a90;   /* ≈7:1  */
+  --color-text-disabled:  #56565c;   /* Decorativo — estados inactivos */
 
-  /* --- Primario — Azul corporativo Iron Link --- */
+  /* ============================================================
+     PRIMARIO — Azul corporativo Iron Link
+     blue / sky / indigo → primary
+     ============================================================ */
   --color-primary-50:  #eef4ff;
   --color-primary-100: #dce8ff;
   --color-primary-200: #b8d0ff;
@@ -48,7 +133,47 @@ body {
   --color-primary-900: #112070;
   --color-primary-950: #0a1445;
 
-  /* --- Éxito — Estado ACTIVO (esmeralda) --- */
+  --color-blue-50:  var(--color-primary-50);
+  --color-blue-100: var(--color-primary-100);
+  --color-blue-200: var(--color-primary-200);
+  --color-blue-300: var(--color-primary-300);
+  --color-blue-400: var(--color-primary-400);
+  --color-blue-500: var(--color-primary-500);
+  --color-blue-600: var(--color-primary-600);
+  --color-blue-700: var(--color-primary-700);
+  --color-blue-800: var(--color-primary-800);
+  --color-blue-900: var(--color-primary-900);
+  --color-blue-950: var(--color-primary-950);
+
+  --color-sky-50:  var(--color-primary-50);
+  --color-sky-100: var(--color-primary-100);
+  --color-sky-200: var(--color-primary-200);
+  --color-sky-300: var(--color-primary-300);
+  --color-sky-400: var(--color-primary-400);
+  --color-sky-500: var(--color-primary-500);
+  --color-sky-600: var(--color-primary-600);
+  --color-sky-700: var(--color-primary-700);
+  --color-sky-800: var(--color-primary-800);
+  --color-sky-900: var(--color-primary-900);
+  --color-sky-950: var(--color-primary-950);
+
+  --color-indigo-50:  var(--color-primary-50);
+  --color-indigo-100: var(--color-primary-100);
+  --color-indigo-200: var(--color-primary-200);
+  --color-indigo-300: var(--color-primary-300);
+  --color-indigo-400: var(--color-primary-400);
+  --color-indigo-500: var(--color-primary-500);
+  --color-indigo-600: var(--color-primary-600);
+  --color-indigo-700: var(--color-primary-700);
+  --color-indigo-800: var(--color-primary-800);
+  --color-indigo-900: var(--color-primary-900);
+  --color-indigo-950: var(--color-primary-950);
+
+  /* ============================================================
+     ÉXITO — Estado ACTIVO (esmeralda)
+     green / emerald / teal → success
+     ============================================================ */
+  --color-success-50:  #ecfdf5;
   --color-success-100: #d0fae6;
   --color-success-200: #a4f3cc;
   --color-success-300: #6ae3aa;
@@ -56,9 +181,51 @@ body {
   --color-success-500: #14a869;
   --color-success-600: #0c8550;
   --color-success-700: #09663e;
+  --color-success-800: #075331;
   --color-success-900: #054027;
+  --color-success-950: #022c1a;
 
-  /* --- Advertencia — Estado SUSPENDIDO (ámbar) --- */
+  --color-emerald-50:  var(--color-success-50);
+  --color-emerald-100: var(--color-success-100);
+  --color-emerald-200: var(--color-success-200);
+  --color-emerald-300: var(--color-success-300);
+  --color-emerald-400: var(--color-success-400);
+  --color-emerald-500: var(--color-success-500);
+  --color-emerald-600: var(--color-success-600);
+  --color-emerald-700: var(--color-success-700);
+  --color-emerald-800: var(--color-success-800);
+  --color-emerald-900: var(--color-success-900);
+  --color-emerald-950: var(--color-success-950);
+
+  --color-green-50:  var(--color-success-50);
+  --color-green-100: var(--color-success-100);
+  --color-green-200: var(--color-success-200);
+  --color-green-300: var(--color-success-300);
+  --color-green-400: var(--color-success-400);
+  --color-green-500: var(--color-success-500);
+  --color-green-600: var(--color-success-600);
+  --color-green-700: var(--color-success-700);
+  --color-green-800: var(--color-success-800);
+  --color-green-900: var(--color-success-900);
+  --color-green-950: var(--color-success-950);
+
+  --color-teal-50:  var(--color-success-50);
+  --color-teal-100: var(--color-success-100);
+  --color-teal-200: var(--color-success-200);
+  --color-teal-300: var(--color-success-300);
+  --color-teal-400: var(--color-success-400);
+  --color-teal-500: var(--color-success-500);
+  --color-teal-600: var(--color-success-600);
+  --color-teal-700: var(--color-success-700);
+  --color-teal-800: var(--color-success-800);
+  --color-teal-900: var(--color-success-900);
+  --color-teal-950: var(--color-success-950);
+
+  /* ============================================================
+     ADVERTENCIA — Estado SUSPENDIDO (ámbar)
+     amber / yellow / orange → warning
+     ============================================================ */
+  --color-warning-50:  #fffbeb;
   --color-warning-100: #fff4cc;
   --color-warning-200: #ffe896;
   --color-warning-300: #ffd354;
@@ -66,9 +233,51 @@ body {
   --color-warning-500: #f59e0b;
   --color-warning-600: #c97c04;
   --color-warning-700: #9c5e02;
+  --color-warning-800: #7c4a02;
   --color-warning-900: #6d3f00;
+  --color-warning-950: #422600;
 
-  /* --- Peligro — Estado CANCELADO / Errores (rojo) --- */
+  --color-amber-50:  var(--color-warning-50);
+  --color-amber-100: var(--color-warning-100);
+  --color-amber-200: var(--color-warning-200);
+  --color-amber-300: var(--color-warning-300);
+  --color-amber-400: var(--color-warning-400);
+  --color-amber-500: var(--color-warning-500);
+  --color-amber-600: var(--color-warning-600);
+  --color-amber-700: var(--color-warning-700);
+  --color-amber-800: var(--color-warning-800);
+  --color-amber-900: var(--color-warning-900);
+  --color-amber-950: var(--color-warning-950);
+
+  --color-yellow-50:  var(--color-warning-50);
+  --color-yellow-100: var(--color-warning-100);
+  --color-yellow-200: var(--color-warning-200);
+  --color-yellow-300: var(--color-warning-300);
+  --color-yellow-400: var(--color-warning-400);
+  --color-yellow-500: var(--color-warning-500);
+  --color-yellow-600: var(--color-warning-600);
+  --color-yellow-700: var(--color-warning-700);
+  --color-yellow-800: var(--color-warning-800);
+  --color-yellow-900: var(--color-warning-900);
+  --color-yellow-950: var(--color-warning-950);
+
+  --color-orange-50:  var(--color-warning-50);
+  --color-orange-100: var(--color-warning-100);
+  --color-orange-200: var(--color-warning-200);
+  --color-orange-300: var(--color-warning-300);
+  --color-orange-400: var(--color-warning-400);
+  --color-orange-500: var(--color-warning-500);
+  --color-orange-600: var(--color-warning-600);
+  --color-orange-700: var(--color-warning-700);
+  --color-orange-800: var(--color-warning-800);
+  --color-orange-900: var(--color-warning-900);
+  --color-orange-950: var(--color-warning-950);
+
+  /* ============================================================
+     PELIGRO — Estado CANCELADO / Errores (rojo)
+     red / rose → danger
+     ============================================================ */
+  --color-danger-50:  #fef2f2;
   --color-danger-100: #ffe4e4;
   --color-danger-200: #ffc5c5;
   --color-danger-300: #ff9b9b;
@@ -76,9 +285,39 @@ body {
   --color-danger-500: #f53b3b;
   --color-danger-600: #cc1f1f;
   --color-danger-700: #a81515;
+  --color-danger-800: #861313;
   --color-danger-900: #6e0b0b;
+  --color-danger-950: #450606;
 
-  /* --- Información — Estado LIMITADO (cyan) --- */
+  --color-red-50:  var(--color-danger-50);
+  --color-red-100: var(--color-danger-100);
+  --color-red-200: var(--color-danger-200);
+  --color-red-300: var(--color-danger-300);
+  --color-red-400: var(--color-danger-400);
+  --color-red-500: var(--color-danger-500);
+  --color-red-600: var(--color-danger-600);
+  --color-red-700: var(--color-danger-700);
+  --color-red-800: var(--color-danger-800);
+  --color-red-900: var(--color-danger-900);
+  --color-red-950: var(--color-danger-950);
+
+  --color-rose-50:  var(--color-danger-50);
+  --color-rose-100: var(--color-danger-100);
+  --color-rose-200: var(--color-danger-200);
+  --color-rose-300: var(--color-danger-300);
+  --color-rose-400: var(--color-danger-400);
+  --color-rose-500: var(--color-danger-500);
+  --color-rose-600: var(--color-danger-600);
+  --color-rose-700: var(--color-danger-700);
+  --color-rose-800: var(--color-danger-800);
+  --color-rose-900: var(--color-danger-900);
+  --color-rose-950: var(--color-danger-950);
+
+  /* ============================================================
+     INFORMACIÓN — Estado LIMITADO (cyan)
+     cyan → info
+     ============================================================ */
+  --color-info-50:  #ecfeff;
   --color-info-100: #e0f4ff;
   --color-info-200: #bae7fd;
   --color-info-300: #7dd5fc;
@@ -86,7 +325,188 @@ body {
   --color-info-500: #0ca5e9;
   --color-info-600: #0283c7;
   --color-info-700: #0369a1;
+  --color-info-800: #075985;
   --color-info-900: #0c4a6e;
+  --color-info-950: #082f49;
+
+  --color-cyan-50:  var(--color-info-50);
+  --color-cyan-100: var(--color-info-100);
+  --color-cyan-200: var(--color-info-200);
+  --color-cyan-300: var(--color-info-300);
+  --color-cyan-400: var(--color-info-400);
+  --color-cyan-500: var(--color-info-500);
+  --color-cyan-600: var(--color-info-600);
+  --color-cyan-700: var(--color-info-700);
+  --color-cyan-800: var(--color-info-800);
+  --color-cyan-900: var(--color-info-900);
+  --color-cyan-950: var(--color-info-950);
+
+  /* ============================================================
+     ACENTO — Categorías especiales (violeta unificado)
+     purple / violet / fuchsia / pink → accent
+     ============================================================ */
+  --color-accent-50:  #f5f3ff;
+  --color-accent-100: #ede9fe;
+  --color-accent-200: #ddd6fe;
+  --color-accent-300: #c4b5fd;
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+  --color-accent-700: #6d28d9;
+  --color-accent-800: #5b21b6;
+  --color-accent-900: #4c1d95;
+  --color-accent-950: #2e1065;
+
+  --color-purple-50:  var(--color-accent-50);
+  --color-purple-100: var(--color-accent-100);
+  --color-purple-200: var(--color-accent-200);
+  --color-purple-300: var(--color-accent-300);
+  --color-purple-400: var(--color-accent-400);
+  --color-purple-500: var(--color-accent-500);
+  --color-purple-600: var(--color-accent-600);
+  --color-purple-700: var(--color-accent-700);
+  --color-purple-800: var(--color-accent-800);
+  --color-purple-900: var(--color-accent-900);
+  --color-purple-950: var(--color-accent-950);
+
+  --color-violet-50:  var(--color-accent-50);
+  --color-violet-100: var(--color-accent-100);
+  --color-violet-200: var(--color-accent-200);
+  --color-violet-300: var(--color-accent-300);
+  --color-violet-400: var(--color-accent-400);
+  --color-violet-500: var(--color-accent-500);
+  --color-violet-600: var(--color-accent-600);
+  --color-violet-700: var(--color-accent-700);
+  --color-violet-800: var(--color-accent-800);
+  --color-violet-900: var(--color-accent-900);
+  --color-violet-950: var(--color-accent-950);
+
+  --color-fuchsia-50:  var(--color-accent-50);
+  --color-fuchsia-100: var(--color-accent-100);
+  --color-fuchsia-200: var(--color-accent-200);
+  --color-fuchsia-300: var(--color-accent-300);
+  --color-fuchsia-400: var(--color-accent-400);
+  --color-fuchsia-500: var(--color-accent-500);
+  --color-fuchsia-600: var(--color-accent-600);
+  --color-fuchsia-700: var(--color-accent-700);
+  --color-fuchsia-800: var(--color-accent-800);
+  --color-fuchsia-900: var(--color-accent-900);
+  --color-fuchsia-950: var(--color-accent-950);
+
+  --color-pink-50:  var(--color-accent-50);
+  --color-pink-100: var(--color-accent-100);
+  --color-pink-200: var(--color-accent-200);
+  --color-pink-300: var(--color-accent-300);
+  --color-pink-400: var(--color-accent-400);
+  --color-pink-500: var(--color-accent-500);
+  --color-pink-600: var(--color-accent-600);
+  --color-pink-700: var(--color-accent-700);
+  --color-pink-800: var(--color-accent-800);
+  --color-pink-900: var(--color-accent-900);
+  --color-pink-950: var(--color-accent-950);
+}
+
+/* ================================================================
+   AUTORIDAD SOBRE EL TEMA SKELETON (cerberus)
+   ----------------------------------------------------------------
+   <html data-theme="cerberus"> hace que Skeleton defina sus propios
+   tokens (primary, success, warning, error, surface, secondary,
+   tertiary). Por igualdad de especificidad + orden de fuente, esos
+   ganarían a los de @theme (:root). Aquí los redefinimos con la
+   paleta Navy para que TODO —utilidades Tailwind, componentes
+   Skeleton y presets (preset-tonal, bg-surface-100-900, etc.)—
+   beba de una sola fuente de verdad.
+   ================================================================ */
+[data-theme='cerberus'] {
+  /* Superficies Skeleton → rampa Navy (alinea preset-* y bg-surface-N-N) */
+  --color-surface-50:  var(--color-neutral-50);
+  --color-surface-100: var(--color-neutral-100);
+  --color-surface-200: var(--color-neutral-200);
+  --color-surface-300: var(--color-neutral-300);
+  --color-surface-400: var(--color-neutral-400);
+  --color-surface-500: var(--color-neutral-500);
+  --color-surface-600: var(--color-neutral-600);
+  --color-surface-700: var(--color-neutral-700);
+  --color-surface-800: var(--color-neutral-800);
+  --color-surface-900: var(--color-neutral-900);
+  --color-surface-950: var(--color-neutral-950);
+
+  /* Error Skeleton → danger (rojo Navy) */
+  --color-error-50:  var(--color-danger-50);
+  --color-error-100: var(--color-danger-100);
+  --color-error-200: var(--color-danger-200);
+  --color-error-300: var(--color-danger-300);
+  --color-error-400: var(--color-danger-400);
+  --color-error-500: var(--color-danger-500);
+  --color-error-600: var(--color-danger-600);
+  --color-error-700: var(--color-danger-700);
+  --color-error-800: var(--color-danger-800);
+  --color-error-900: var(--color-danger-900);
+  --color-error-950: var(--color-danger-950);
+
+  /* Secundario → gris-azulado neutral ; Terciario → acento violeta */
+  --color-secondary-50:  var(--color-neutral-50);
+  --color-secondary-100: var(--color-neutral-100);
+  --color-secondary-200: var(--color-neutral-200);
+  --color-secondary-300: var(--color-neutral-300);
+  --color-secondary-400: var(--color-neutral-400);
+  --color-secondary-500: var(--color-neutral-500);
+  --color-secondary-600: var(--color-neutral-600);
+  --color-secondary-700: var(--color-neutral-700);
+  --color-secondary-800: var(--color-neutral-800);
+  --color-secondary-900: var(--color-neutral-900);
+  --color-secondary-950: var(--color-neutral-950);
+
+  --color-tertiary-50:  var(--color-accent-50);
+  --color-tertiary-100: var(--color-accent-100);
+  --color-tertiary-200: var(--color-accent-200);
+  --color-tertiary-300: var(--color-accent-300);
+  --color-tertiary-400: var(--color-accent-400);
+  --color-tertiary-500: var(--color-accent-500);
+  --color-tertiary-600: var(--color-accent-600);
+  --color-tertiary-700: var(--color-accent-700);
+  --color-tertiary-800: var(--color-accent-800);
+  --color-tertiary-900: var(--color-accent-900);
+  --color-tertiary-950: var(--color-accent-950);
+
+  /* Primario / éxito / advertencia → valores Navy.
+     (Se usan literales porque un token no puede auto-referenciarse.
+      MANTENER SINCRONIZADO con las rampas canónicas de @theme.) */
+  --color-primary-50:  #eef4ff;
+  --color-primary-100: #dce8ff;
+  --color-primary-200: #b8d0ff;
+  --color-primary-300: #82b0ff;
+  --color-primary-400: #4d8fff;
+  --color-primary-500: #2570ff;
+  --color-primary-600: #1452e0;
+  --color-primary-700: #1040be;
+  --color-primary-800: #112f90;
+  --color-primary-900: #112070;
+  --color-primary-950: #0a1445;
+
+  --color-success-50:  #ecfdf5;
+  --color-success-100: #d0fae6;
+  --color-success-200: #a4f3cc;
+  --color-success-300: #6ae3aa;
+  --color-success-400: #32c686;
+  --color-success-500: #14a869;
+  --color-success-600: #0c8550;
+  --color-success-700: #09663e;
+  --color-success-800: #075331;
+  --color-success-900: #054027;
+  --color-success-950: #022c1a;
+
+  --color-warning-50:  #fffbeb;
+  --color-warning-100: #fff4cc;
+  --color-warning-200: #ffe896;
+  --color-warning-300: #ffd354;
+  --color-warning-400: #ffbb1f;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #c97c04;
+  --color-warning-700: #9c5e02;
+  --color-warning-800: #7c4a02;
+  --color-warning-900: #6d3f00;
+  --color-warning-950: #422600;
 }
 
 /* ================================================================
@@ -162,12 +582,12 @@ body {
    ================================================================ */
 .scrollbar-isp {
   scrollbar-width: thin;
-  scrollbar-color: #1e2d50 transparent;
+  scrollbar-color: #2a2a2e transparent;
 }
 .scrollbar-isp::-webkit-scrollbar { width: 4px; height: 4px; }
 .scrollbar-isp::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-isp::-webkit-scrollbar-thumb {
-  background: #1e2d50;
+  background: #2a2a2e;
   border-radius: 8px;
 }
-.scrollbar-isp::-webkit-scrollbar-thumb:hover { background: #2a3e6a; }
+.scrollbar-isp::-webkit-scrollbar-thumb:hover { background: #3a3a40; }

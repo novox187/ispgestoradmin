@@ -271,7 +271,7 @@
 <div class="space-y-4">
 
 	<!-- Header card -->
-	<div class="bg-[#111111] border border-neutral-800 rounded-xl p-5 space-y-4">
+	<div class="bg-[#121214] border border-neutral-800 rounded-xl p-5 space-y-4">
 
 		<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
 			<div class="space-y-1">
@@ -405,7 +405,7 @@
 	</div>
 
 	<!-- Reglas -->
-	<div class="bg-[#111111] border border-neutral-800 rounded-xl p-5">
+	<div class="bg-[#121214] border border-neutral-800 rounded-xl p-5">
 		<div class="flex items-center gap-2 mb-4">
 			{#each [{ id: 'filters', label: 'Filtros' }, { id: 'nat', label: 'NAT' }] as tab (tab.id)}
 				<button
@@ -641,7 +641,7 @@
 <!-- ── Modal de Apply con validación + diff ──────────────────────────── -->
 {#if applyModalOpen}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-		<div class="bg-[#111] border border-neutral-700 rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl">
+		<div class="bg-[#121214] border border-neutral-700 rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl">
 			<div class="space-y-1">
 				<div class="text-sm font-semibold text-gray-100">Confirmar aplicación de cambios</div>
 				<p class="text-xs text-gray-400">Se reemplazarán todas las reglas de filtro y NAT del router con el estado actual del borrador.</p>
@@ -737,7 +737,7 @@
 <!-- ── Modal Importación parcial ──────────────────────────────────────── -->
 {#if mergeModalOpen}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-		<div class="bg-[#111] border border-neutral-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+		<div class="bg-[#121214] border border-neutral-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
 			<div class="space-y-1">
 				<div class="text-sm font-semibold text-gray-100">Importación parcial desde router</div>
 				<p class="text-xs text-gray-400 leading-relaxed">

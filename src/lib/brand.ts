@@ -85,11 +85,11 @@ export const BRAND = {
   /** Categoría/sector de la aplicación — usado en og:type secundario y Schema.org. */
   category: 'BusinessApplication',
 
-  /** Color principal de la marca (hex) — usado en theme-color y manifest. */
-  primaryColor: '#0f0f0f',
+  /** Color principal de la marca (hex) — usado en theme-color y manifest. Coincide con --color-surface-base. */
+  primaryColor: '#0b0b0d',
 
-  /** Color de acento — para tile color en Windows, splash en iOS, etc. */
-  accentColor: '#3b82f6',
+  /** Color de acento — para tile color en Windows, splash en iOS, etc. Coincide con --color-primary-500. */
+  accentColor: '#2570ff',
 
   /** Información de contacto de la empresa */
   contact: {

@@ -292,7 +292,7 @@
 
 </script>
 
-<div class="flex h-screen w-full bg-[#09090f] text-gray-100 overflow-hidden">
+<div class="flex h-screen w-full bg-[#0b0b0d] text-gray-100 overflow-hidden">
 
   <main class="flex-1 overflow-y-auto">
     <Encabezado {toggleSidebar} {toggleNotifications} notificationCount={3} />
@@ -333,7 +333,7 @@
   {#if indicatorVisible}
     <div class="fixed bottom-4 right-4 z-50" in:scale={{ duration: 140, start: 0.9 }} out:fade={{ duration: 140 }}>
       <button
-        class="flex items-center gap-2 bg-[#141414] border border-gray-800 text-gray-200 px-3 py-2 rounded-lg shadow-lg max-w-[320px]"
+        class="flex items-center gap-2 bg-[#1a1a1d] border border-gray-800 text-gray-200 px-3 py-2 rounded-lg shadow-lg max-w-[320px]"
         onclick={() => overallStatus === 'error' && loadDashboardData()}
       >
         {#if overallStatus === 'loading'}

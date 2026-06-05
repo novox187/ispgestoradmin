@@ -34,11 +34,11 @@
 	});
 </script>
 
-<main class="flex-1 overflow-hidden flex flex-col bg-[#09090f] text-gray-100">
+<main class="flex-1 overflow-hidden flex flex-col bg-[#0b0b0d] text-gray-100">
 	<Encabezado {toggleSidebar} />
 
 	<!-- Breadcrumb -->
-	<div class="border-b border-neutral-800/60 bg-[#09090f] px-4 md:px-6 py-2.5">
+	<div class="border-b border-neutral-800/60 bg-[#0b0b0d] px-4 md:px-6 py-2.5">
 		<nav class="flex items-center gap-1 text-xs" aria-label="Breadcrumb">
 			{#each breadcrumbs as crumb, i}
 				{#if i > 0}
@@ -59,7 +59,7 @@
 	<div class="flex flex-1 overflow-hidden">
 
 		<!-- Sub-sidebar -->
-		<aside class="w-56 shrink-0 border-r border-neutral-800/60 bg-[#09090f] overflow-y-auto hidden md:flex flex-col py-3 px-2 gap-4">
+		<aside class="w-56 shrink-0 border-r border-neutral-800/60 bg-[#0b0b0d] overflow-y-auto hidden md:flex flex-col py-3 px-2 gap-4">
 			<!-- Header del panel -->
 			<div class="px-2 mb-1">
 				<div class="flex items-center gap-2 mb-1">
