@@ -2,7 +2,7 @@
     import { createEventDispatcher } from 'svelte';
     import {
         Send, Paperclip, MoreVertical, CreditCard,
-        ArrowLeft, MessageSquare, UserCheck, UserX, Info,
+        ArrowLeft, MessageSquare, UserCheck, UserX, UserMinus, Info,
         Wallet, CheckCircle, ExternalLink, LockKeyhole
     } from '@lucide/svelte';
     import ClientDetailSidebar from './ClientDetailSidebar.svelte';
@@ -58,7 +58,7 @@
 
     let showDropdown = $state(false);
     let showConfirmModal = $state(false);
-    let actionType = $state<'suspend' | 'activate' | null>(null);
+    let actionType = $state<'suspend' | 'activate' | 'cancel' | null>(null);
     let actionLoading = $state(false);
 
     let showAddFundsModal = $state(false);
@@ -100,7 +100,7 @@
 
     function toggleDropdown() { showDropdown = !showDropdown; }
 
-    function handleActionClick(action: 'suspend' | 'activate') {
+    function handleActionClick(action: 'suspend' | 'activate' | 'cancel') {
         showDropdown = false;
         actionType = action;
         showConfirmModal = true;
@@ -123,24 +123,36 @@
             };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const endpoint = actionType === 'suspend'
-                ? `${API_BASE}/admin/clientes/${client.id}/suspend`
-                : `${API_BASE}/admin/clientes/${client.id}/activate`;
+            const endpointByAction: Record<'suspend' | 'activate' | 'cancel', string> = {
+                suspend:  `${API_BASE}/admin/clientes/${client.id}/suspend`,
+                activate: `${API_BASE}/admin/clientes/${client.id}/activate`,
+                cancel:   `${API_BASE}/admin/clientes/${client.id}/cancel`,
+            };
+            const verbDone: Record<'suspend' | 'activate' | 'cancel', string> = {
+                suspend: 'suspendido', activate: 'activado', cancel: 'dado de baja',
+            };
+            const verbInf: Record<'suspend' | 'activate' | 'cancel', string> = {
+                suspend: 'suspender', activate: 'activar', cancel: 'dar de baja a',
+            };
+            const newStatusByAction: Record<'suspend' | 'activate' | 'cancel', string> = {
+                suspend: 'SUSPENDED', activate: 'ACTIVE', cancel: 'CANCELLED',
+            };
 
-            const res = await fetch(endpoint, { method: 'POST', headers });
+            const action = actionType!;
+            const res = await fetch(endpointByAction[action], { method: 'POST', headers });
 
             if (res.ok) {
                 const data = await res.json();
-                toast.success(`Cliente ${actionType === 'suspend' ? 'suspendido' : 'activado'} correctamente.`);
+                toast.success(`Cliente ${verbDone[action]} correctamente.`);
                 if (client) {
-                    const newStatus = actionType === 'suspend' ? 'SUSPENDED' : 'ACTIVE';
+                    const newStatus = newStatusByAction[action];
                     if ('status' in client) client.status = newStatus;
                     if ('service_status' in client) client.service_status = newStatus;
                 }
                 dispatch('updated', data);
             } else {
                 const errorData = await res.json().catch(() => ({}));
-                toast.error(errorData.message || `Error al ${actionType === 'suspend' ? 'suspender' : 'activar'} el cliente.`);
+                toast.error(errorData.message || `Error al ${verbInf[action]} el cliente.`);
             }
         } catch (error) {
             console.error(error);
@@ -185,6 +197,16 @@
 
     function isClientActive(c: Client) {
         return c.status?.toUpperCase() === 'ACTIVE' || c.service_status?.toUpperCase() === 'ACTIVE';
+    }
+
+    function isClientSuspended(c: Client) {
+        const s = (c.status ?? c.service_status ?? '').toUpperCase();
+        return s === 'SUSPENDED' || s === 'SUSPENDIDO' || s === 'LIMITADO';
+    }
+
+    function isClientCancelled(c: Client) {
+        const s = (c.status ?? c.service_status ?? '').toUpperCase();
+        return s === 'CANCELLED' || s === 'CANCELADO';
     }
 </script>
 
@@ -298,7 +320,7 @@
                                     <UserX class="size-3.5" aria-hidden="true" />
                                     Suspender cliente
                                 </button>
-                            {:else}
+                            {:else if isClientSuspended(client)}
                                 <button
                                     onclick={() => handleActionClick('activate')}
                                     role="menuitem"
@@ -307,6 +329,15 @@
                                 >
                                     <UserCheck class="size-3.5" aria-hidden="true" />
                                     Activar cliente
+                                </button>
+                                <button
+                                    onclick={() => handleActionClick('cancel')}
+                                    role="menuitem"
+                                    class="w-full text-left px-4 py-2.5 text-sm text-danger-400 hover:bg-danger-900/30
+                                           transition-colors border-t border-white/[0.06] flex items-center gap-2.5"
+                                >
+                                    <UserMinus class="size-3.5" aria-hidden="true" />
+                                    Dar de baja
                                 </button>
                             {/if}
 
@@ -551,10 +582,12 @@
 
 <ModalConfirmacion
     open={showConfirmModal}
-    title={actionType === 'suspend' ? 'Suspender Cliente' : 'Activar Cliente'}
-    message={`¿Está seguro que desea ${actionType === 'suspend' ? 'suspender' : 'activar'} a ${client?.name || 'este cliente'} (ID: ${client?.id})?`}
-    type={actionType === 'suspend' ? 'warning' : 'success'}
-    confirmText={actionType === 'suspend' ? 'Sí, suspender' : 'Sí, activar'}
+    title={actionType === 'suspend' ? 'Suspender Cliente' : actionType === 'cancel' ? 'Dar de Baja' : 'Activar Cliente'}
+    message={actionType === 'cancel'
+        ? `¿Dar de baja a ${client?.name || 'este cliente'} (ID: ${client?.id})? Se conservarán sus registros, pero quedará excluido de la facturación y de todo proceso automático. Esta acción corta su servicio definitivamente.`
+        : `¿Está seguro que desea ${actionType === 'suspend' ? 'suspender' : 'activar'} a ${client?.name || 'este cliente'} (ID: ${client?.id})?`}
+    type={actionType === 'activate' ? 'success' : actionType === 'cancel' ? 'danger' : 'warning'}
+    confirmText={actionType === 'suspend' ? 'Sí, suspender' : actionType === 'cancel' ? 'Sí, dar de baja' : 'Sí, activar'}
     loading={actionLoading}
     on:confirm={executeAction}
     on:cancel={closeConfirmModal}
