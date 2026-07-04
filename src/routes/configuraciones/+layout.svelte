@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import {
     Settings, Database, Shield, Bell, ChevronRight,
-    Users, Bot, Sliders, Building2, Lock, Receipt, ShieldCheck
+    Users, Bot, Sliders, Building2, Lock, Receipt, ShieldCheck, ScrollText
   } from '@lucide/svelte';
   import Encabezado from '$lib/components/Encabezado.svelte';
   import { appState } from '$lib/stores/app.svelte';
@@ -77,6 +77,13 @@
           description: 'Gestión de cuentas de empleados',
           icon: Users,
           path: '/configuraciones/usuarios',
+        },
+        {
+          id: 'auditoria',
+          label: 'Auditoría del Sistema',
+          description: 'Registro inmutable de operaciones y cortes de servicio',
+          icon: ScrollText,
+          path: '/configuraciones/auditoria',
         },
       ],
     },

@@ -3,11 +3,12 @@
     import {
         Send, Paperclip, MoreVertical, CreditCard,
         ArrowLeft, MessageSquare, UserCheck, UserX, UserMinus, Info,
-        Wallet, CheckCircle, ExternalLink, LockKeyhole
+        Wallet, CheckCircle, ExternalLink, LockKeyhole, History
     } from '@lucide/svelte';
     import ClientDetailSidebar from './ClientDetailSidebar.svelte';
     import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
     import ModalAddFunds from "./ModalAddFunds.svelte";
+    import ClientHistoryDrawer from "../ClientHistoryDrawer.svelte";
     import { API_BASE } from '$lib/config';
     import { toast } from 'svelte-sonner';
 
@@ -62,6 +63,7 @@
     let actionLoading = $state(false);
 
     let showAddFundsModal = $state(false);
+    let showHistoryDrawer = $state(false);
     let isAdmin = $state(false);
     let detailMounted = $state(false);
     let detailVisible = $state(false);
@@ -308,6 +310,16 @@
                             >
                                 <Info class="size-3.5 text-primary-400" aria-hidden="true" />
                                 Ver detalles
+                            </button>
+
+                            <button
+                                onclick={() => { showDropdown = false; showHistoryDrawer = true; }}
+                                role="menuitem"
+                                class="w-full text-left px-4 py-2.5 text-sm text-text-secondary hover:bg-surface-hover
+                                       hover:text-text-primary transition-colors border-t border-white/[0.06] flex items-center gap-2.5"
+                            >
+                                <History class="size-3.5 text-primary-400" aria-hidden="true" />
+                                Historial
                             </button>
 
                             {#if isClientActive(client)}
@@ -597,6 +609,13 @@
     bind:open={showAddFundsModal}
     {client}
     on:success={(e) => dispatch('updated', e.detail)}
+/>
+
+<ClientHistoryDrawer
+    open={showHistoryDrawer}
+    clientId={client?.id ?? null}
+    clientName={client?.name ?? ''}
+    onClose={() => (showHistoryDrawer = false)}
 />
 
 <style>

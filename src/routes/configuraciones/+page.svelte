@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     Database, Shield, Bell, Building2, Bot, Users,
-    ChevronRight, Sliders, Lock, Sparkles, CheckCircle2, Receipt, ShieldCheck
+    ChevronRight, Sliders, Lock, Sparkles, CheckCircle2, Receipt, ShieldCheck, ScrollText
   } from '@lucide/svelte';
 
   type ConfigCard = {
@@ -93,6 +93,17 @@
       badgeColor: 'blue',
       status: 'available',
       features: ['Suspensión automática', 'Facturación mensual', 'Sync MikroTik', 'Historial de auditoría'],
+    },
+    {
+      id: 'auditoria',
+      label: 'Auditoría del Sistema',
+      description: 'Registro inmutable de todas las operaciones: cambios de datos, cortes de servicio manuales y automáticos, reactivaciones y bajas.',
+      icon: ScrollText,
+      path: '/configuraciones/auditoria',
+      badge: 'Trazabilidad',
+      badgeColor: 'blue',
+      status: 'available',
+      features: ['Visor con filtros', 'Cortes de servicio', 'Intentos fallidos', 'Ejecutor y origen (IP)'],
     },
   ];
 
