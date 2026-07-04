@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import {
     X, History, Loader2, AlertTriangle, User, Calendar, ArrowRight,
     ChevronLeft, ChevronRight, ChevronDown, Globe,
@@ -55,12 +56,17 @@
     }
   }
 
-  // Recargar al abrir el drawer o al cambiar de cliente
+  // Recargar solo al abrir el drawer o al cambiar de cliente. untrack evita
+  // que page/filterTable (leídos dentro de load) se vuelvan dependencias del
+  // efecto: sin él, cada cambio de página o filtro re-ejecutaba el efecto y
+  // reseteaba el estado a página 1 sin filtro.
   $effect(() => {
     if (open && clientId) {
-      page = 1;
-      filterTable = '';
-      load();
+      untrack(() => {
+        page = 1;
+        filterTable = '';
+        load();
+      });
     }
   });
 
