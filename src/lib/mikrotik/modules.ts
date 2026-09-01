@@ -1,7 +1,13 @@
 import type { Component } from 'svelte';
-import { ArrowLeftRight, Bell, LayoutDashboard, Shield, Smartphone } from '@lucide/svelte';
+import { ArrowLeftRight, Bell, LayoutDashboard, Radar, Shield, Smartphone } from '@lucide/svelte';
 
-export type MikrotikModuleId = 'overview' | 'firewall' | 'sync' | 'monitoring' | 'devices';
+export type MikrotikModuleId =
+	| 'overview'
+	| 'firewall'
+	| 'sync'
+	| 'monitoring'
+	| 'devices'
+	| 'agents';
 
 export type MikrotikModule = {
 	id: MikrotikModuleId;
@@ -55,9 +61,21 @@ export const MIKROTIK_MODULES: MikrotikModule[] = [
 	{
 		id: 'devices',
 		label: 'Dispositivos',
-		description: 'Gestión de equipos, credenciales y perfiles por router.',
+		description: 'Alta automática de equipos y gestión de credenciales y perfiles por router.',
 		href: '/mikrotik/dispositivos',
 		icon: Smartphone,
 		status: 'ready'
+	},
+	{
+		id: 'agents',
+		label: 'Agentes',
+		description:
+			'Demonios que detectan los routers conectados por cable y configuran la VPN en ambos extremos.',
+		href: '/mikrotik/agentes',
+		icon: Radar,
+		status: 'ready'
+		// Sin `requiresPrimaryRouter`: los agentes son justamente lo que permite
+		// dar de alta el primer router, así que la pantalla tiene que ser
+		// alcanzable antes de que exista ninguno.
 	}
 ];

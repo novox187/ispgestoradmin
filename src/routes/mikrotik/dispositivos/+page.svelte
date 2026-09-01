@@ -12,6 +12,7 @@
 		type UpdateRouterPayload
 	} from '$lib/api/mikrotik-routers';
 	import { bootstrap } from '$lib/stores/bootstrap.svelte';
+	import ProvisioningPanel from '$lib/components/mikrotik/provisioning/ProvisioningPanel.svelte';
 
 	let routers = $state<MikrotikRouter[]>([]);
 	let loading = $state(false);
@@ -166,6 +167,19 @@
 	onMount(() => loadRouters());
 </script>
 
+<!--
+	Alta automática. Va arriba porque es el camino normal desde que existe el
+	aprovisionamiento: el operador enchufa el equipo y lo ve aparecer aquí. El
+	alta manual de abajo se conserva para los equipos que no pueden pasar por el
+	banco de aprovisionamiento.
+-->
+<ProvisioningPanel
+	onCompleted={() => {
+		loadRouters();
+		bootstrap.refresh();
+	}}
+/>
+
 <!-- Toolbar -->
 <div class="flex items-center justify-between mb-4">
 	<p class="text-xs text-gray-500 font-mono">
@@ -182,10 +196,11 @@
 		</button>
 		<button
 			onclick={() => openCreate()}
-			class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-semibold transition-colors"
+			class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-700 text-gray-400 hover:text-white hover:border-neutral-600 text-xs font-mono transition-colors"
+			title="Para equipos que no pueden pasar por el banco de aprovisionamiento"
 		>
 			<Plus class="w-3.5 h-3.5" />
-			Nuevo router
+			Alta manual
 		</button>
 	</div>
 </div>
@@ -218,6 +233,7 @@
 						<th class="text-left px-4 py-3 text-xs font-mono text-gray-500 uppercase tracking-wider font-normal">Puerto</th>
 						<th class="text-left px-4 py-3 text-xs font-mono text-gray-500 uppercase tracking-wider font-normal">Usuario</th>
 						<th class="text-left px-4 py-3 text-xs font-mono text-gray-500 uppercase tracking-wider font-normal">Estado</th>
+						<th class="text-left px-4 py-3 text-xs font-mono text-gray-500 uppercase tracking-wider font-normal">Enlace</th>
 						<th class="text-left px-4 py-3 text-xs font-mono text-gray-500 uppercase tracking-wider font-normal">Ú. Sync</th>
 						<th class="px-4 py-3 w-20"></th>
 					</tr>
@@ -255,6 +271,28 @@
 									<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono bg-neutral-800 text-gray-500 border border-neutral-700">
 										<XCircle class="w-3 h-3" />
 										Inactivo
+									</span>
+								{/if}
+							</td>
+							<!--
+								Conectividad medida por el monitor cada 5 minutos. El backend ya
+								la persistía y la exponía, pero no se mostraba en ninguna pantalla:
+								era la única forma de saber si un equipo respondía de verdad.
+							-->
+							<td class="px-4 py-3">
+								{#if router.connectivity_status === 'connected'}
+									<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono bg-green-500/10 text-green-400 border border-green-500/20" title="Último chequeo: {formatDate(router.last_health_check_at)}">
+										<CheckCircle class="w-3 h-3" />
+										Conectado
+									</span>
+								{:else if router.connectivity_status === 'disconnected'}
+									<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono bg-red-500/10 text-red-400 border border-red-500/20" title="{router.consecutive_failures} fallos consecutivos · último chequeo: {formatDate(router.last_health_check_at)}">
+										<XCircle class="w-3 h-3" />
+										Sin conexión
+									</span>
+								{:else}
+									<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono bg-neutral-800 text-gray-500 border border-neutral-700" title="Aún no se ha ejecutado ningún chequeo">
+										Sin datos
 									</span>
 								{/if}
 							</td>
