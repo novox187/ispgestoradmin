@@ -105,6 +105,8 @@ export interface EnrolledAgent extends ProvisioningAgent {
 	enrollment_token: string;
 	enrollment_expires: string | null;
 	enroll_command: string;
+	/** Orden única que instala, enrola y arranca el agente en la máquina destino. */
+	installer_command: string;
 }
 
 /** Pasos del alta, en el orden en que los recorre la saga del servidor. */

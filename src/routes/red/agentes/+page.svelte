@@ -359,12 +359,46 @@
 					</p>
 				</div>
 
+				<!--
+					El instalador va primero y el método manual plegado: aquel no exige
+					llevar la carpeta del agente a la máquina, ni averiguar la NIC, ni
+					pegar el token, que eran tres ocasiones distintas de equivocarse.
+				-->
 				<div>
 					<div class="text-xs font-mono text-gray-500 mb-1.5">
 						Ejecuta esto en la máquina del agente
 					</div>
 					<div class="relative">
-						<pre class="p-3 pr-11 rounded-lg bg-neutral-950 border border-neutral-700 text-[11px] font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap break-all">{issued.enroll_command}</pre>
+						<pre class="p-3 pr-11 rounded-lg bg-neutral-950 border border-blue-500/30 text-[11px] font-mono text-gray-200 overflow-x-auto whitespace-pre-wrap break-all">{issued.installer_command}</pre>
+						<button
+							onclick={() => copy(issued!.installer_command)}
+							class="absolute top-2 right-2 p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-neutral-800 transition-colors"
+							title="Copiar"
+						>
+							<Copy class="w-3.5 h-3.5" />
+						</button>
+					</div>
+					<p class="mt-1.5 text-[11px] text-neutral-500 leading-relaxed">
+						Instala el agente, lo enrola y lo deja arrancado.
+						{#if issued.role === 'provisioner'}
+							Detecta solo la tarjeta de red donde se enchufarán los routers; si hay varias,
+							pregunta cuál.
+						{:else}
+							Detecta solo la interfaz WireGuard y la IP pública del servidor.
+						{/if}
+					</p>
+				</div>
+
+				<details class="group">
+					<summary
+						class="cursor-pointer list-none text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors"
+					>
+						<span class="group-open:hidden">Instalación manual</span>
+						<span class="hidden group-open:inline">Instalación manual (el agente ya instalado)</span>
+					</summary>
+
+					<div class="mt-2 relative">
+						<pre class="p-3 pr-11 rounded-lg bg-neutral-950 border border-neutral-700 text-[11px] font-mono text-gray-400 overflow-x-auto whitespace-pre-wrap break-all">{issued.enroll_command}</pre>
 						<button
 							onclick={() => copy(issued!.enroll_command)}
 							class="absolute top-2 right-2 p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-neutral-800 transition-colors"
@@ -373,21 +407,21 @@
 							<Copy class="w-3.5 h-3.5" />
 						</button>
 					</div>
-				</div>
 
-				{#if issued.role === 'provisioner'}
-					<p class="text-[11px] text-neutral-600">
-						Añade <span class="font-mono text-gray-400">--interfaces &lt;NIC&gt;</span> con la
-						tarjeta de red donde se enchufarán los routers. Solo se admitirán equipos vistos por
-						ahí.
-					</p>
-				{:else}
-					<p class="text-[11px] text-neutral-600">
-						Añade <span class="font-mono text-gray-400">--endpoint-host &lt;dominio&gt;</span> con
-						la dirección a la que marcarán los routers. La clave pública del servidor la lee el
-						propio agente de la interfaz.
-					</p>
-				{/if}
+					{#if issued.role === 'provisioner'}
+						<p class="mt-1.5 text-[11px] text-neutral-600">
+							Añade <span class="font-mono text-gray-400">--interfaces &lt;NIC&gt;</span> con la
+							tarjeta de red donde se enchufarán los routers. Solo se admitirán equipos vistos
+							por ahí.
+						</p>
+					{:else}
+						<p class="mt-1.5 text-[11px] text-neutral-600">
+							Añade <span class="font-mono text-gray-400">--endpoint-host &lt;IP&gt;</span> con la
+							dirección a la que marcarán los routers. Tiene que ser la IP pública real: un
+							nombre tras un proxy como Cloudflare no reenvía UDP y el túnel nunca levantaría.
+						</p>
+					{/if}
+				</details>
 			</div>
 
 			<div class="flex justify-end px-5 py-4 border-t border-neutral-800">
