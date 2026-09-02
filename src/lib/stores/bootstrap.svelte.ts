@@ -4,7 +4,7 @@ import { API_BASE } from '$lib/config';
  * Estado de bootstrap del sistema. Indica si hay un router MikroTik primary
  * configurado. Mientras `primaryRouterConfigured=false`:
  *  - El layout renderiza el banner persistente con CTA.
- *  - Los enlaces a módulos dependientes (firewall, colas, sync) se deshabilitan.
+ *  - Los enlaces a módulos dependientes (firewall, sincronización) se deshabilitan.
  *  - Cualquier llamada al backend a esos endpoints retornaría 423 Locked.
  */
 export class BootstrapState {
@@ -21,7 +21,7 @@ export class BootstrapState {
 	routersTotal = $state(0);
 	cta = $state({
 		message: 'Configure el router principal para habilitar todas las funcionalidades.',
-		redirect_to: '/mikrotik/dispositivos',
+		redirect_to: '/red/dispositivos',
 		label: 'Configurar router principal'
 	});
 	loading = $state(false);
@@ -61,12 +61,7 @@ export class BootstrapState {
 	 * Conjunto de prefijos de ruta que dependen del router primary. Útil para
 	 * deshabilitar enlaces en el sidebar.
 	 */
-	static readonly ROUTER_DEPENDENT_PREFIXES = [
-		'/mikrotik/firewall',
-		'/mikrotik/colas',
-		'/mikrotik/sincronizacion',
-		'/mikrotik/monitoreo'
-	];
+	static readonly ROUTER_DEPENDENT_PREFIXES = ['/red/firewall', '/red/sincronizacion'];
 
 	isRouteBlocked(path: string): boolean {
 		if (this.primaryRouterConfigured !== false) return false;

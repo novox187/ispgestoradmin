@@ -1,13 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { NETWORK_MODULES } from '$lib/red/modules';
 	import {
 		fetchNetworkDevices,
 		STATUS_CLASSES,
 		STATUS_LABELS,
 		type NetworkDevice
 	} from '$lib/api/network-devices';
-	import { Lock, TriangleAlert } from '@lucide/svelte';
+	import { bootstrap } from '$lib/stores/bootstrap.svelte';
+	import { ArrowRight, Check, TriangleAlert } from '@lucide/svelte';
+
+	/**
+	 * Resumen del parque.
+	 *
+	 * Antes esta pantalla era un índice: una rejilla de tarjetas que repetía el
+	 * sub-sidebar y, debajo, la tabla completa de equipos, que es exactamente lo
+	 * que muestra Dispositivos. Ninguna de las dos cosas respondía a la pregunta
+	 * por la que se entra aquí —«¿hay algo roto?»—, así que ahora eso es lo único
+	 * que hay: cifras, lo que necesita atención y el estado del router principal.
+	 */
 
 	let devices = $state<NetworkDevice[]>([]);
 	let loading = $state(true);
@@ -39,21 +49,33 @@
 	 * operador aprendería a ignorarla — que es como se pierde la utilidad de un
 	 * panel de estado.
 	 */
-	const caidos = $derived(devices.filter((d) => d.connectivity_status === 'disconnected').length);
-	const sinDatos = $derived(devices.filter((d) => d.connectivity_status === 'stale').length);
+	const caidos = $derived(devices.filter((d) => d.connectivity_status === 'disconnected'));
+	const sinDatos = $derived(devices.filter((d) => d.connectivity_status === 'stale'));
 	const activos = $derived(devices.filter((d) => d.is_active).length);
+
+	// Los caídos primero: son los que exigen ir a mirar.
+	const requierenAtencion = $derived([...caidos, ...sinDatos]);
+
+	const tarjetas = $derived([
+		{ label: 'Equipos', valor: devices.length, clase: 'text-neutral-100' },
+		{ label: 'Activos', valor: activos, clase: 'text-neutral-100' },
+		{
+			label: 'Caídos',
+			valor: caidos.length,
+			clase: caidos.length > 0 ? 'text-red-400' : 'text-neutral-100'
+		},
+		{
+			label: 'Sin datos recientes',
+			valor: sinDatos.length,
+			clase: sinDatos.length > 0 ? 'text-amber-400' : 'text-neutral-100'
+		}
+	]);
 </script>
 
-<div class="p-4 md:p-6 space-y-6">
-	<header>
-		<h1 class="text-lg font-semibold text-neutral-100">Red</h1>
-		<p class="text-xs text-neutral-500 mt-1">
-			Routers de gestión y antenas de enlace, en un solo inventario.
-		</p>
-	</header>
-
+<div class="space-y-6">
 	{#if error}
 		<div
+			role="alert"
 			class="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-xs text-red-300"
 		>
 			<TriangleAlert class="w-4 h-4 shrink-0 mt-0.5" />
@@ -61,117 +83,131 @@
 		</div>
 	{/if}
 
-	<!-- Cifras -->
 	<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-		{#each [{ label: 'Equipos', valor: devices.length, clase: 'text-neutral-100' }, { label: 'Activos', valor: activos, clase: 'text-neutral-100' }, { label: 'Caídos', valor: caidos, clase: caidos > 0 ? 'text-red-400' : 'text-neutral-100' }, { label: 'Sin datos recientes', valor: sinDatos, clase: sinDatos > 0 ? 'text-amber-400' : 'text-neutral-100' }] as tarjeta}
+		{#each tarjetas as t (t.label)}
 			<div class="rounded-xl border border-neutral-800/60 bg-neutral-900/40 px-4 py-3">
-				<p class="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
-					{tarjeta.label}
-				</p>
-				<p class="mt-1 text-2xl font-semibold {tarjeta.clase}">
-					{loading ? '—' : tarjeta.valor}
+				<p class="text-[10px] font-mono uppercase tracking-widest text-neutral-500">{t.label}</p>
+				<p class="mt-1 text-2xl font-semibold tabular-nums {t.clase}">
+					{loading ? '—' : t.valor}
 				</p>
 			</div>
 		{/each}
 	</div>
 
-	{#if sinDatos > 0}
-		<div
-			class="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-300"
-		>
-			<TriangleAlert class="w-4 h-4 shrink-0 mt-0.5" />
-			<span>
-				Hay {sinDatos}
-				{sinDatos === 1 ? 'equipo' : 'equipos'} sin datos recientes. Suele significar que el agente que
-				los sondea está caído, no que los equipos lo estén.
-			</span>
-		</div>
-	{/if}
-
-	<!-- Reparto por fabricante -->
-	{#if porFabricante.length > 0}
-		<section class="rounded-xl border border-neutral-800/60 bg-neutral-900/40 p-4">
-			<h2 class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-3">
-				Por fabricante
-			</h2>
-			<div class="flex flex-wrap gap-2">
-				{#each porFabricante as [fabricante, total]}
-					<span
-						class="inline-flex items-center gap-2 rounded-lg border border-neutral-700/50 bg-neutral-800/40 px-3 py-1.5 text-xs text-neutral-300"
-					>
-						{fabricante}
-						<span class="font-mono text-neutral-500">{total}</span>
-					</span>
-				{/each}
-			</div>
-		</section>
-	{/if}
-
-	<!-- Módulos -->
-	<section>
-		<h2 class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-3">Módulos</h2>
-		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{#each NETWORK_MODULES.filter((m) => m.id !== 'overview') as m (m.id)}
-				{@const bloqueado = m.status === 'coming_soon'}
-				<svelte:element
-					this={bloqueado ? 'div' : 'a'}
-					href={bloqueado ? undefined : m.href}
-					class="rounded-xl border p-4 transition-colors
-						{bloqueado
-						? 'border-neutral-800/60 bg-neutral-900/20 cursor-not-allowed'
-						: 'border-neutral-800/60 bg-neutral-900/40 hover:border-primary-500/30 hover:bg-neutral-900/70'}"
+	<div class="grid gap-4 lg:grid-cols-3">
+		<!-- Lo accionable ocupa el espacio principal. -->
+		<section class="lg:col-span-2 rounded-xl border border-neutral-800/60 bg-neutral-900/40">
+			<div class="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
+				<h2 class="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+					Requieren atención
+				</h2>
+				<a
+					href="/red/dispositivos"
+					class="inline-flex items-center gap-1 text-[11px] text-neutral-500 hover:text-primary-400 transition-colors"
 				>
-					<div class="flex items-center gap-2 mb-1.5">
-						<m.icon class="w-4 h-4 {bloqueado ? 'text-neutral-600' : 'text-primary-500'}" />
-						<span class="text-sm font-medium {bloqueado ? 'text-neutral-600' : 'text-neutral-200'}">
-							{m.label}
-						</span>
-						{#if bloqueado}
-							<Lock class="w-3 h-3 text-neutral-600 ml-auto" />
-						{/if}
-					</div>
-					<p class="text-xs {bloqueado ? 'text-neutral-700' : 'text-neutral-500'}">
-						{m.description}
-					</p>
-				</svelte:element>
-			{/each}
-		</div>
-	</section>
-
-	<!-- Estado por equipo -->
-	{#if !loading && devices.length > 0}
-		<section class="rounded-xl border border-neutral-800/60 bg-neutral-900/40 overflow-hidden">
-			<h2
-				class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 px-4 pt-4 pb-2"
-			>
-				Estado actual
-			</h2>
-			<div class="overflow-x-auto">
-				<table class="w-full text-xs">
-					<tbody>
-						{#each devices as d (d.id)}
-							<tr class="border-t border-neutral-800/40">
-								<td class="px-4 py-2 text-neutral-200">{d.name}</td>
-								<td class="px-4 py-2 text-neutral-500 font-mono">{d.host}</td>
-								<td class="px-4 py-2 text-neutral-500">{d.role_label ?? '—'}</td>
-								<td class="px-4 py-2">
-									<span
-										class="inline-block rounded border px-1.5 py-0.5 text-[10px]
-											{STATUS_CLASSES[d.connectivity_status ?? 'unknown']}"
-									>
-										{STATUS_LABELS[d.connectivity_status ?? 'unknown']}
-									</span>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+					Ver inventario
+					<ArrowRight class="w-3 h-3" />
+				</a>
 			</div>
+
+			{#if loading}
+				<p class="px-4 pb-4 text-xs text-neutral-600">Cargando…</p>
+			{:else if devices.length === 0}
+				<p class="px-4 pb-4 text-xs text-neutral-600">
+					El inventario está vacío. Empieza dando de alta un equipo en
+					<a href="/red/dispositivos" class="text-primary-400 hover:underline">Dispositivos</a>.
+				</p>
+			{:else if requierenAtencion.length === 0}
+				<p class="flex items-center gap-2 px-4 pb-4 text-xs text-emerald-400">
+					<Check class="w-3.5 h-3.5" />
+					Los {devices.length} equipos del parque responden.
+				</p>
+			{:else}
+				<div class="overflow-x-auto">
+					<table class="w-full text-xs">
+						<tbody>
+							{#each requierenAtencion as d (d.id)}
+								<tr class="border-t border-neutral-800/40">
+									<td class="px-4 py-2 text-neutral-200">{d.name}</td>
+									<td class="px-4 py-2 font-mono text-neutral-500">{d.host}</td>
+									<td class="px-4 py-2 text-neutral-500">{d.role_label ?? '—'}</td>
+									<td class="px-4 py-2">
+										<span
+											class="inline-block rounded border px-1.5 py-0.5 text-[10px]
+												{STATUS_CLASSES[d.connectivity_status ?? 'unknown']}"
+										>
+											{STATUS_LABELS[d.connectivity_status ?? 'unknown']}
+										</span>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				{#if sinDatos.length > 0}
+					<p class="px-4 py-3 text-[11px] text-amber-300/80 border-t border-neutral-800/40">
+						«Sin datos recientes» suele significar que el agente que sondea esos equipos está
+						caído, no que los equipos lo estén.
+					</p>
+				{/if}
+			{/if}
 		</section>
-	{:else if !loading}
-		<p class="text-xs text-neutral-600">
-			Todavía no hay equipos en el inventario. Empieza dando de alta una antena en
-			<a href="/red/dispositivos" class="text-primary-400 hover:underline">Dispositivos</a>.
-		</p>
-	{/if}
+
+		<div class="space-y-4">
+			<!--
+				El router principal es la única fuente de credenciales de RouterOS para
+				todo el sistema. Antes solo se veía cuando faltaba, en forma de banner.
+			-->
+			<section class="rounded-xl border border-neutral-800/60 bg-neutral-900/40 p-4">
+				<h2 class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-2.5">
+					Router principal
+				</h2>
+				{#if bootstrap.primaryRouter}
+					<p class="text-sm text-neutral-200">{bootstrap.primaryRouter.name}</p>
+					<p class="mt-0.5 font-mono text-[11px] text-neutral-500">
+						{bootstrap.primaryRouter.host}{bootstrap.primaryRouter.port
+							? `:${bootstrap.primaryRouter.port}`
+							: ''}
+					</p>
+					<span
+						class="mt-2 inline-block rounded border px-1.5 py-0.5 text-[10px]
+							{STATUS_CLASSES[bootstrap.primaryRouter.connectivity_status ?? 'unknown']}"
+					>
+						{STATUS_LABELS[bootstrap.primaryRouter.connectivity_status ?? 'unknown']}
+					</span>
+				{:else if bootstrap.primaryRouterConfigured === false}
+					<p class="text-xs text-amber-300 leading-relaxed">
+						Sin router principal. Firewall y Sincronización quedan bloqueados hasta que se
+						configure uno.
+					</p>
+					<a
+						href="/red/dispositivos"
+						class="mt-2 inline-flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300"
+					>
+						Configurarlo
+						<ArrowRight class="w-3 h-3" />
+					</a>
+				{:else}
+					<p class="text-xs text-neutral-600">Comprobando…</p>
+				{/if}
+			</section>
+
+			{#if porFabricante.length > 0}
+				<section class="rounded-xl border border-neutral-800/60 bg-neutral-900/40 p-4">
+					<h2 class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-2.5">
+						Por fabricante
+					</h2>
+					<ul class="space-y-1.5">
+						{#each porFabricante as [fabricante, total] (fabricante)}
+							<li class="flex items-baseline justify-between gap-3 text-xs">
+								<span class="text-neutral-300">{fabricante}</span>
+								<span class="font-mono tabular-nums text-neutral-500">{total}</span>
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+		</div>
+	</div>
 </div>

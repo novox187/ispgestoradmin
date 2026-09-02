@@ -8,7 +8,6 @@
 	import { fetchMikrotikRouters, type MikrotikRouterSummary } from '$lib/api/mikrotik-routers';
 	import {
 		ArrowDownToLine,
-		ArrowLeftRight,
 		ArrowUpFromLine,
 		Gauge,
 		Server,
@@ -131,49 +130,35 @@
 
 <div class="space-y-5">
 
-	<!-- ── Encabezado ──────────────────────────────────────────────────────── -->
-	<div class="rounded-xl border border-neutral-800 bg-[#121214] p-5">
-		<div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-			<div class="flex items-start gap-3">
-				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10">
-					<ArrowLeftRight class="h-5 w-5 text-blue-300" />
-				</div>
-				<div class="space-y-1">
-					<div class="text-[10px] font-mono uppercase tracking-widest text-gray-500">Mikrotik / Sincronización</div>
-					<h3 class="text-base font-semibold text-gray-100 md:text-lg">Sincronización</h3>
-					<p class="max-w-2xl text-xs leading-relaxed text-gray-400">
-						Mantén alineadas las colas de ancho de banda y las reglas de firewall entre la base de datos y el router MikroTik.
-					</p>
+	<!--
+		Estado del entorno. El título, la bajada y el rótulo de sección los pone
+		el layout de Red — este bloque los repetía, y encima con el prefijo
+		«Mikrotik /» de una sección que ya no existe.
+	-->
+	<div class="flex flex-wrap items-center gap-5 rounded-xl border border-neutral-800 bg-[#121214] px-4 py-2.5">
+		<div class="flex items-center gap-2">
+			<span class="relative flex h-2 w-2">
+				{#if online}
+					<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
+				{/if}
+				<span class="relative inline-flex h-2 w-2 rounded-full {online ? 'bg-emerald-400' : 'bg-red-400'}"></span>
+			</span>
+			<div class="leading-tight">
+				<div class="text-[9px] font-mono uppercase tracking-wide text-gray-500">Internet</div>
+				<div class="text-xs font-medium {online ? 'text-emerald-300' : 'text-red-300'}">
+					{online ? 'En línea' : 'Sin conexión'}
 				</div>
 			</div>
+		</div>
 
-			<!-- Estado del entorno -->
-			<div class="flex items-center gap-5 rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-2.5">
-				<div class="flex items-center gap-2">
-					<span class="relative flex h-2 w-2">
-						{#if online}
-							<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
-						{/if}
-						<span class="relative inline-flex h-2 w-2 rounded-full {online ? 'bg-emerald-400' : 'bg-red-400'}"></span>
-					</span>
-					<div class="leading-tight">
-						<div class="text-[9px] font-mono uppercase tracking-wide text-gray-500">Internet</div>
-						<div class="text-xs font-medium {online ? 'text-emerald-300' : 'text-red-300'}">
-							{online ? 'En línea' : 'Sin conexión'}
-						</div>
-					</div>
-				</div>
+		<div class="h-7 w-px bg-neutral-800"></div>
 
-				<div class="h-7 w-px bg-neutral-800"></div>
-
-				<div class="flex items-center gap-2">
-					<span class="inline-flex h-2 w-2 rounded-full {hasSession ? 'bg-blue-400' : 'bg-amber-400'}"></span>
-					<div class="leading-tight">
-						<div class="text-[9px] font-mono uppercase tracking-wide text-gray-500">Sesión</div>
-						<div class="text-xs font-medium {hasSession ? 'text-blue-300' : 'text-amber-300'}">
-							{hasSession ? 'Activa' : 'Expirada'}
-						</div>
-					</div>
+		<div class="flex items-center gap-2">
+			<span class="inline-flex h-2 w-2 rounded-full {hasSession ? 'bg-blue-400' : 'bg-amber-400'}"></span>
+			<div class="leading-tight">
+				<div class="text-[9px] font-mono uppercase tracking-wide text-gray-500">Sesión</div>
+				<div class="text-xs font-medium {hasSession ? 'text-blue-300' : 'text-amber-300'}">
+					{hasSession ? 'Activa' : 'Expirada'}
 				</div>
 			</div>
 		</div>
@@ -190,7 +175,7 @@
 				{#if routersLoading}
 					<span class="text-xs text-gray-500">Cargando…</span>
 				{:else if routers.length === 0}
-					<a href="/mikrotik/dispositivos" class="text-xs text-amber-400 hover:text-amber-300">
+					<a href="/red/dispositivos" class="text-xs text-amber-400 hover:text-amber-300">
 						Sin routers registrados — Configurar dispositivo →
 					</a>
 				{:else}

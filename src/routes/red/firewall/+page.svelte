@@ -274,13 +274,13 @@
 	<div class="bg-[#121214] border border-neutral-800 rounded-xl p-5 space-y-4">
 
 		<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-			<div class="space-y-1">
-				<div class="text-xs font-mono text-gray-400 tracking-wide">MIKROTIK / FIREWALL</div>
-				<h3 class="text-base md:text-lg font-semibold text-gray-100">Firewall MikroTik</h3>
-				<p class="text-xs text-gray-400 leading-relaxed">
-					Los cambios se guardan como borrador hasta que presiones <strong class="text-gray-300">Aplicar cambios</strong>.
-				</p>
-			</div>
+			<!--
+				Título y bajada los pone el layout de Red. Aquí solo queda la
+				advertencia operativa, que no se deduce del nombre del módulo.
+			-->
+			<p class="text-xs text-gray-400 leading-relaxed">
+				Los cambios se guardan como borrador hasta que presiones <strong class="text-gray-300">Aplicar cambios</strong>.
+			</p>
 			<div class="flex flex-col items-end gap-2">
 				<RouterStatusBadge routerId={selectedRouterId} />
 				<div class="flex items-center gap-2">

@@ -22,7 +22,7 @@
     'planes': 'PLANES',
     'facturas': 'FACTURACIÓN',
     'proveedores': 'PROVEEDORES',
-    'mikrotik': 'MIKROTIK',
+    'red': 'RED',
     'usuarios': 'USUARIOS',
     'configuraciones': 'CONFIGURACIONES',
     'perfil': 'MI PERFIL',

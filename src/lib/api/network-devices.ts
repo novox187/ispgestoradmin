@@ -49,7 +49,10 @@ export interface NetworkDevice {
 	last_signal_dbm: number | null;
 	last_ccq_percent: number | null;
 	last_telemetry_at: string | null;
-	/** Los MikroTik se gestionan desde su propio módulo, que decide el primary. */
+	/**
+	 * Falso para los MikroTik: este endpoint no los escribe. La pantalla de
+	 * Dispositivos los edita igualmente, despachando a `mikrotik-routers`.
+	 */
 	editable: boolean;
 }
 

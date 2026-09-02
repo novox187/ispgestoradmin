@@ -7,7 +7,7 @@
 	// El banner es persistente — no se cierra. Desaparece solo cuando se
 	// registra el primer router. Lo ocultamos si ya estamos en la propia
 	// página de dispositivos para no estorbar el formulario de creación.
-	const isOnDispositivos = $derived($page.url.pathname.startsWith('/mikrotik/dispositivos'));
+	const isOnDispositivos = $derived($page.url.pathname.startsWith('/red/dispositivos'));
 
 	const visible = $derived(
 		bootstrap.primaryRouterConfigured === false && !isOnDispositivos

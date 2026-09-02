@@ -123,14 +123,7 @@
 	}
 </script>
 
-<div class="p-4 md:p-6 space-y-5">
-	<header>
-		<h1 class="text-lg font-semibold text-neutral-100">Descubrimiento</h1>
-		<p class="text-xs text-neutral-500 mt-1">
-			Barre un rango de la red de gestión y ofrece dar de alta lo que encuentre.
-		</p>
-	</header>
-
+<div class="space-y-5">
 	{#if error}
 		<div
 			class="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-xs text-red-300"

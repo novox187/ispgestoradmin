@@ -11,6 +11,9 @@ export interface MikrotikRouter {
 	is_primary: boolean;
 	network_cidr: string | null;
 	gateway: string | null;
+	/** Ubicación en el mapa. El servidor las devuelve como cadena decimal. */
+	latitude: string | null;
+	longitude: string | null;
 	connectivity_status: string | null;
 	last_health_check_at: number | null;
 	last_connected_at: number | null;
@@ -40,6 +43,8 @@ export interface CreateRouterPayload {
 	is_primary?: boolean;
 	network_cidr?: string | null;
 	gateway?: string | null;
+	latitude?: number | null;
+	longitude?: number | null;
 }
 
 export interface UpdateRouterPayload {
@@ -53,6 +58,8 @@ export interface UpdateRouterPayload {
 	is_primary?: boolean;
 	network_cidr?: string | null;
 	gateway?: string | null;
+	latitude?: number | null;
+	longitude?: number | null;
 }
 
 function authHeaders(): Record<string, string> {

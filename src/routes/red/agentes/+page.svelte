@@ -123,11 +123,6 @@
 </script>
 
 <div class="flex items-start justify-between mb-4 gap-4">
-	<p class="text-xs text-gray-500 font-mono max-w-2xl">
-		Demonios que corren fuera del contenedor y permiten dar de alta routers automáticamente.
-		Se conectan hacia la API por HTTPS; no hay que abrir ningún puerto.
-	</p>
-
 	<div class="flex items-center gap-2 shrink-0">
 		<button
 			onclick={load}

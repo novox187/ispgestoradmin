@@ -63,7 +63,7 @@
         // la página de dispositivos para forzar la configuración. Esto cubre
         // accesos directos por URL — el sidebar ya deshabilita los enlaces.
         if (token && bootstrap.isRouteBlocked(path)) {
-            goto('/mikrotik/dispositivos', { replaceState: true });
+            goto('/red/dispositivos', { replaceState: true });
         }
     }
 
