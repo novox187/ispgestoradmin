@@ -314,11 +314,13 @@
 					>
 						<option value="provisioner">provisioner — oficina, donde se enchufan los routers</option>
 						<option value="vpn_host">vpn_host — servidor del hosting, junto al WireGuard</option>
+						<option value="monitor">monitor — sondea el parque y barre la red</option>
 					</select>
 					<p class="text-[11px] text-neutral-600 mt-1.5">
 						El rol acota lo que el agente puede hacer y a qué secretos llega: un
-						<span class="font-mono">provisioner</span> nunca recibe claves del servidor, y un
-						<span class="font-mono">vpn_host</span> nunca recibe credenciales de un router.
+						<span class="font-mono">provisioner</span> nunca recibe claves del servidor, un
+						<span class="font-mono">vpn_host</span> nunca recibe credenciales de un router, y un
+						<span class="font-mono">monitor</span> no puede tocar la configuración de ningún equipo.
 					</p>
 				</div>
 			</div>

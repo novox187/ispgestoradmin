@@ -1,8 +1,5 @@
 <script lang="ts">
-  import {
-    LayoutDashboard, Users, Wifi, Zap, CreditCard,
-    Router, Lock, User, MoreVertical, Settings, LogOut, SlidersHorizontal
-  } from '@lucide/svelte';
+  import { CreditCard, LayoutDashboard, Lock, LogOut, MoreVertical, Network, Router, Settings, SlidersHorizontal, User, Users, Wifi, Zap } from '@lucide/svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { API_BASE } from '$lib/config';
@@ -49,6 +46,10 @@
     {
       label: 'Infraestructura',
       items: [
+        // «Red» es el parque entero (routers y antenas); «MikroTik» sigue siendo
+        // el plano de control de RouterOS —firewall, colas, router principal—.
+        // Conviven a propósito hasta que la sección nueva esté rodada.
+        { label: 'Red', icon: Network, path: '/red' },
         { label: 'MikroTik', icon: Router, path: '/mikrotik' },
       ]
     },

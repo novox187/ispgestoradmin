@@ -77,7 +77,12 @@ export interface ProvisioningSession {
 	audit_trail?: AuditEntry[];
 }
 
-export type AgentRole = 'provisioner' | 'vpn_host';
+/**
+ * Roles de agente. El `monitor` sondea el parque y ejecuta los barridos de
+ * descubrimiento; va aparte del `provisioner` porque aquel corre un bucle de
+ * tres segundos que no puede bloquearse sondeando cientos de antenas.
+ */
+export type AgentRole = 'provisioner' | 'vpn_host' | 'monitor';
 
 export interface ProvisioningAgent {
 	id: number;
