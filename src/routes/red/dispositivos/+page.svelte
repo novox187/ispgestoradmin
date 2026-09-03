@@ -143,9 +143,12 @@
 			name: '',
 			role: mikrotik ? 'edge_router' : 'backhaul_ap',
 			host: '',
-			// Puertos por defecto de cada plano de gestión: API de RouterOS y HTTP
-			// de airOS. Se dejan editables porque no todo el parque los respeta.
-			port: mikrotik ? '8728' : '',
+			// Puertos por defecto de cada plano de gestión: API binaria de RouterOS
+			// y web de airOS, que viene por TLS de fábrica. Se dejan editables
+			// porque no todo el parque los respeta, pero rellenos: en blanco, el
+			// servidor tenía que adivinarlo, y la columna arrastra un 8728 que
+			// deja a cualquier antena apuntando al puerto de MikroTik.
+			port: mikrotik ? '8728' : '443',
 			username: mikrotik ? 'admin' : '',
 			password: '',
 			description: '',
@@ -637,7 +640,7 @@
 							type="number"
 							min="1"
 							max="65535"
-							placeholder={esMikrotik ? '8728' : '80'}
+							placeholder={esMikrotik ? '8728' : '443'}
 							class="{claseInput} font-mono"
 						/>
 					</label>
