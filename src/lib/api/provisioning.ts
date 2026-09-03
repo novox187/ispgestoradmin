@@ -100,6 +100,20 @@ export interface ProvisioningAgent {
 	created_at: string | null;
 }
 
+export type PlataformaInstalador = 'linux' | 'windows' | 'macos';
+
+/** Cómo se llama cada plataforma y qué hay que saber antes de ejecutar. */
+export const PLATAFORMAS: Record<PlataformaInstalador, { etiqueta: string; nota: string }> = {
+	linux: { etiqueta: 'Linux', nota: 'Pégalo en un terminal. Pedirá tu contraseña de sudo.' },
+	windows: {
+		etiqueta: 'Windows',
+		// La distinción importa: en una consola normal falla a mitad, con el
+		// agente instalado pero sin arrancar.
+		nota: 'Abre PowerShell como administrador (clic derecho → Ejecutar como administrador).'
+	},
+	macos: { etiqueta: 'macOS', nota: 'Pégalo en Terminal. Pedirá tu contraseña de administrador.' }
+};
+
 export interface EnrolledAgent extends ProvisioningAgent {
 	/** Solo se devuelve una vez, al registrar o regenerar. No se puede recuperar. */
 	enrollment_token: string;
@@ -107,6 +121,11 @@ export interface EnrolledAgent extends ProvisioningAgent {
 	enroll_command: string;
 	/** Orden única que instala, enrola y arranca el agente en la máquina destino. */
 	installer_command: string;
+	/**
+	 * Una orden por plataforma. El `vpn_host` solo trae `linux`: administra el
+	 * WireGuard del hosting y en otro sistema no tendría nada que hacer.
+	 */
+	installer_commands: Partial<Record<PlataformaInstalador, string>>;
 }
 
 /** Pasos del alta, en el orden en que los recorre la saga del servidor. */

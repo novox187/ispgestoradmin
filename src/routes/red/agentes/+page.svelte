@@ -19,6 +19,8 @@
 		regenerateAgentToken,
 		setAgentActive,
 		deleteAgent,
+		PLATAFORMAS,
+		type PlataformaInstalador,
 		type ProvisioningAgent,
 		type AgentRole,
 		type EnrolledAgent
@@ -35,6 +37,33 @@
 	// El token solo existe una vez: en cuanto se cierra este panel no hay forma
 	// de recuperarlo, solo de regenerarlo.
 	let issued = $state<EnrolledAgent | null>(null);
+
+	let plataforma = $state<PlataformaInstalador>('linux');
+
+	const plataformasDisponibles = $derived(
+		(Object.keys(issued?.installer_commands ?? {}) as PlataformaInstalador[]).filter(
+			(p) => p in PLATAFORMAS
+		)
+	);
+
+	/**
+	 * La orden a mostrar. Se cae a `installer_command` porque el `vpn_host` solo
+	 * trae la de Linux, y porque un panel viejo contra una API nueva —o al revés—
+	 * no debería quedarse sin nada que copiar.
+	 */
+	const ordenInstalador = $derived(
+		issued?.installer_commands?.[plataforma] ?? issued?.installer_command ?? ''
+	);
+
+	// Si la plataforma elegida no está entre las que ofrece este agente, se
+	// vuelve a la primera que sí: es lo que pasa al registrar un vpn_host
+	// después de haber estado mirando la orden de Windows.
+	$effect(() => {
+		const disponibles = plataformasDisponibles;
+		if (disponibles.length > 0 && !disponibles.includes(plataforma)) {
+			plataforma = disponibles[0];
+		}
+	});
 
 	const hasVpnHost = $derived(agents.some((a) => a.role === 'vpn_host' && a.is_active && a.enrolled));
 	const offline = $derived(agents.filter((a) => a.enrolled && a.is_active && !a.is_online));
@@ -452,16 +481,41 @@
 					<div class="text-xs font-mono text-gray-500 mb-1.5">
 						Ejecuta esto en la máquina del agente
 					</div>
+
+					<!--
+						Se elige la plataforma aquí y no se adivina: quien registra el
+						agente casi nunca es quien lo instala. Lo normal es copiar la orden
+						y mandársela a alguien que está delante de la máquina, en la
+						oficina, y esa máquina puede ser cualquiera de las tres.
+					-->
+					{#if plataformasDisponibles.length > 1}
+						<div class="flex gap-1 mb-2">
+							{#each plataformasDisponibles as p}
+								<button
+									onclick={() => (plataforma = p)}
+									class="px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-colors {plataforma ===
+									p
+										? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
+										: 'border-neutral-800 text-gray-500 hover:text-gray-300'}"
+								>
+									{PLATAFORMAS[p].etiqueta}
+								</button>
+							{/each}
+						</div>
+					{/if}
+
 					<div class="relative">
-						<pre class="p-3 pr-11 rounded-lg bg-neutral-950 border border-blue-500/30 text-[11px] font-mono text-gray-200 overflow-x-auto whitespace-pre-wrap break-all">{issued.installer_command}</pre>
+						<pre class="p-3 pr-11 rounded-lg bg-neutral-950 border border-blue-500/30 text-[11px] font-mono text-gray-200 overflow-x-auto whitespace-pre-wrap break-all">{ordenInstalador}</pre>
 						<button
-							onclick={() => copy(issued!.installer_command)}
+							onclick={() => copy(ordenInstalador)}
 							class="absolute top-2 right-2 p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-neutral-800 transition-colors"
 							title="Copiar"
 						>
 							<Copy class="w-3.5 h-3.5" />
 						</button>
 					</div>
+
+					<p class="mt-1.5 text-[11px] text-amber-400/80">{PLATAFORMAS[plataforma].nota}</p>
 					<p class="mt-1.5 text-[11px] text-neutral-500 leading-relaxed">
 						Instala el agente, lo enrola y lo deja arrancado.
 						{#if issued.role === 'provisioner'}
