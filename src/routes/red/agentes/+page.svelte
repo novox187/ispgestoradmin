@@ -23,6 +23,7 @@
 		type AgentRole,
 		type EnrolledAgent
 	} from '$lib/api/provisioning';
+	import ConfirmacionCritica from '$lib/components/ConfirmacionCritica.svelte';
 
 	let agents = $state<ProvisioningAgent[]>([]);
 	let loading = $state(false);
@@ -67,33 +68,108 @@
 		}
 	}
 
-	async function regenerate(agent: ProvisioningAgent) {
+	/**
+	 * Acción destructiva pendiente de confirmar.
+	 *
+	 * Las tres dejan al agente fuera hasta que alguien vuelva a instalarlo en la
+	 * máquina donde vive —que puede estar en la oficina de un cliente—, así que
+	 * ninguna se ejecuta desde el clic en el icono: abren el modal, que explica
+	 * la consecuencia concreta y pide la contraseña.
+	 */
+	type AccionCritica = {
+		agent: ProvisioningAgent;
+		titulo: string;
+		consecuencias: string[];
+		etiquetaAccion: string;
+		reversible: string | null;
+		ejecutar: (password: string) => Promise<void>;
+	};
+
+	let accion = $state<AccionCritica | null>(null);
+	let ejecutandoAccion = $state(false);
+
+	function pedirRegenerar(agent: ProvisioningAgent) {
+		accion = {
+			agent,
+			titulo: 'Regenerar las credenciales',
+			etiquetaAccion: 'Regenerar',
+			consecuencias: [
+				'Las credenciales actuales dejan de servir en el acto.',
+				'El agente se desconecta y no vuelve por sí solo.',
+				'Hay que volver a enrolarlo en su máquina con el token nuevo.'
+			],
+			reversible: 'Es la vía para rotar el secreto de un agente comprometido.',
+			ejecutar: async (password) => {
+				issued = await regenerateAgentToken(agent.id, password);
+				toast.success('Token regenerado; las credenciales anteriores ya no sirven');
+			}
+		};
+	}
+
+	function pedirDesactivar(agent: ProvisioningAgent) {
+		accion = {
+			agent,
+			titulo: 'Revocar el acceso del agente',
+			etiquetaAccion: 'Revocar',
+			consecuencias: [
+				'El servidor le rechaza la siguiente petición: es inmediato.',
+				agent.role === 'vpn_host'
+					? 'Dejará de poder administrar los peers de WireGuard, así que las altas de routers fallarán.'
+					: agent.role === 'monitor'
+						? 'Se deja de sondear el parque: no habrá telemetría ni alertas de lo que vigila.'
+						: 'Se deja de detectar equipos conectados por cable: no habrá altas automáticas.'
+			],
+			reversible: 'Se puede deshacer reactivándolo aquí mismo: no pierde sus credenciales.',
+			ejecutar: async (password) => {
+				await setAgentActive(agent.id, false, password);
+				toast.success('Agente revocado');
+			}
+		};
+	}
+
+	function pedirEliminar(agent: ProvisioningAgent) {
+		accion = {
+			agent,
+			titulo: 'Eliminar el agente',
+			etiquetaAccion: 'Eliminar',
+			consecuencias: [
+				'Se borra su registro y sus credenciales dejan de valer.',
+				'El demonio seguirá corriendo en su máquina, pero sin poder conectarse.',
+				'Para recuperarlo hay que registrarlo de nuevo e instalarlo otra vez allí.'
+			],
+			reversible: 'No se puede deshacer.',
+			ejecutar: async (password) => {
+				await deleteAgent(agent.id, password);
+				toast.success('Agente eliminado');
+			}
+		};
+	}
+
+	async function confirmarAccion(password: string) {
+		if (!accion) return;
+
+		ejecutandoAccion = true;
 		try {
-			issued = await regenerateAgentToken(agent.id);
-			toast.success('Token regenerado; las credenciales anteriores ya no sirven');
+			await accion.ejecutar(password);
+			accion = null;
 			await load();
 		} catch (e: any) {
-			toast.error(e?.message ?? 'No se pudo regenerar el token');
+			// El modal sigue abierto a propósito: si la contraseña estaba mal, lo
+			// que toca es reescribirla, no volver a empezar.
+			toast.error(e?.message ?? 'No se pudo completar la acción');
+		} finally {
+			ejecutandoAccion = false;
 		}
 	}
 
-	async function toggle(agent: ProvisioningAgent) {
+	/** Reactivar devuelve el servicio en vez de quitarlo: no necesita freno. */
+	async function reactivar(agent: ProvisioningAgent) {
 		try {
-			await setAgentActive(agent.id, !agent.is_active);
-			toast.success(agent.is_active ? 'Agente revocado' : 'Agente reactivado');
+			await setAgentActive(agent.id, true);
+			toast.success('Agente reactivado');
 			await load();
 		} catch (e: any) {
 			toast.error(e?.message ?? 'No se pudo cambiar el estado');
-		}
-	}
-
-	async function remove(agent: ProvisioningAgent) {
-		try {
-			await deleteAgent(agent.id);
-			toast.success('Agente eliminado');
-			await load();
-		} catch (e: any) {
-			toast.error(e?.message ?? 'No se pudo eliminar');
 		}
 	}
 
@@ -247,24 +323,32 @@
 
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-end gap-1">
+									<!--
+										Ninguna de las tres ejecuta desde aquí: abren la
+										confirmación, que explica la consecuencia concreta y pide
+										la contraseña. La excepción es reactivar, que devuelve el
+										servicio en vez de quitarlo.
+									-->
 									<button
-										onclick={() => regenerate(agent)}
+										onclick={() => pedirRegenerar(agent)}
 										class="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-neutral-800 transition-colors"
-										title="Regenerar token de enrolamiento (invalida las credenciales actuales)"
+										title="Regenerar credenciales — pedirá confirmación"
 									>
 										<KeyRound class="w-3.5 h-3.5" />
 									</button>
 									<button
-										onclick={() => toggle(agent)}
+										onclick={() => (agent.is_active ? pedirDesactivar(agent) : reactivar(agent))}
 										class="p-1.5 rounded-lg text-gray-500 hover:text-amber-400 hover:bg-neutral-800 transition-colors"
-										title={agent.is_active ? 'Revocar acceso' : 'Reactivar'}
+										title={agent.is_active
+											? 'Revocar acceso — pedirá confirmación'
+											: 'Reactivar'}
 									>
 										<Power class="w-3.5 h-3.5" />
 									</button>
 									<button
-										onclick={() => remove(agent)}
+										onclick={() => pedirEliminar(agent)}
 										class="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-neutral-800 transition-colors"
-										title="Eliminar (solo si no tiene historial)"
+										title="Eliminar — pedirá confirmación"
 									>
 										<Trash2 class="w-3.5 h-3.5" />
 									</button>
@@ -434,4 +518,17 @@
 			</div>
 		</div>
 	</div>
+{/if}
+
+{#if accion}
+	<ConfirmacionCritica
+		titulo={accion.titulo}
+		objetivo="{accion.agent.name} · {accion.agent.role}"
+		consecuencias={accion.consecuencias}
+		etiquetaAccion={accion.etiquetaAccion}
+		reversible={accion.reversible}
+		ejecutando={ejecutandoAccion}
+		onconfirmar={confirmarAccion}
+		oncancelar={() => (accion = null)}
+	/>
 {/if}

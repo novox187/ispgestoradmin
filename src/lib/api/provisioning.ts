@@ -205,27 +205,53 @@ export async function createAgent(name: string, role: AgentRole): Promise<Enroll
 	return handleResponse<EnrolledAgent>(res);
 }
 
-export async function regenerateAgentToken(id: number): Promise<EnrolledAgent> {
+/**
+ * Las tres acciones de abajo dejan al agente fuera hasta que alguien vuelva a
+ * instalarlo en la máquina donde vive, y el servidor exige reconfirmar la
+ * contraseña para ejecutarlas. Que la pida el servidor y no solo el panel es
+ * deliberado: con una sesión robada, si el freno estuviera solo aquí no habría
+ * freno ninguno.
+ */
+export async function regenerateAgentToken(
+	id: number,
+	password: string
+): Promise<EnrolledAgent> {
 	const res = await fetch(`${API_BASE}/admin/provisioning/agents/${id}/regenerate-token`, {
 		method: 'POST',
-		headers: authHeaders()
+		headers: authHeaders(),
+		body: JSON.stringify({ password })
 	});
 	return handleResponse<EnrolledAgent>(res);
 }
 
-export async function setAgentActive(id: number, isActive: boolean): Promise<ProvisioningAgent> {
+export async function setAgentActive(
+	id: number,
+	isActive: boolean,
+	/** Solo hace falta al desactivar: reactivar devuelve el servicio, no lo quita. */
+	password?: string
+): Promise<ProvisioningAgent> {
 	const res = await fetch(`${API_BASE}/admin/provisioning/agents/${id}`, {
 		method: 'PUT',
 		headers: authHeaders(),
-		body: JSON.stringify({ is_active: isActive })
+		body: JSON.stringify(isActive ? { is_active: true } : { is_active: false, password })
 	});
 	return handleResponse<ProvisioningAgent>(res);
 }
 
-export async function deleteAgent(id: number): Promise<void> {
+export async function renameAgent(id: number, name: string): Promise<ProvisioningAgent> {
+	const res = await fetch(`${API_BASE}/admin/provisioning/agents/${id}`, {
+		method: 'PUT',
+		headers: authHeaders(),
+		body: JSON.stringify({ name })
+	});
+	return handleResponse<ProvisioningAgent>(res);
+}
+
+export async function deleteAgent(id: number, password: string): Promise<void> {
 	const res = await fetch(`${API_BASE}/admin/provisioning/agents/${id}`, {
 		method: 'DELETE',
-		headers: authHeaders()
+		headers: authHeaders(),
+		body: JSON.stringify({ password })
 	});
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
