@@ -3,11 +3,14 @@
 	import { toast } from 'svelte-sonner';
 	import {
 		adoptFinding,
+		buscarClientes,
 		fetchScan,
 		fetchScans,
+		FINDING_SOURCE_LABELS,
 		requestScan,
 		SCAN_STATUS_CLASSES,
 		SCAN_STATUS_LABELS,
+		type ClienteBuscado,
 		type DeviceRole,
 		type NetworkScan,
 		type ScanDetail,
@@ -34,8 +37,54 @@
 	let pidiendo = $state(false);
 
 	let adoptando = $state<ScanFinding | null>(null);
-	let form = $state({ name: '', role: 'backhaul_ap' as DeviceRole, username: '', password: '' });
+	let form = $state({
+		name: '',
+		role: 'backhaul_ap' as DeviceRole,
+		username: '',
+		password: '',
+		client_id: null as number | null
+	});
 	let guardando = $state(false);
+
+	/**
+	 * Solo un equipo de abonado pertenece a alguien. Una antena sectorial da
+	 * servicio a muchos: atarla a uno haría creer que su avería afecta a una
+	 * sola ficha.
+	 */
+	const pideCliente = $derived(form.role === 'cpe');
+
+	let clienteBuscado = $state('');
+	let clientes = $state<ClienteBuscado[]>([]);
+	let buscandoClientes = $state(false);
+	let debounceClientes: ReturnType<typeof setTimeout> | null = null;
+
+	/** Nombre a mostrar del cliente elegido, venga de la sugerencia o del buscador. */
+	const clienteElegido = $derived(
+		form.client_id === null
+			? null
+			: (clientes.find((c) => c.id === form.client_id)?.full_name ??
+				(form.client_id === adoptando?.suggested_client_id
+					? adoptando?.suggested_client_name
+					: null))
+	);
+
+	function buscarClientesDebounced(termino: string) {
+		if (debounceClientes) clearTimeout(debounceClientes);
+
+		if (termino.trim().length < 2) {
+			clientes = [];
+			return;
+		}
+
+		debounceClientes = setTimeout(async () => {
+			buscandoClientes = true;
+			try {
+				clientes = await buscarClientes(termino.trim());
+			} finally {
+				buscandoClientes = false;
+			}
+		}, 350);
+	}
 
 	let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -96,13 +145,18 @@
 
 	function abrirAdopcion(f: ScanFinding) {
 		adoptando = f;
+		clienteBuscado = '';
+		clientes = [];
 		form = {
 			// Se propone el nombre que el propio equipo declara: casi siempre es
 			// el que el instalador le puso y el que el operador reconoce.
 			name: f.hostname ?? f.essid ?? f.ip_address,
-			role: 'backhaul_ap',
+			// Si el servidor reconoció al abonado, es que el equipo es suyo: lo
+			// más probable es que sea un CPE, así que se propone ese papel.
+			role: f.suggested_client_id !== null ? 'cpe' : 'backhaul_ap',
 			username: '',
-			password: ''
+			password: '',
+			client_id: f.suggested_client_id
 		};
 	}
 
@@ -111,8 +165,23 @@
 
 		guardando = true;
 		try {
-			await adoptFinding(adoptando.id, form);
-			toast.success(`«${form.name}» añadido al inventario.`);
+			const r = await adoptFinding(adoptando.id, {
+				...form,
+				// El servidor rechaza vincular un cliente a infraestructura, así
+				// que se limpia al cambiar de papel en vez de dejar que falle.
+				client_id: pideCliente ? form.client_id : null
+			});
+
+			toast.success(
+				r.link_id
+					? `«${form.name}» añadido, y su enlace registrado en el mapa.`
+					: `«${form.name}» añadido al inventario.`
+			);
+
+			// La discordancia de IP no impide el alta pero hay que mirarla: es la
+			// dirección con la que se le factura a ese abonado.
+			if (r.ip_warning) toast.warning(r.ip_warning, { duration: 12000 });
+
 			adoptando = null;
 			await cargar();
 		} catch (e) {
@@ -264,6 +333,18 @@
 
 			<div class="overflow-x-auto">
 				<table class="w-full text-xs">
+					<thead>
+						<tr class="text-left text-[10px] font-mono uppercase tracking-widest text-neutral-600">
+							<th class="px-4 py-2 font-medium">IP</th>
+							<th class="px-4 py-2 font-medium">MAC</th>
+							<th class="px-4 py-2 font-medium">Nombre</th>
+							<th class="px-4 py-2 font-medium">Modelo</th>
+							<th class="px-4 py-2 font-medium">Fabricante</th>
+							<th class="px-4 py-2 font-medium">Cómo se vio</th>
+							<th class="px-4 py-2 font-medium">Abonado</th>
+							<th class="px-4 py-2"></th>
+						</tr>
+					</thead>
 					<tbody>
 						{#each detalle.findings as f (f.id)}
 							<tr class="border-t border-neutral-800/40">
@@ -273,6 +354,41 @@
 								<td class="px-4 py-2.5 text-neutral-500">{f.model ?? '—'}</td>
 								<td class="px-4 py-2.5 text-neutral-500">
 									{f.vendor ?? ''}
+								</td>
+								<td class="px-4 py-2.5">
+									<!--
+										Saber qué fuente lo vio explica lo que falta: el barrido
+										solo lo contestan los equipos airOS, y la tabla de vecinos
+										solo recoge lo que es vecino de capa 2 de un router.
+									-->
+									<span
+										class="rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap {f.source ===
+										'both'
+											? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+											: f.source === 'neighbor'
+												? 'border-sky-500/20 bg-sky-500/10 text-sky-400'
+												: 'border-neutral-600/30 bg-neutral-500/10 text-neutral-400'}"
+										title={f.discovered_via
+											? `Lo ve ${f.discovered_via}${f.remote_interface ? ` por ${f.remote_interface}` : ''}`
+											: 'Respondió al barrido de la red'}
+									>
+										{FINDING_SOURCE_LABELS[f.source]}
+									</span>
+								</td>
+								<td class="px-4 py-2.5 text-neutral-500">
+									{#if f.suggested_client_name}
+										<span
+											class="text-[11px] text-amber-400/90"
+											title={f.suggested_client_reason === 'ip'
+												? 'Coincide con la IP con la que se le factura'
+												: 'Coincide con el nombre del abonado; confírmalo'}
+										>
+											{f.suggested_client_name}
+											{f.suggested_client_reason === 'name' ? '(por nombre)' : ''}
+										</span>
+									{:else}
+										—
+									{/if}
 								</td>
 								<td class="px-4 py-2.5 text-right">
 									{#if f.known}
@@ -350,6 +466,75 @@
 						antena de cliente, casi nunca.
 					</span>
 				</label>
+
+				{#if pideCliente}
+					<div class="rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
+						<span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+							Abonado
+						</span>
+
+						{#if form.client_id !== null}
+							<div class="mt-1.5 flex items-center justify-between gap-2">
+								<span class="text-xs text-neutral-100">{clienteElegido ?? `#${form.client_id}`}</span>
+								<button
+									type="button"
+									onclick={() => {
+										form.client_id = null;
+										clienteBuscado = '';
+										clientes = [];
+									}}
+									class="text-[10px] text-neutral-500 hover:text-neutral-300"
+								>
+									Cambiar
+								</button>
+							</div>
+							{#if adoptando.suggested_client_id === form.client_id}
+								<!--
+									Se dice POR QUÉ se propuso: la IP es exacta porque es con la
+									que se le factura, el nombre es solo una pista que el
+									instalador tecleó en la antena.
+								-->
+								<span class="mt-1 block text-[10px] text-neutral-600">
+									{adoptando.suggested_client_reason === 'ip'
+										? 'Propuesto porque su IP es la que consta en la ficha del abonado.'
+										: 'Propuesto porque el nombre de la antena coincide. Confírmalo antes de guardar.'}
+								</span>
+							{/if}
+						{:else}
+							<input
+								bind:value={clienteBuscado}
+								oninput={() => buscarClientesDebounced(clienteBuscado)}
+								placeholder="Buscar por nombre…"
+								class="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-xs text-neutral-100 focus:border-primary-500/40 focus:outline-none"
+							/>
+
+							{#if buscandoClientes}
+								<span class="mt-1 block text-[10px] text-neutral-600">Buscando…</span>
+							{:else if clientes.length > 0}
+								<ul class="mt-1.5 max-h-40 overflow-y-auto rounded-lg border border-neutral-800">
+									{#each clientes as c (c.id)}
+										<li>
+											<button
+												type="button"
+												onclick={() => (form.client_id = c.id)}
+												class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs text-neutral-300 hover:bg-neutral-800/60"
+											>
+												<span>{c.full_name}</span>
+												<span class="font-mono text-[10px] text-neutral-600">{c.ip ?? ''}</span>
+											</button>
+										</li>
+									{/each}
+								</ul>
+							{:else if clienteBuscado.trim().length >= 2}
+								<span class="mt-1 block text-[10px] text-neutral-600">Ningún abonado coincide.</span>
+							{/if}
+
+							<span class="mt-1.5 block text-[10px] text-neutral-600">
+								Puedes dejarlo sin vincular y hacerlo más tarde.
+							</span>
+						{/if}
+					</div>
+				{/if}
 
 				<div class="grid grid-cols-2 gap-3">
 					<label class="block">

@@ -236,7 +236,29 @@ export interface ScanFinding {
 	/** Ya está en el inventario: se muestra, pero no se ofrece dar de alta. */
 	known: boolean;
 	known_as: string | null;
+	/**
+	 * De dónde salió el hallazgo. Importa porque las dos fuentes ven cosas
+	 * distintas: el barrido UDP solo lo contestan los equipos airOS, y la tabla
+	 * de vecinos del router solo recoge lo que sea vecino suyo de capa 2. Saber
+	 * cuál lo vio explica por qué falta lo que falta.
+	 */
+	source: 'sweep' | 'neighbor' | 'both';
+	/** Equipo cuya tabla de vecinos lo reportó: el otro extremo del enlace. */
+	discovered_via: string | null;
+	discovered_via_device_id: number | null;
+	remote_interface: string | null;
+	/** Abonado propuesto. Es una sugerencia: la confirma el operador. */
+	suggested_client_id: number | null;
+	suggested_client_name: string | null;
+	/** `ip` es exacta (coincide con la que factura); `name` es solo una pista. */
+	suggested_client_reason: 'ip' | 'name' | null;
 }
+
+export const FINDING_SOURCE_LABELS: Record<ScanFinding['source'], string> = {
+	sweep: 'Barrido',
+	neighbor: 'Vecino del router',
+	both: 'Barrido + vecino'
+};
 
 export interface ScanDetail extends NetworkScan {
 	findings: ScanFinding[];
@@ -277,16 +299,68 @@ export async function requestScan(agentId: number, cidr: string): Promise<Networ
 	return handleResponse<NetworkScan>(res);
 }
 
+/** Lo mínimo para elegir un abonado al que vincular un equipo. */
+export interface ClienteBuscado {
+	id: number;
+	full_name: string;
+	ip: string | null;
+}
+
+/**
+ * Busca abonados por nombre para el desplegable del alta.
+ *
+ * Va contra el listado que ya existe para la pantalla de clientes en vez de
+ * abrir un endpoint nuevo: la cartera puede ser de miles y traerla entera para
+ * rellenar un `<select>` sería absurdo.
+ */
+export async function buscarClientes(termino: string): Promise<ClienteBuscado[]> {
+	const params = new URLSearchParams({ search: termino, per_page: '15' });
+	const res = await fetch(`${API_BASE}/admin/clientes/summary?${params}`, {
+		headers: authHeaders()
+	});
+
+	if (!res.ok) return [];
+
+	const json = await res.json();
+	// El listado de clientes es paginado y no comparte la envoltura `{data}` de
+	// este módulo, así que se aceptan las dos formas.
+	const filas = json.data?.data ?? json.data ?? [];
+
+	return (Array.isArray(filas) ? filas : []).map((c: Record<string, unknown>) => ({
+		id: Number(c.id),
+		full_name: String(c.full_name ?? c.name ?? ''),
+		ip: (c.ip as string) ?? null
+	}));
+}
+
+export interface AdoptResult {
+	device_id: number;
+	/** Enlace creado a partir de quién reportó el vecino; null si no se supo. */
+	link_id: number | null;
+	/**
+	 * La IP del equipo no coincide con la que tiene la ficha del cliente, que
+	 * es con la que se le factura. No se corrige solo: hay que mirarlo.
+	 */
+	ip_warning: string | null;
+}
+
 export async function adoptFinding(
 	findingId: number,
-	payload: { name: string; role: DeviceRole; username?: string; password?: string }
-): Promise<{ device_id: number }> {
+	payload: {
+		name: string;
+		role: DeviceRole;
+		username?: string;
+		password?: string;
+		/** Solo válido cuando el rol es `cpe`: el abonado dueño del equipo. */
+		client_id?: number | null;
+	}
+): Promise<AdoptResult> {
 	const res = await fetch(`${API_BASE}/admin/network/scan-findings/${findingId}/adopt`, {
 		method: 'POST',
 		headers: authHeaders(),
 		body: JSON.stringify(payload)
 	});
-	return handleResponse<{ device_id: number }>(res);
+	return handleResponse<AdoptResult>(res);
 }
 
 // ── Topología y mapa ─────────────────────────────────────────────────────────
