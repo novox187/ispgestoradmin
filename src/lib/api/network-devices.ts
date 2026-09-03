@@ -78,6 +78,11 @@ export interface ProbeOutcome {
 	error: string | null;
 	model: string | null;
 	firmware: string | null;
+	/**
+	 * Estado tras anotar el sondeo. Un equipo que acaba de responder deja de
+	 * estar «Desconectado» al instante, sin esperar al ciclo del monitor.
+	 */
+	connectivity_status: ConnectivityStatus;
 }
 
 export interface DeviceFilters {

@@ -320,6 +320,14 @@
 			const r = await testNetworkDevice(d.id);
 			if (r.ok) toast.success(`«${d.name}» responde${r.model ? `: ${r.model}` : ''}.`);
 			else toast.error(`«${d.name}» no responde: ${r.error ?? 'sin detalle'}`);
+			// El estado se pinta con lo que devuelve el propio sondeo, sin esperar
+			// a que vuelva la lista entera: el operador acaba de ver que el equipo
+			// contesta y la insignia no debería seguir en rojo mientras tanto.
+			if (r.connectivity_status) {
+				devices = devices.map((x) =>
+					x.id === d.id ? { ...x, connectivity_status: r.connectivity_status } : x
+				);
+			}
 			await cargar();
 		} catch (e) {
 			toast.error(e instanceof Error ? e.message : 'No se pudo probar.');
