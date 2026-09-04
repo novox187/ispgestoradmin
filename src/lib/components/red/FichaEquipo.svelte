@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { Loader2, Plug, RefreshCw, TriangleAlert, X } from '@lucide/svelte';
+	import { Loader2, Plug, RefreshCw, Radio, TriangleAlert, X } from '@lucide/svelte';
 	import {
 		ccqQuality,
+		fetchDeviceLive,
 		fetchDeviceMetrics,
 		formatBytes,
 		formatDistance,
@@ -20,6 +21,7 @@
 		STATUS_CLASSES,
 		STATUS_LABELS,
 		type DeviceMetrics,
+		type DeviceTelemetry,
 		type Quality
 	} from '$lib/api/network-devices';
 	import GraficoSerie from './GraficoSerie.svelte';
@@ -60,6 +62,64 @@
 	let error = $state<string | null>(null);
 	let sondeando = $state(false);
 	let timer: ReturnType<typeof setTimeout> | null = null;
+
+	/**
+	 * Lectura en directo.
+	 *
+	 * El ciclo de fondo sondea cada pocos minutos, cadencia pensada para vigilar
+	 * cientos de equipos a la vez; mirando UNO eso se ve como una pantalla
+	 * congelada, que es justo la queja. Con la ficha abierta se le pregunta al
+	 * equipo cada pocos segundos, como hace su propia interfaz web.
+	 */
+	const CADENCIA_DIRECTO = 5_000;
+
+	let directo = $state(true);
+	let enVivo = $state<DeviceTelemetry | null>(null);
+	let motivoSinDirecto = $state<string | null>(null);
+	let latido = $state(false);
+	let timerDirecto: ReturnType<typeof setTimeout> | null = null;
+
+	async function sondearEnVivo() {
+		if (!directo) return;
+
+		try {
+			const lectura = await fetchDeviceLive(deviceId);
+
+			if (lectura.ok) {
+				enVivo = lectura.telemetry;
+				motivoSinDirecto = null;
+				// Un parpadeo corto por lectura: sin él no hay forma de distinguir
+				// «va en directo» de «se quedó parado con datos buenos».
+				latido = true;
+				setTimeout(() => (latido = false), 400);
+			} else {
+				/*
+				 * Que el servidor no llegue al equipo es lo normal en las antenas
+				 * de la LAN del cliente. Se apaga el directo en vez de insistir
+				 * cada cinco segundos contra algo inalcanzable, y se dice por qué.
+				 */
+				directo = false;
+				motivoSinDirecto = lectura.error ?? 'el servidor no alcanza a este equipo';
+			}
+		} catch (e) {
+			directo = false;
+			motivoSinDirecto = e instanceof Error ? e.message : 'no se pudo leer en directo';
+		} finally {
+			if (timerDirecto) clearTimeout(timerDirecto);
+			if (directo) timerDirecto = setTimeout(sondearEnVivo, CADENCIA_DIRECTO);
+		}
+	}
+
+	function alternarDirecto() {
+		directo = !directo;
+
+		if (directo) {
+			motivoSinDirecto = null;
+			sondearEnVivo();
+		} else if (timerDirecto) {
+			clearTimeout(timerDirecto);
+		}
+	}
 
 	async function cargar(silencioso = false) {
 		if (!silencioso) cargando = true;
@@ -112,11 +172,39 @@
 		if (e.key === 'Escape') onClose();
 	}
 
-	onMount(cargar);
-	onDestroy(() => timer && clearTimeout(timer));
+	onMount(() => {
+		cargar();
+		sondearEnVivo();
+	});
+
+	onDestroy(() => {
+		if (timer) clearTimeout(timer);
+		// Importa apagarlo: si no, cerrar la ficha dejaría el navegador
+		// interrogando a un equipo de tejado para siempre.
+		directo = false;
+		if (timerDirecto) clearTimeout(timerDirecto);
+	});
 
 	const equipo = $derived(datos?.device ?? null);
-	const t = $derived(datos?.device.telemetry ?? null);
+	/** Manda lo leído en directo; si no hay, lo último que guardó el sistema. */
+	const t = $derived(enVivo ?? datos?.device.telemetry ?? null);
+
+	/**
+	 * airMAX es de Ubiquiti. En un MikroTik no es «cero» ni «desconocido»: es una
+	 * métrica que no existe, y enseñarla vacía invita a buscar una avería donde
+	 * no la hay.
+	 */
+	const esUbiquiti = $derived(equipo?.vendor === 'ubiquiti');
+
+	/**
+	 * ¿Ha informado el equipo esta métrica alguna vez en la ventana?
+	 *
+	 * Un gráfico permanentemente vacío no dice «no hay lecturas», dice «este
+	 * equipo no publica esto» — y ocupa el mismo sitio que uno con información.
+	 */
+	function tieneDatos(campo: Parameters<typeof serie>[0]): boolean {
+		return serie(campo).some((p) => p.v !== null);
+	}
 	const puntos = $derived(datos?.history.points ?? []);
 	const esHorario = $derived(datos?.history.resolution === 'hourly');
 
@@ -202,6 +290,20 @@
 					</div>
 
 					<button
+						onclick={alternarDirecto}
+						title={directo
+							? 'Preguntando al equipo cada 5 segundos'
+							: (motivoSinDirecto ?? 'Reanudar la lectura en directo')}
+						class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors
+							{directo
+							? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+							: 'border-neutral-800 text-neutral-500 hover:text-neutral-300'}"
+					>
+						<Radio class="w-3.5 h-3.5 {latido ? 'opacity-100' : 'opacity-50'}" />
+						{directo ? 'En directo' : 'Directo'}
+					</button>
+
+					<button
 						onclick={sondear}
 						disabled={sondeando}
 						class="flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-1.5 text-[11px] text-neutral-300 hover:border-neutral-700 disabled:opacity-50"
@@ -243,6 +345,23 @@
 		{#if cargando && !datos}
 			<p class="text-xs text-neutral-600">Cargando ficha…</p>
 		{:else if datos && equipo}
+			{#if motivoSinDirecto}
+				<!--
+					No es una avería del enlace ni un fallo del panel: el servidor no
+					llega a este equipo, que es lo normal en las antenas que viven en la
+					LAN del cliente. La ficha sigue enseñando lo que trajo su agente.
+				-->
+				<div class="mb-4 flex items-start gap-2 rounded-lg border border-neutral-700/60 bg-neutral-800/30 px-3 py-2.5 text-xs text-neutral-400">
+					<Radio class="w-4 h-4 shrink-0 mt-0.5" />
+					<span>
+						<!-- El motivo viene del driver y suele acabar en punto; encadenarlo
+						     tal cual dejaba dos seguidos. -->
+						Sin lectura en directo: {motivoSinDirecto.replace(/\.$/, '')}. Se muestran los datos
+						del último sondeo, que se refrescan cada {Math.round(INTERVALO / 1000)} segundos.
+					</span>
+				</div>
+			{/if}
+
 			{#if t?.unparsed}
 				<!-- Ni caído ni sano: respondió algo que el driver no sabe leer. Sin
 				     este aviso, una ficha a medias parecería una avería. -->
@@ -310,13 +429,15 @@
 						'%',
 						t?.ccq_percent ?? null
 					)}
-					{@render medidor(
-						'Calidad airMAX',
-						t?.airmax_quality_percent ?? null,
-						percentQuality(t?.airmax_quality_percent ?? null),
-						'%',
-						t?.airmax_quality_percent ?? null
-					)}
+					{#if esUbiquiti}
+						{@render medidor(
+							'Calidad airMAX',
+							t?.airmax_quality_percent ?? null,
+							percentQuality(t?.airmax_quality_percent ?? null),
+							'%',
+							t?.airmax_quality_percent ?? null
+						)}
+					{/if}
 				{/if}
 
 				{@render medidor(
@@ -334,7 +455,7 @@
 					t?.memory_used_percent ?? null
 				)}
 
-				{#if equipo.has_radio}
+				{#if equipo.has_radio && esUbiquiti}
 					{@render medidor(
 						'Capacidad airMAX',
 						t?.airmax_capacity_percent ?? null,
@@ -366,7 +487,7 @@
 					</span>
 				</h2>
 
-				{#if esHorario && puntos.length === 0}
+				{#if puntos.length === 0}
 					<!--
 						Tres cajas vacías con «sin lecturas» harían pensar que el equipo
 						lleva una semana mudo. Lo que pasa casi siempre es lo otro: el
@@ -377,26 +498,41 @@
 						class="rounded-xl border border-neutral-800/60 bg-neutral-900/40 px-4 py-6 text-center"
 					>
 						<p class="text-xs text-neutral-400">
-							Todavía no hay resumen por hora de este equipo.
+							{esHorario
+								? 'Todavía no hay resumen por hora de este equipo.'
+								: 'No hay lecturas de este equipo en este periodo.'}
 						</p>
 						<p class="mx-auto mt-1 max-w-lg text-[11px] leading-relaxed text-neutral-600">
-							Los periodos largos se sirven de un resumen que agrega un proceso periódico; el
-							detalle al minuto solo se conserva unas semanas. Mientras ese resumen se construye,
-							usa <button
-								class="text-primary-400 hover:underline"
-								onclick={() => cambiarRango(24)}>las últimas 24 horas</button
-							>.
+							{#if esHorario}
+								Los periodos largos se sirven de un resumen que agrega un proceso periódico; el
+								detalle al minuto solo se conserva unas semanas. Mientras ese resumen se
+								construye, usa <button
+									class="text-primary-400 hover:underline"
+									onclick={() => cambiarRango(24)}>las últimas 24 horas</button
+								>.
+							{:else}
+								La serie se llena con cada sondeo del monitoreo. Si el equipo se acaba de dar de
+								alta, aún no ha dado tiempo.
+							{/if}
 						</p>
 					</div>
 				{:else}
+					<!--
+						Cada gráfico se dibuja solo si el equipo publica esa métrica. Un
+						MikroTik no informa caudal ni calidad airMAX, y cuatro cajas con
+						«sin lecturas» hacen pensar en una avería donde solo hay un
+						fabricante que no publica ese dato.
+					-->
 					<div class="grid gap-3 lg:grid-cols-2">
-						{#if equipo.has_radio}
+						{#if tieneDatos('signal')}
 							<GraficoSerie
 								puntos={serie('signal')}
 								titulo="Señal (dBm)"
 								unidad=" dBm"
 								color="#38bdf8"
 							/>
+						{/if}
+						{#if tieneDatos('ccq')}
 							<GraficoSerie
 								puntos={serie('ccq')}
 								titulo="CCQ (%)"
@@ -405,19 +541,23 @@
 								dominio={[0, 100]}
 							/>
 						{/if}
+						{#if tieneDatos('snr')}
+							<GraficoSerie puntos={serie('snr')} titulo="SNR (dB)" unidad=" dB" color="#c084fc" />
+						{/if}
 
-						<GraficoSerie
-							puntos={serie('cpu')}
-							titulo="CPU (%)"
-							unidad="%"
-							color="#f59e0b"
-							dominio={[0, 100]}
-						/>
+						{#if tieneDatos('cpu')}
+							<GraficoSerie
+								puntos={serie('cpu')}
+								titulo="CPU (%)"
+								unidad="%"
+								color="#f59e0b"
+								dominio={[0, 100]}
+							/>
+						{/if}
 
-						{#if equipo.has_radio && !esHorario}
-							<!-- El caudal solo existe en la serie al detalle: el resumen
-							     horario no lo agrega, y dibujar una caja vacía en «7 d»
-							     parecería un enlace sin tráfico. -->
+						<!-- El caudal solo lo publican las airOS y solo vive en la serie
+						     al detalle: el resumen horario no lo agrega. -->
+						{#if tieneDatos('tx_kbps')}
 							<GraficoSerie
 								puntos={serie('tx_kbps')}
 								titulo="Tráfico TX (Mbps)"
@@ -425,6 +565,8 @@
 								color="#f87171"
 								decimales={2}
 							/>
+						{/if}
+						{#if tieneDatos('rx_kbps')}
 							<GraficoSerie
 								puntos={serie('rx_kbps')}
 								titulo="Tráfico RX (Mbps)"

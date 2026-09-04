@@ -269,6 +269,28 @@ export interface DeviceMetrics {
 }
 
 /**
+ * Lo que el equipo contesta cuando se le pregunta ahora mismo.
+ *
+ * `ok: false` no es un error del panel: significa que el servidor no alcanza a
+ * ese equipo, que es lo normal en las antenas que viven en la LAN del cliente y
+ * sondea un agente. La ficha lo dice una vez y sigue con lo que trajo el agente.
+ */
+export interface LiveReading {
+	ok: boolean;
+	error: string | null;
+	telemetry: DeviceTelemetry | null;
+	device?: NetworkDevice;
+}
+
+/** Lee el equipo en directo. Genera tráfico contra él: solo con la ficha abierta. */
+export async function fetchDeviceLive(id: number): Promise<LiveReading> {
+	const res = await fetch(`${API_BASE}/admin/network/devices/${id}/live`, {
+		headers: authHeaders()
+	});
+	return handleResponse<LiveReading>(res);
+}
+
+/**
  * Ficha completa de un equipo: última lectura, historia y vecinos.
  *
  * Se pide solo al abrir la ficha, nunca en el listado: cuesta varias consultas

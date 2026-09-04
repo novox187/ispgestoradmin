@@ -219,12 +219,17 @@
 									snrQuality(t.snr_db),
 									t.snr_db === null ? null : (t.snr_db / 40) * 100
 								)}
-								{@render barra(
-									'airMAX',
-									t.airmax_quality_percent !== null ? `${t.airmax_quality_percent} %` : '—',
-									percentQuality(t.airmax_quality_percent),
-									t.airmax_quality_percent
-								)}
+								<!-- airMAX es de Ubiquiti. En un MikroTik no es «desconocido»,
+								     es una métrica que no existe: se deja el hueco antes que
+								     un guion que invite a buscar una avería. -->
+								{#if d.vendor === 'ubiquiti'}
+									{@render barra(
+										'airMAX',
+										t.airmax_quality_percent !== null ? `${t.airmax_quality_percent} %` : '—',
+										percentQuality(t.airmax_quality_percent),
+										t.airmax_quality_percent
+									)}
+								{/if}
 							</div>
 
 							<div
