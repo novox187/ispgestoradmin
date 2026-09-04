@@ -15,9 +15,15 @@
     clientId: number | null;
     clientName: string;
     onClose: () => void;
+    /**
+     * Cuando se monta como pestaña dentro del espacio de trabajo del cliente
+     * en lugar de como cajón flotante: sin telón, sin posición fija y sin
+     * botón de cierre, porque no hay nada que cerrar.
+     */
+    embedded?: boolean;
   }
 
-  let { open, clientId, clientName, onClose }: Props = $props();
+  let { open, clientId, clientName, onClose, embedded = false }: Props = $props();
 
   let audits = $state<AuditEntry[]>([]);
   let loading = $state(false);
@@ -96,6 +102,7 @@
 </script>
 
 {#if open}
+  {#if !embedded}
   <div
     class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
     onclick={onClose}
@@ -104,9 +111,12 @@
     tabindex="-1"
     aria-label="Cerrar historial"
   ></div>
+  {/if}
 
   <aside
-    class="fixed top-0 right-0 z-50 h-full w-full sm:w-[520px] bg-[#0b0b0d] border-l border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
+    class={embedded
+      ? 'h-full w-full bg-transparent overflow-hidden flex flex-col'
+      : 'fixed top-0 right-0 z-50 h-full w-full sm:w-[520px] bg-surface-base border-l border-neutral-800 shadow-2xl overflow-hidden flex flex-col'}
     aria-label="Historial del cliente"
   >
     <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
@@ -119,13 +129,15 @@
           <p class="text-[11px] text-neutral-500">{clientName}</p>
         </div>
       </div>
-      <button
-        onclick={onClose}
-        class="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800/60 transition-colors"
-        aria-label="Cerrar"
-      >
-        <X class="w-4 h-4" />
-      </button>
+      {#if !embedded}
+        <button
+          onclick={onClose}
+          class="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800/60 transition-colors"
+          aria-label="Cerrar"
+        >
+          <X class="w-4 h-4" />
+        </button>
+      {/if}
     </header>
 
     <!-- Filtros por tabla -->

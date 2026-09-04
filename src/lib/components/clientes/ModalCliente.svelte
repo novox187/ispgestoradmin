@@ -2,6 +2,7 @@
 	import { fade, scale } from 'svelte/transition';
 	import { API_BASE } from '$lib/config';
 	import { formatDate as formatDatePure } from '$lib/utils/date-format';
+	import { formatCurrency } from '$lib/utils/currency';
 	import {
 		X, User, Wifi, WifiOff, Clock, CreditCard, FileText,
 		MapPin, Phone, Mail, Cpu, ShieldAlert, CheckCircle2,
@@ -37,9 +38,9 @@
 		return { label: s, color: '#8a8a90', bg: 'rgba(148,163,184,0.10)' };
 	}
 
-	function fmtCurrency(v: number | string) {
-		return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(v) || 0);
-	}
+	// El formato monetario vive en $lib/utils/currency: aquí se facturaba en
+	// pesos colombianos, cuando el sistema emite comprobantes al SRI en dólares.
+	const fmtCurrency = formatCurrency;
 
 	function fmtDate(d?: string) {
 		return formatDatePure(d);

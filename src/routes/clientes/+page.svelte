@@ -13,90 +13,57 @@
         type DashboardLoadStatus,
         type FetchErrorDetails
     } from '$lib/utils/hybrid-cache';
-    
-    // Components
-    import Encabezado from "$lib/components/Encabezado.svelte";
-    import ClientListSidebar from "$lib/components/clientes/telegram/ClientListSidebar.svelte";
-    import ClientChatArea from "$lib/components/clientes/telegram/ClientChatArea.svelte";
-    
-    // Modals (Keep them for functionality)
-    import ModalCrearCliente from "$lib/components/clientes/ModalCrearCliente.svelte";
-    import ModalEditarCliente from "$lib/components/clientes/ModalEditarCliente.svelte";
-    import ModalConfirmacion from "$lib/components/common/ModalConfirmacion.svelte";
 
-    // Icons
-    import { Plus, Pencil, Trash2, Loader2, CheckCircleIcon, XCircleIcon } from '@lucide/svelte';
+    import Encabezado from '$lib/components/Encabezado.svelte';
+    import ClientsToolbar from '$lib/components/clientes/workspace/ClientsToolbar.svelte';
+    import ClientList from '$lib/components/clientes/workspace/ClientList.svelte';
+    import ClientWorkspace from '$lib/components/clientes/workspace/ClientWorkspace.svelte';
+    import ModalCrearCliente from '$lib/components/clientes/ModalCrearCliente.svelte';
+    import type { ClientStats, ClientRow } from '$lib/types/clientes';
+    import { normalizeStatus } from '$lib/utils/client-status';
 
-    // State
-    let isSidebarOpen = $state(false);
-    let isNotificationsOpen = $state(false);
-    function toggleSidebar() { appState.toggleSidebar() }
-    function toggleNotifications() { appState.toggleNotifications() }
+    import { Loader2, CheckCircleIcon, XCircleIcon } from '@lucide/svelte';
 
-    // Client Data Types
-    interface Client {
-        id: number;
-        name: string;
-        email: string;
-        phone: string;
-        plan: string;
-        status: 'active' | 'suspended' | 'inactive' | 'cancelled';
-        joinDate: string;
-        unreadCount?: number; // Mocked for now
-    }
+    function toggleSidebar() { appState.toggleSidebar(); }
+    function toggleNotifications() { appState.toggleNotifications(); }
 
-    // List State
-    let clients = $state<Client[]>([]);
+    // ── Estado del listado ────────────────────────────────────────────────────
+    let clients = $state<ClientRow[]>([]);
+    let stats = $state<ClientStats | null>(null);
     let loadingClients = $state(false);
+    let searching = $state(false);
+    let refreshing = $state(false);
+
     let searchTerm = $state('');
     let statusFilter = $state('all');
+    let sort = $state('id');
+    let dir = $state<'asc' | 'desc'>('asc');
     let page = $state(1);
-    let pageSize = $state(50); // Increased for list view
+    const PER_PAGE = 25;
+    let lastPage = $state(1);
     let totalClients = $state(0);
 
-    // Selected Client State
+    let hasFilters = $derived(searchTerm.trim() !== '' || statusFilter !== 'all');
+
+    // ── Cliente seleccionado ──────────────────────────────────────────────────
     let selectedClientId = $state<number | null>(null);
     let selectedClient = $state<any>(null);
     let selectedClientMessages = $state<any[]>([]);
+    let loadingClient = $state(false);
     let loadingMessages = $state(false);
-    let isDetailOpen = $state(false);
+    let unreadCount = $state(0);
+    let isAdmin = $state(false);
 
-    // Active ticket tracked for WebSocket subscription
     let activeTicketId = $state<number | null>(null);
     let activeTicketStatus = $state<string>('open');
     let activeClientIdForWs = $state<number | null>(null);
     let echoInstance: any = null;
 
-    // Derived state for mobile view
     let showChatOnMobile = $derived(selectedClientId !== null);
-
-    // Modal States
     let showAddClient = $state(false);
-    let showEditClient = $state(false);
-    let confirmModalOpen = $state(false);
-    let confirmModalLoading = $state(false);
-    let confirmModalError = $state<string | null>(null);
-    let confirmModalData = $state({
-        title: '',
-        message: '',
-        confirmText: '',
-        cancelText: '',
-        type: 'info' as 'danger' | 'success' | 'warning' | 'info',
-        action: '' as 'suspend' | 'activate' | 'cancel',
-        clientId: 0
-    });
 
-    let newClient = $state({
-        name: '',
-        email: '',
-        phone: '',
-        plan: '',
-        status: 'active'
-    });
-
-    // --- Data Fetching ---
-
-    const CLIENTS_CACHE_STORAGE = 'ispga_clients_summary_v2';
+    // ── Indicador de sincronización ───────────────────────────────────────────
+    const CLIENTS_CACHE_STORAGE = 'ispga_clients_summary_v3';
     let inFlight = false;
     let abortController: AbortController | null = null;
 
@@ -116,76 +83,62 @@
         const errors = Object.entries(requestStates)
             .filter(([, v]) => v.status === 'error')
             .sort((a, b) => (b[1].updatedAt ?? 0) - (a[1].updatedAt ?? 0));
-        const first = errors[0]?.[1];
-        if (!first) return '';
-        return first.message || 'Error de actualización';
+        return errors[0]?.[1]?.message || '';
     });
 
     function setRequestState(key: string, next: { status: DashboardLoadStatus; endpoint: string; message?: string }) {
-        requestStates[key] = { ...next, updatedAt: Date.now() };
-        requestStates = { ...requestStates };
+        requestStates = { ...requestStates, [key]: { ...next, updatedAt: Date.now() } };
     }
 
     const loadBus: DashboardLoadBus = {
         start: (key, endpoint) => setRequestState(key, { status: 'loading', endpoint }),
-        success: (key) => {
-            const prev = requestStates[key];
-            setRequestState(key, { status: 'success', endpoint: prev?.endpoint || '' });
-        },
+        success: (key) => setRequestState(key, { status: 'success', endpoint: requestStates[key]?.endpoint || '' }),
         error: (key, details) => setRequestState(key, { status: 'error', endpoint: details.endpoint, message: details.message })
     };
 
     setContext(DASHBOARD_LOAD_CONTEXT, loadBus);
 
     $effect(() => {
-        if (indicatorHideTimer) {
-            clearTimeout(indicatorHideTimer);
-            indicatorHideTimer = null;
-        }
+        if (indicatorHideTimer) { clearTimeout(indicatorHideTimer); indicatorHideTimer = null; }
 
-        if (overallStatus === 'idle') {
-            indicatorVisible = false;
-            return;
-        }
-
+        if (overallStatus === 'idle') { indicatorVisible = false; return; }
         indicatorVisible = true;
 
         if (overallStatus === 'success') {
-            indicatorHideTimer = setTimeout(() => {
-                if (overallStatus === 'success') indicatorVisible = false;
-            }, 2500);
-        }
-
-        if (overallStatus === 'error') {
-            indicatorHideTimer = setTimeout(() => {
-                if (overallStatus === 'error') indicatorVisible = false;
-            }, 9000);
+            indicatorHideTimer = setTimeout(() => { if (overallStatus === 'success') indicatorVisible = false; }, 2500);
+        } else if (overallStatus === 'error') {
+            indicatorHideTimer = setTimeout(() => { if (overallStatus === 'error') indicatorVisible = false; }, 9000);
         }
 
         return () => {
-            if (indicatorHideTimer) {
-                clearTimeout(indicatorHideTimer);
-                indicatorHideTimer = null;
-            }
+            if (indicatorHideTimer) { clearTimeout(indicatorHideTimer); indicatorHideTimer = null; }
         };
     });
 
-    async function loadClients() {
+    // ── Carga del listado ─────────────────────────────────────────────────────
+    function authHeaders(): Record<string, string> {
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
+        const headers: Record<string, string> = { Accept: 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        return headers;
+    }
+
+    async function loadClients(opts: { silent?: boolean } = {}) {
         if (inFlight) return;
         inFlight = true;
-        if (clients.length === 0) loadingClients = true;
+        if (clients.length === 0 && !opts.silent) loadingClients = true;
+
         try {
-            const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null);
             const params = new URLSearchParams({
-                page: page.toString(),
-                per_page: pageSize.toString(),
+                page: String(page),
+                per_page: String(PER_PAGE),
                 search: searchTerm,
-                status: statusFilter
+                status: statusFilter,
+                sort,
+                dir
             });
             const endpoint = `${API_BASE}/admin/clientes/summary?${params.toString()}`;
-            const headers: Record<string, string> = { Accept: 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-            
+
             loadBus.start('clients-list', endpoint);
 
             if (abortController) abortController.abort();
@@ -193,54 +146,90 @@
 
             const data = await fetchJsonWithRetry<any>(
                 endpoint,
-                { headers, signal: abortController.signal },
+                { headers: authHeaders(), signal: abortController.signal },
                 { attempts: 3, baseDelayMs: 700 }
             );
-            
-            const list = data.data || [];
-            totalClients = data.total || 0;
 
-            clients = (list || []).map((c: any) => ({
-                id: c.id,
-                name: c.name,
-                email: c.email,
-                phone: c.phone,
-                plan: c.plan ?? '',
-                status: normalizeStatus(c.status),
-                joinDate: '',
-                unreadCount: 0 // Placeholder
-            }));
-            
-            // Si no hay filtros aplicados, actualizamos el caché
+            clients = (data.data ?? []) as ClientRow[];
+            totalClients = data.total ?? 0;
+            lastPage = data.last_page ?? 1;
+            stats = data.stats ?? null;
+
+            // La página que se cachea es la primera sin filtros: es la que se
+            // pinta al entrar, y cachear una vista filtrada la mostraría como
+            // si fuera el listado completo.
             if (!searchTerm && statusFilter === 'all' && page === 1) {
-                // Guardar toda la lista inicial en localStorage (hasta 5MB permitido)
-                writeStorageCache(CLIENTS_CACHE_STORAGE, { clients, totalClients });
+                writeStorageCache(CLIENTS_CACHE_STORAGE, { clients, totalClients, lastPage, stats });
             }
+
             loadBus.success('clients-list');
         } catch (e: any) {
             if (e?.name === 'AbortError') return;
             console.error('Error cargando clientes:', e);
             const err = e as FetchErrorDetails;
-            const message = typeof err?.message === 'string' && err.message ? err.message : 'Error cargando la lista de clientes';
+            const message = typeof err?.message === 'string' && err.message ? err.message : 'No se pudo cargar el listado de clientes.';
             loadBus.error('clients-list', { endpoint: `${API_BASE}/admin/clientes/summary`, status: err?.status, message });
             toast.error(message);
         } finally {
             loadingClients = false;
+            searching = false;
+            refreshing = false;
             inFlight = false;
         }
     }
 
-    function normalizeStatus(s: string) {
-        if (!s) return 'inactive';
-        const up = String(s).toUpperCase();
-        if (up === 'ACTIVO' || up === 'ACTIVE') return 'active';
-        if (up === 'SUSPENDIDO' || up === 'LIMITADO' || up === 'SUSPENDED') return 'suspended';
-        if (up === 'CANCELLED' || up === 'CANCELADO') return 'cancelled';
-        return 'inactive';
+    // El listado se recarga tras una pausa de escritura: antes cada tecla
+    // lanzaba una petición que la siguiente abortaba a medio camino.
+    const SEARCH_DEBOUNCE_MS = 320;
+    let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function handleSearch(value: string) {
+        searchTerm = value;
+        searching = true;
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            page = 1;
+            loadClients();
+        }, SEARCH_DEBOUNCE_MS);
+    }
+
+    function handleFilter(value: string) {
+        statusFilter = statusFilter === value && value !== 'all' ? 'all' : value;
+        page = 1;
+        loadClients();
+    }
+
+    function handleSort(value: string) {
+        if (sort === value) {
+            dir = dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            sort = value;
+            // La deuda interesa de mayor a menor; el resto en orden natural.
+            dir = value === 'debt' ? 'desc' : 'asc';
+        }
+        page = 1;
+        loadClients();
+    }
+
+    function handlePage(next: number) {
+        if (next < 1 || next > lastPage || next === page) return;
+        page = next;
+        loadClients();
+    }
+
+    function handleRefresh() {
+        refreshing = true;
+        loadClients({ silent: true });
+    }
+
+    function clearFilters() {
+        searchTerm = '';
+        statusFilter = 'all';
+        page = 1;
+        loadClients();
     }
 
     // ── WebSocket ─────────────────────────────────────────────────────────────
-
     async function initEcho() {
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
         if (!token || echoInstance) return;
@@ -248,24 +237,24 @@
         try {
             const [{ default: Echo }, { default: Pusher }] = await Promise.all([
                 import('laravel-echo'),
-                import('pusher-js'),
+                import('pusher-js')
             ]);
             (window as any).Pusher = Pusher;
 
-            const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? 'http';
-            const reverbTLS    = reverbScheme === 'https';
-            const reverbPort   = Number(import.meta.env.VITE_REVERB_PORT ?? (reverbTLS ? 443 : 80));
+            const scheme = import.meta.env.VITE_REVERB_SCHEME ?? 'http';
+            const tls = scheme === 'https';
+            const port = Number(import.meta.env.VITE_REVERB_PORT ?? (tls ? 443 : 80));
 
             echoInstance = new Echo({
-                broadcaster:       'reverb',
-                key:               import.meta.env.VITE_REVERB_APP_KEY ?? 'isp-chat-key',
-                wsHost:            import.meta.env.VITE_REVERB_HOST ?? 'localhost',
-                wsPort:            reverbPort,
-                wssPort:           reverbPort,
-                forceTLS:          reverbTLS,
+                broadcaster: 'reverb',
+                key: import.meta.env.VITE_REVERB_APP_KEY ?? 'isp-chat-key',
+                wsHost: import.meta.env.VITE_REVERB_HOST ?? 'localhost',
+                wsPort: port,
+                wssPort: port,
+                forceTLS: tls,
                 enabledTransports: ['ws', 'wss'],
-                authEndpoint:      `${API_BASE}/broadcasting/auth`,
-                auth: { headers: { Authorization: `Bearer ${token}` } },
+                authEndpoint: `${API_BASE}/broadcasting/auth`,
+                auth: { headers: { Authorization: `Bearer ${token}` } }
             });
         } catch (e) {
             console.warn('WebSocket no disponible', e);
@@ -274,57 +263,60 @@
 
     function subscribeToClient(clientId: number) {
         if (!echoInstance) return;
-        echoInstance
-            .private(`client.${clientId}`)
-            .listen('.client.event', (payload: any) => {
-                if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
-                selectedClientMessages = mergeSorted(selectedClientMessages, [mapClientEvent(payload)]);
-            });
+        echoInstance.private(`client.${clientId}`).listen('.client.event', (payload: any) => {
+            if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
+            selectedClientMessages = mergeSorted(selectedClientMessages, [mapClientEvent(payload)]);
+        });
         activeClientIdForWs = clientId;
     }
 
     function subscribeToTicket(ticketId: number) {
         if (!echoInstance) return;
-        echoInstance
-            .private(`ticket.${ticketId}`)
-            .listen('.message.sent', (payload: any) => {
-                if (payload.sender !== 'user' && payload.sender !== 'system') return;
-                if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
-                selectedClientMessages = mergeSorted(selectedClientMessages, [mapApiMessage(payload)]);
-            });
+        echoInstance.private(`ticket.${ticketId}`).listen('.message.sent', (payload: any) => {
+            if (payload.sender !== 'user' && payload.sender !== 'system') return;
+            if (selectedClientMessages.some((m: any) => String(m.id) === String(payload.id))) return;
+            selectedClientMessages = mergeSorted(selectedClientMessages, [mapApiMessage(payload)]);
+            unreadCount += 1;
+        });
         activeTicketId = ticketId;
+    }
+
+    function leaveChannels() {
+        if (!echoInstance) return;
+        if (activeTicketId) echoInstance.leave(`ticket.${activeTicketId}`);
+        if (activeClientIdForWs) echoInstance.leave(`client.${activeClientIdForWs}`);
     }
 
     function mapApiMessage(m: any) {
         return {
-            id:         m.id,
-            ticket_id:  m.ticket_id ?? null,
-            text:       m.text ?? m.message ?? '',
-            sender:     m.sender === 'agent' ? 'me' : (m.sender === 'system' ? 'system' : 'them'),
-            time:       m.formatted_datetime ?? new Date(m.timestamp ?? m.created_at).toLocaleString('es'),
-            timestamp:  m.timestamp ?? m.created_at ?? '',
+            id: m.id,
+            ticket_id: m.ticket_id ?? null,
+            text: m.text ?? m.message ?? '',
+            sender: m.sender === 'agent' ? 'me' : (m.sender === 'system' ? 'system' : 'them'),
+            time: m.formatted_datetime ?? new Date(m.timestamp ?? m.created_at).toLocaleString('es-EC'),
+            timestamp: m.timestamp ?? m.created_at ?? '',
             event_type: m.event_type ?? null,
-            metadata:   m.metadata ?? null,
+            metadata: m.metadata ?? null,
             attachments: (m.attachments ?? []).map((a: any) => ({
-                name:     a.original_name,
-                url:      a.file_url,
-                type:     a.type,
-                file_url: a.file_url,
-            })),
+                name: a.original_name,
+                url: a.file_url,
+                type: a.type,
+                file_url: a.file_url
+            }))
         };
     }
 
     function mapClientEvent(e: any) {
         return {
-            id:          e.id,
-            ticket_id:   null as null,
-            text:        e.text ?? '',
-            sender:      'system' as const,
-            time:        e.formatted_datetime ?? '',
-            timestamp:   e.timestamp ?? '',
-            event_type:  e.event_type ?? null,
-            metadata:    e.metadata ?? null,
-            attachments: [] as any[],
+            id: e.id,
+            ticket_id: null as null,
+            text: e.text ?? '',
+            sender: 'system' as const,
+            time: e.formatted_datetime ?? '',
+            timestamp: e.timestamp ?? '',
+            event_type: e.event_type ?? null,
+            metadata: e.metadata ?? null,
+            attachments: [] as any[]
         };
     }
 
@@ -338,63 +330,59 @@
         });
     }
 
-    // ── Carga de cliente y mensajes ────────────────────────────────────────────
-
-    async function handleSelectClient(event: CustomEvent<number>) {
-        const id = event.detail;
-
-        // Dejar canales del cliente anterior antes de cambiar
-        if (echoInstance) {
-            if (activeTicketId) echoInstance.leave(`ticket.${activeTicketId}`);
-            if (activeClientIdForWs) echoInstance.leave(`client.${activeClientIdForWs}`);
-        }
+    // ── Selección de cliente ──────────────────────────────────────────────────
+    async function selectClient(id: number) {
+        leaveChannels();
 
         selectedClientId = id;
+        loadingClient = true;
         loadingMessages = true;
-        isDetailOpen = false;
+        selectedClient = null;
         selectedClientMessages = [];
         activeTicketId = null;
         activeTicketStatus = 'open';
         activeClientIdForWs = null;
+        unreadCount = 0;
 
-        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
-        const headers: Record<string, string> = { Accept: 'application/json' };
-        if (token) headers.Authorization = `Bearer ${token}`;
+        const headers = authHeaders();
 
         try {
-            // 1. Cargar datos completos del cliente
             const clientRes = await fetch(`${API_BASE}/admin/clientes/full/${id}`, { headers });
-            if (!clientRes.ok) throw new Error('Error cargando detalles del cliente');
-            const clientData = await clientRes.json();
-            selectedClient = { ...clientData, status: normalizeStatus(clientData.status || clientData.service_status) };
+            if (!clientRes.ok) throw new Error('No se pudo cargar la ficha del cliente.');
+            const data = await clientRes.json();
+            selectedClient = { ...data, status: normalizeStatus(data.status || data.service_status) };
+        } catch (e) {
+            console.error(e);
+            toast.error('No se pudo cargar la ficha del cliente.');
+            loadingClient = false;
+            loadingMessages = false;
+            return;
+        }
+        loadingClient = false;
 
-            // Suscribirse al canal del cliente siempre (wallet_funded y otros eventos)
+        // La conversación se carga aparte: la ficha ya se puede leer mientras
+        // llega, y un fallo del chat no debe dejar la pantalla vacía.
+        try {
             await initEcho();
             subscribeToClient(id);
 
-            // Cargar eventos del cliente independientemente de si tiene ticket activo
             const evtsRes = await fetch(`${API_BASE}/admin/chat/client/${id}/events`, { headers });
             if (evtsRes.ok) {
                 const evtsData = await evtsRes.json();
-                const clientEvts = (evtsData.events ?? []).map(mapClientEvent);
-                if (clientEvts.length > 0) {
-                    selectedClientMessages = mergeSorted(selectedClientMessages, clientEvts);
-                }
+                const evts = (evtsData.events ?? []).map(mapClientEvent);
+                if (evts.length) selectedClientMessages = mergeSorted(selectedClientMessages, evts);
             }
 
-            // 2. Buscar el ticket activo del cliente en el nuevo endpoint de chat
-            //    Cargamos las conversaciones y buscamos el ticket de este cliente
-            const convRes = await fetch(`${API_BASE}/admin/chat/conversations?per_page=100`, { headers });
-            if (convRes.ok) {
-                const convData = await convRes.json();
-                const ticket = (convData.data ?? []).find((t: any) => t.client?.id === id);
-
+            // Un único endpoint para el ticket del cliente. Antes se descargaban
+            // 100 conversaciones y se buscaba la suya con un find() en el navegador.
+            const ticketRes = await fetch(`${API_BASE}/admin/chat/client/${id}/ticket`, { headers });
+            if (ticketRes.ok) {
+                const { ticket } = await ticketRes.json();
                 if (ticket) {
                     activeTicketId = ticket.ticket_id;
                     activeTicketStatus = ticket.status ?? 'open';
-                    const clientId: number | null = ticket.client?.id ?? null;
+                    unreadCount = ticket.unread_count ?? 0;
 
-                    // 3. Cargar mensajes del ticket
                     const msgRes = await fetch(`${API_BASE}/admin/chat/${ticket.ticket_id}/messages?per_page=50`, { headers });
                     if (msgRes.ok) {
                         const msgData = await msgRes.json();
@@ -402,53 +390,37 @@
                         const evts = (msgData.events ?? []).map(mapClientEvent);
                         selectedClientMessages = mergeSorted(msgs, evts);
                         activeTicketStatus = msgData.ticket?.status ?? activeTicketStatus;
-
-                        // 4. Suscribir al canal del ticket para mensajes de chat
                         subscribeToTicket(ticket.ticket_id);
                     }
                 }
             }
         } catch (e) {
             console.error(e);
-            toast.error('No se pudieron cargar los mensajes');
+            toast.error('No se pudo cargar la conversación del cliente.');
         } finally {
             loadingMessages = false;
         }
     }
 
-    // --- Event Handlers ---
-
-    function handleSearch(event: CustomEvent<string>) {
-        searchTerm = event.detail;
-        page = 1;
-        loadClients();
-    }
-
-    function handleFilter(event: CustomEvent<string>) {
-        statusFilter = event.detail;
-        page = 1;
-        loadClients();
-    }
-
+    // ── Mensajería ────────────────────────────────────────────────────────────
     async function handleSendMessage(event: CustomEvent<string>) {
         const text = event.detail;
-        if (!text.trim() || !activeTicketId) {
-            if (!activeTicketId) toast.error('No hay un ticket activo para este cliente.');
-            return;
-        }
+        if (!text.trim()) return;
+        if (!activeTicketId) { toast.error('No hay un ticket abierto para este cliente.'); return; }
 
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
-        if (!token) { toast.error('No autenticado.'); return; }
+        if (!token) { toast.error('Sesión no válida.'); return; }
 
-        // Optimistic update
         const tempMsg = {
-            id:          `temp-${Date.now()}`,
+            id: `temp-${Date.now()}`,
+            ticket_id: activeTicketId,
             text,
-            sender:      'me',
-            time:        new Date().toLocaleString('es'),
-            event_type:  null,
-            metadata:    null,
-            attachments: [],
+            sender: 'me',
+            time: new Date().toLocaleString('es-EC'),
+            timestamp: new Date().toISOString(),
+            event_type: null,
+            metadata: null,
+            attachments: []
         };
         selectedClientMessages = [...selectedClientMessages, tempMsg];
 
@@ -457,24 +429,21 @@
             formData.append('message', text);
 
             const res = await fetch(`${API_BASE}/admin/chat/${activeTicketId}/messages`, {
-                method:  'POST',
+                method: 'POST',
                 headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-                body:    formData,
+                body: formData
             });
 
             if (!res.ok) {
                 selectedClientMessages = selectedClientMessages.filter(m => m.id !== tempMsg.id);
-                const errData = await res.json().catch(() => ({}));
-                toast.error(errData.message || 'Error al enviar el mensaje.');
+                const err = await res.json().catch(() => ({}));
+                toast.error(err.message || 'No se pudo enviar el mensaje.');
                 return;
             }
 
             const saved = await res.json();
-            // Reemplazar mensaje temporal con la respuesta real del servidor
-            selectedClientMessages = selectedClientMessages.map(m =>
-                m.id === tempMsg.id ? mapApiMessage(saved) : m
-            );
-        } catch (err) {
+            selectedClientMessages = selectedClientMessages.map(m => m.id === tempMsg.id ? mapApiMessage(saved) : m);
+        } catch {
             selectedClientMessages = selectedClientMessages.filter(m => m.id !== tempMsg.id);
             toast.error('Error de red al enviar el mensaje.');
         }
@@ -483,12 +452,13 @@
     async function handleCloseTicket() {
         if (!activeTicketId) return;
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('employee_token') : null;
-        if (!token) { toast.error('No autenticado.'); return; }
+        if (!token) { toast.error('Sesión no válida.'); return; }
+
         try {
             const res = await fetch(`${API_BASE}/admin/chat/${activeTicketId}/status`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-                body: JSON.stringify({ status: 'closed' }),
+                body: JSON.stringify({ status: 'closed' })
             });
             if (res.ok) {
                 activeTicketStatus = 'closed';
@@ -502,19 +472,20 @@
         }
     }
 
-    function handleToggleDetail() {
-        isDetailOpen = !isDetailOpen;
-    }
-
+    // ── Sincronización tras cambios ───────────────────────────────────────────
     function handleClientUpdated(event: CustomEvent<any>) {
-        loadClients();
-        const updatedData = event.detail.client || event.detail;
-        if (selectedClient && selectedClient.id === updatedData.id) {
-             selectedClient = {
+        loadClients({ silent: true });
+        const updated = event.detail?.client ?? event.detail;
+        if (selectedClient && updated?.id === selectedClient.id) {
+            selectedClient = {
                 ...selectedClient,
-                ...updatedData,
-                status: normalizeStatus(updatedData.status || updatedData.service_status)
+                ...updated,
+                status: normalizeStatus(updated.status || updated.service_status)
             };
+        } else if (selectedClientId) {
+            // Las acciones de servicio responden sin la ficha completa: se
+            // recarga para que saldo, deuda y plan reflejen el nuevo estado.
+            selectClient(selectedClientId);
         }
     }
 
@@ -523,25 +494,30 @@
         loadClients();
     }
 
-    function handleCloseModal() {
-        showAddClient = false;
-    }
-
     onMount(() => {
-        const cached = readStorageCache<{clients: Client[], totalClients: number}>(CLIENTS_CACHE_STORAGE);
-        if (cached?.data?.clients && Array.isArray(cached.data.clients) && cached.data.clients.length > 0) {
+        const role = (localStorage.getItem('employee_role') || '').toLowerCase().trim();
+        isAdmin = ['admin', 'administrador', 'super_admin', 'super admin'].includes(role);
+
+        const cached = readStorageCache<{ clients: ClientRow[]; totalClients: number; lastPage: number; stats: ClientStats | null }>(CLIENTS_CACHE_STORAGE);
+        if (cached?.data?.clients?.length) {
             clients = cached.data.clients;
-            totalClients = cached.data.totalClients || cached.data.clients.length;
+            totalClients = cached.data.totalClients ?? clients.length;
+            lastPage = cached.data.lastPage ?? 1;
+            stats = cached.data.stats ?? null;
             loadingClients = false;
         }
 
         loadClients();
         initEcho();
-        const interval = setInterval(loadClients, 60000);
+
+        // Refresco de fondo: mantiene contadores y deuda al día sin que nadie
+        // tenga que recargar la página en una jornada de soporte.
+        const interval = setInterval(() => loadClients({ silent: true }), 60000);
 
         return () => {
             clearInterval(interval);
-            if (abortController) abortController.abort();
+            if (searchTimer) clearTimeout(searchTimer);
+            abortController?.abort();
         };
     });
 
@@ -551,103 +527,97 @@
             echoInstance = null;
         }
     });
-
 </script>
 
-<div class="flex flex-col h-screen bg-[#0b0b0d] overflow-hidden w-full">
-    <!-- Encabezado global -->
+<div class="flex flex-col h-screen w-full overflow-hidden bg-surface-base">
     <Encabezado {toggleSidebar} {toggleNotifications} />
 
-    <!-- Área principal (vista dividida) -->
-    <div class="flex-1 flex overflow-hidden relative">
-
-        <!-- Sidebar de clientes -->
-        <div class="{showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-auto h-full">
-            <ClientListSidebar
-                {clients}
-                {selectedClientId}
-                {searchTerm}
-                {statusFilter}
-                loading={loadingClients}
-                on:select={handleSelectClient}
-                on:search={handleSearch}
-                on:filter={handleFilter}
-            />
-        </div>
-
-        <!-- Área de chat / detalle -->
-        <div class="{!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 h-full min-w-0">
-            <ClientChatArea
-                client={selectedClient}
-                messages={selectedClientMessages}
-                loading={loadingMessages}
-                {isDetailOpen}
-                {activeTicketId}
-                ticketStatus={activeTicketStatus}
-                on:sendMessage={handleSendMessage}
-                on:toggleDetail={handleToggleDetail}
-                on:back={() => selectedClientId = null}
-                on:updated={handleClientUpdated}
-                on:closeTicket={handleCloseTicket}
-            />
-        </div>
-
-        <!-- FAB — Agregar cliente -->
-        <button
-            type="button"
-            onclick={() => showAddClient = true}
-            aria-label="Agregar nuevo cliente"
-            class="{showChatOnMobile ? 'hidden md:inline-flex' : 'inline-flex'}
-                   absolute bottom-5 left-5 z-20 items-center justify-center
-                   size-13 bg-primary-600 text-white rounded-full shadow-xl
-                   hover:bg-primary-500 hover:scale-105 active:scale-95
-                   transition-all duration-150 shadow-primary-900/40
-                   focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2"
-        >
-            <Plus class="size-5" />
-        </button>
-
+    <div class="{showChatOnMobile ? 'hidden md:block' : 'block'} shrink-0">
+        <ClientsToolbar
+            {stats}
+            {statusFilter}
+            {searchTerm}
+            {searching}
+            {refreshing}
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            onRefresh={handleRefresh}
+            onCreate={() => showAddClient = true}
+        />
     </div>
 
-    <!-- Modal de creación -->
+    <div class="flex-1 flex min-h-0 overflow-hidden">
+        <!-- Listado -->
+        <div class="{showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-auto h-full">
+            <ClientList
+                {clients}
+                {selectedClientId}
+                loading={loadingClients}
+                {page}
+                {lastPage}
+                total={totalClients}
+                perPage={PER_PAGE}
+                {sort}
+                {dir}
+                {hasFilters}
+                onSelect={selectClient}
+                onPage={handlePage}
+                onSort={handleSort}
+                onClearFilters={clearFilters}
+            />
+        </div>
+
+        <!-- Espacio de trabajo -->
+        <div class="{!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 h-full min-w-0">
+            <div class="flex-1 min-w-0">
+                <ClientWorkspace
+                    client={selectedClient}
+                    messages={selectedClientMessages}
+                    {loadingClient}
+                    {loadingMessages}
+                    {activeTicketId}
+                    ticketStatus={activeTicketStatus}
+                    {unreadCount}
+                    {isAdmin}
+                    on:sendMessage={handleSendMessage}
+                    on:closeTicket={handleCloseTicket}
+                    on:updated={handleClientUpdated}
+                    on:back={() => { leaveChannels(); selectedClientId = null; selectedClient = null; }}
+                />
+            </div>
+        </div>
+    </div>
+
     {#if showAddClient}
         <ModalCrearCliente
-            newClient={{
-                name: newClient.name,
-                email: newClient.email,
-                phone: newClient.phone,
-                plan: newClient.plan,
-                status: newClient.status === 'cancelled' ? undefined : newClient.status as 'active' | 'suspended' | 'inactive' | undefined
-            }}
-            {showAddClient}
+            newClient={{ name: '', email: '', phone: '', plan: '', status: 'active' }}
+            showAddClient
             handleAddClient={() => {}}
-            on:close={handleCloseModal}
+            on:close={() => showAddClient = false}
             on:created={handleCreated}
         />
     {/if}
 
-    <!-- Indicador de estado de carga -->
+    <!-- Estado de sincronización -->
     {#if indicatorVisible}
-        <div
-            class="fixed bottom-5 right-5 z-[60]"
-            in:scale={{ duration: 140, start: 0.9 }}
-            out:fade={{ duration: 140 }}
-        >
+        <div class="fixed bottom-4 right-4 z-[60]" in:scale={{ duration: 140, start: 0.92 }} out:fade={{ duration: 140 }}>
             <button
-                class="flex items-center gap-2 bg-surface-overlay border border-white/[0.08] text-text-secondary
-                       px-3.5 py-2.5 rounded-xl shadow-xl max-w-[300px] transition-colors
-                       hover:bg-surface-hover"
+                type="button"
                 onclick={() => overallStatus === 'error' && loadClients()}
-                aria-label={overallStatus === 'error' ? 'Reintentar carga — ' + overallMessage : 'Estado de sincronización'}
+                aria-label={overallStatus === 'error' ? `Reintentar carga: ${overallMessage}` : 'Estado de sincronización'}
+                class="flex items-center gap-2 max-w-[19rem] px-3 py-2.5 rounded-xl shadow-xl
+                       bg-surface-overlay border border-white/[0.08] text-text-secondary
+                       hover:bg-surface-hover transition-colors duration-150
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
                 {#if overallStatus === 'loading'}
-                    <Loader2 class="size-3.5 animate-spin text-primary-400 shrink-0" aria-hidden="true" />
-                    <span class="text-xs text-text-muted">Sincronizando...</span>
+                    <Loader2 class="size-3.5 shrink-0 text-primary-400 animate-spin" aria-hidden="true" />
+                    <span class="text-xs text-text-muted">Sincronizando…</span>
                 {:else if overallStatus === 'success'}
-                    <CheckCircleIcon class="size-3.5 text-success-400 shrink-0" aria-hidden="true" />
+                    <CheckCircleIcon class="size-3.5 shrink-0 text-success-400" aria-hidden="true" />
                     <span class="text-xs text-text-muted">Al día</span>
                 {:else if overallStatus === 'error'}
-                    <XCircleIcon class="size-3.5 text-danger-400 shrink-0" aria-hidden="true" />
+                    <XCircleIcon class="size-3.5 shrink-0 text-danger-400" aria-hidden="true" />
                     <span class="text-xs text-danger-400 truncate">{overallMessage || 'Error de conexión'}</span>
                 {/if}
             </button>

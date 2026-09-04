@@ -220,31 +220,41 @@
 {/if}
 
 {#if showFullscreenPreview && imagePreviewUrl}
-    <div 
-        class="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-8 bg-black/80 backdrop-blur-md cursor-zoom-out"
+    <div
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-8 bg-black/80 backdrop-blur-md"
         transition:fade={{ duration: 300, easing: quintOut }}
-        onclick={() => showFullscreenPreview = false}
         role="dialog"
         aria-modal="true"
+        aria-label="Vista previa del comprobante"
+        tabindex="-1"
+        onkeydown={(e) => { if (e.key === 'Escape') showFullscreenPreview = false; }}
     >
-        <button 
+        <!-- El telón es un botón real, no un div con onclick: así cerrar la
+             vista previa funciona con teclado y lo anuncia el lector. -->
+        <button
             type="button"
-            class="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-all duration-300 z-10"
-            onclick={(e) => {
-                e.stopPropagation();
-                showFullscreenPreview = false;
-            }}
+            class="absolute inset-0 cursor-zoom-out"
+            aria-label="Cerrar vista previa"
+            onclick={() => showFullscreenPreview = false}
+        ></button>
+
+        <button
+            type="button"
+            class="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 p-2 rounded-full text-white/70
+                   bg-black/40 hover:text-white hover:bg-black/60 transition-colors duration-150
+                   focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            onclick={() => showFullscreenPreview = false}
             title="Cerrar (Esc)"
+            aria-label="Cerrar vista previa"
         >
             <X class="size-6 sm:size-8" />
         </button>
 
-        <img 
-            src={imagePreviewUrl} 
-            alt="Vista previa ampliada" 
-            class="max-w-[95vw] max-h-[90vh] object-contain rounded-xl shadow-2xl border border-white/10"
+        <img
+            src={imagePreviewUrl}
+            alt="Comprobante de pago ampliado"
+            class="relative pointer-events-none max-w-[95vw] max-h-[90vh] object-contain rounded-xl shadow-2xl border border-white/10"
             transition:scale={{ duration: 400, start: 0.85, easing: quintOut }}
-            onclick={(e) => e.stopPropagation()} 
         />
     </div>
 {/if}
